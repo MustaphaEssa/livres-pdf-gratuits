@@ -83,13 +83,11 @@ export async function searchBooks(
   const where: Prisma.BookWhereInput = { isPublished: true };
 
   if (query) {
-    // Note: SQLite ne supporte pas `mode: "insensitive"`. Le LIKE de SQLite
-    // est déjà insensible à la casse pour l'ASCII. (Sur PostgreSQL, rajouter
-    // `mode: "insensitive"` pour couvrir les accents.)
+    // PostgreSQL : `mode: "insensitive"` pour une recherche insensible à la casse
     where.OR = [
-      { title: { contains: query } },
-      { author: { contains: query } },
-      { description: { contains: query } },
+      { title: { contains: query, mode: "insensitive" } },
+      { author: { contains: query, mode: "insensitive" } },
+      { description: { contains: query, mode: "insensitive" } },
     ];
   }
 
