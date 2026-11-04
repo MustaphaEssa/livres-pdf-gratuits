@@ -1,0 +1,34 @@
+# ===========================================================================
+# Service systemd pour lancer l'application au démarrage et la relancer en
+# cas de crash.
+#
+# Installation :
+#   sudo cp deploy/livre-pdf-gratuit.service.example \
+#           /etc/systemd/system/livre-pdf-gratuit.service
+#   # adapter User, WorkingDirectory et le chemin de npm si besoin
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now livre-pdf-gratuit
+#   sudo systemctl status livre-pdf-gratuit
+# ===========================================================================
+
+[Unit]
+Description=Livre PDF Gratuit (Next.js)
+After=network.target
+
+[Service]
+Type=simple
+# Utilisateur non-root dédié de préférence
+User=www-data
+WorkingDirectory=/var/www/livre-pdf-gratuit
+Environment=NODE_ENV=production
+Environment=PORT=3000
+# Les variables (DATABASE_URL, AUTH_SECRET...) sont lues depuis .env
+ExecStart=/usr/bin/npm run start
+Restart=always
+RestartSec=5
+# Journalisation via journalctl -u livre-pdf-gratuit
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

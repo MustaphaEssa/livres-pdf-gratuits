@@ -1,0 +1,52 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Testing
+coverage
+
+# Next.js
+.next
+out
+
+# Production
+build
+
+# Misc
+.DS_Store
+*.pem
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local env files
+.env
+.env*.local
+
+# Vercel
+.vercel
+
+# Typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# Prisma
+prisma/migrations
+
+# Base de données SQLite (doit vivre sur le disque du VPS, jamais committée)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Sauvegardes locales (peuvent contenir des secrets)
+*.bak
+
+# Uploads
+public/uploads/books/*
+!public/uploads/books/.gitkeep
+public/uploads/covers/*
+!public/uploads/covers/.gitkeep

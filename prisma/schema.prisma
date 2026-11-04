@@ -1,0 +1,284 @@
+// prisma/schema.prisma
+// Schéma de base de données pour Livre PDF Gratuit
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== MODÈLES ====================
+
+// Catégorie (utilisée pour les livres et le blog)
+model Category {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String?
+  image       String?
+  type        String   @default("BOOK") // BOOK ou BLOG
+  parentId    String?
+  parent      Category? @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryHierarchy")
+  
+  books       BookCategory[]
+  posts       PostCategory[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([slug])
+  @@index([parentId])
+  @@index([type])
+}
+
+// Livre
+model Book {
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  title         String
+  author        String
+  description   String? 
+  coverImage    String?
+  pdfUrl        String
+  pdfSize       Int?     // Taille en bytes
+  pageCount     Int?
+  language      String   @default("fr") // fr, ar, en
+  publishedYear Int?
+  isbn          String?
+  publisher     String?
+  
+  // Métriques
+  downloadCount Int      @default(0)
+  viewCount    Int      @default(0)
+  rating       Float    @default(0)
+  ratingCount  Int      @default(0)
+  
+  // Statut
+  isFeatured   Boolean  @default(false)
+  isPublished  Boolean  @default(true)
+  
+  // Relations
+  categories    BookCategory[]
+  downloads     Download[]
+  reviews       Review[]
+  favorites     Favorite[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@index([slug])
+  @@index([title])
+  @@index([author])
+  @@index([isFeatured])
+  @@index([downloadCount])
+  @@index([createdAt])
+  @@index([isPublished])
+}
+
+// Relation many-to-many Book-Category
+model BookCategory {
+  bookId     String
+  categoryId String
+  book       Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([bookId, categoryId])
+  @@index([bookId])
+  @@index([categoryId])
+}
+
+// Téléchargements
+model Download {
+  id        String   @id @default(cuid())
+  bookId    String
+  userId    String?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([bookId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// Avis/Reviews
+model Review {
+  id        String   @id @default(cuid())
+  bookId    String
+  name      String?
+  email     String?
+  rating    Int
+  comment   String? 
+  isApproved Boolean @default(false)
+  createdAt DateTime @default(now())
+  
+  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  
+  @@index([bookId])
+  @@index([isApproved])
+}
+
+// ==================== BLOG ====================
+
+// Article de blog
+model Post {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  excerpt     String? 
+  content     String  
+  coverImage  String?
+  author      String?
+  
+  // Statut
+  isPublished Boolean @default(false)
+  isFeatured  Boolean @default(false)
+  
+  // Relations
+  categories  PostCategory[]
+  comments    Comment[]
+  tags        String?  // Tags stockés comme tableau
+  
+  // SEO
+  metaTitle       String?
+  metaDescription String?
+  
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([slug])
+  @@index([isPublished])
+  @@index([publishedAt])
+  @@index([isFeatured])
+}
+
+// Commentaire sur article
+model Comment {
+  id        String   @id @default(cuid())
+  postId    String
+  parentId  String?  // Pour réponses imbriquées
+  name      String?
+  email     String?
+  content   String  
+  isApproved Boolean @default(false)
+  createdAt DateTime @default(now())
+  
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  parent    Comment? @relation("CommentReplies", fields: [parentId], references: [id])
+  replies   Comment[] @relation("CommentReplies")
+  
+  @@index([postId])
+  @@index([isApproved])
+  @@index([parentId])
+}
+
+// Relation Post-Category
+model PostCategory {
+  postId     String
+  categoryId String
+  post       Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([postId, categoryId])
+}
+
+// ==================== UTILISATEURS ====================
+
+// Utilisateur du site public
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  favorites   Favorite[]
+  downloads   Download[]
+  resetTokens PasswordResetToken[]
+
+  @@index([email])
+}
+
+// Livre favori d'un utilisateur
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  bookId    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, bookId])
+  @@index([userId])
+  @@index([bookId])
+}
+
+// Jeton de réinitialisation de mot de passe
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+}
+
+// ==================== ADMIN ====================
+
+// Admin User
+model Admin {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  password     String
+  name         String
+  role         String    @default("ADMIN")
+  isActive     Boolean  @default(true)
+  lastLogin    DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@index([email])
+}
+
+// ==================== PARAMÈTRES DU SITE ====================
+
+model SiteSettings {
+  id        String   @id @default("default")
+  siteName  String   @default("Livre PDF Gratuit")
+  siteDescription String?
+  logo      String?
+  favicon   String?
+  email     String?
+  telephone String?
+  address   String?
+  
+  // SEO
+  googleAnalyticsId String?
+  
+  // Social
+  facebook  String?
+  twitter   String?
+  instagram String?
+  youtube   String?
+  
+  // Paramètres supplémentaires
+  heroTitle       String?
+  heroSubtitle    String?
+  featuredBooksCount Int @default(6)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

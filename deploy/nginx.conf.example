@@ -1,0 +1,51 @@
+# ===========================================================================
+# Exemple de configuration nginx pour "Livre PDF Gratuit"
+# À placer dans /etc/nginx/sites-available/livre-pdf-gratuit puis lier dans
+# sites-enabled, adapter le domaine et le chemin, recharger nginx.
+#
+#   sudo ln -s /etc/nginx/sites-available/livre-pdf-gratuit /etc/nginx/sites-enabled/
+#   sudo nginx -t && sudo systemctl reload nginx
+#
+# HTTPS : lancer ensuite `sudo certbot --nginx -d votre-domaine.com`
+# ===========================================================================
+
+server {
+    listen 80;
+    server_name votre-domaine.com www.votre-domaine.com;
+
+    # Chemin absolu vers le dossier du projet sur le VPS
+    set $APP_ROOT /var/www/livre-pdf-gratuit;
+
+    # Autorise l'upload de PDF jusqu'à 50 Mo (doit couvrir MAX_FILE_SIZE)
+    client_max_body_size 55m;
+
+    # --- Fichiers uploadés servis DIRECTEMENT par nginx (performant) ---
+    # PDF et couvertures : pas besoin de passer par Node.
+    location /uploads/ {
+        alias $APP_ROOT/public/uploads/;
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+        # Autorise la lecture en ligne (react-pdf) depuis le même domaine
+        try_files $uri =404;
+    }
+
+    # --- Assets statiques Next.js (hashés, cache long) ---
+    location /_next/static/ {
+        alias $APP_ROOT/.next/static/;
+        expires 365d;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # --- Tout le reste -> application Next.js (next start sur :3000) ---
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 300s;
+    }
+}
