@@ -112,7 +112,7 @@ export function Footer() {
             <ul className="space-y-3">
               <li className="flex items-center gap-2 text-sm text-slate-400">
                 <Mail className="h-4 w-4 text-amber-500" />
-                <span>{settings?.email || "contact@livre-pdf-gratuit.com"}</span>
+                <span>{settings?.email || "contact@livrespdfgratuits.com"}</span>
               </li>
               <li className="flex items-center gap-2 text-sm text-slate-400">
                 <Phone className="h-4 w-4 text-amber-500" />

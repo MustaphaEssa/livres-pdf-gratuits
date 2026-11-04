@@ -3,7 +3,8 @@ import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
-// Mot de passe admin par défaut (surchargeable via ADMIN_PASSWORD)
+// Identifiants admin par défaut (surchargeables via ADMIN_EMAIL / ADMIN_PASSWORD)
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@livrespdfgratuits.com";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
 
 // Catégories de livres
@@ -231,10 +232,10 @@ async function main() {
   // Admin (mot de passe hashé avec bcrypt)
   const hashedPassword = await bcrypt.hash(ADMIN_PASSWORD, 10);
   const admin = await prisma.admin.upsert({
-    where: { email: "admin@livre-pdf-gratuit.com" },
+    where: { email: ADMIN_EMAIL },
     update: { password: hashedPassword },
     create: {
-      email: "admin@livre-pdf-gratuit.com",
+      email: ADMIN_EMAIL,
       password: hashedPassword,
       name: "Admin",
       role: "SUPER_ADMIN",

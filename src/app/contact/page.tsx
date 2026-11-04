@@ -144,7 +144,7 @@ export default function ContactPage() {
                       <Mail className="h-5 w-5 text-amber-500 mt-0.5" />
                       <div>
                         <p className="font-medium text-slate-900 dark:text-white">{t.contact.email}</p>
-                        <p className="text-slate-600 dark:text-slate-400">{settings?.email || "contact@livre-pdf-gratuit.com"}</p>
+                        <p className="text-slate-600 dark:text-slate-400">{settings?.email || "contact@livrespdfgratuits.com"}</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
