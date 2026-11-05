@@ -116,7 +116,7 @@ function surname(input: string): string {
 // Requête stricte sur le format "Nom, Prénom" pour éviter les faux positifs.
 export async function searchAuthor(author: string, rows: number): Promise<SearchDoc[]> {
   const creator = toArchiveCreator(author);
-  const q = `creator:"${creator}" AND mediatype:texts AND format:(PDF) AND year:[1500 TO 1929]`;
+  const q = `creator:"${creator}" AND mediatype:texts AND format:(PDF) AND language:(French OR Français OR fre OR fra) AND year:[1500 TO 1929]`;
   const url =
     "https://archive.org/advancedsearch.php?q=" +
     encodeURIComponent(q) +

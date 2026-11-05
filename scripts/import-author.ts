@@ -110,7 +110,7 @@ interface SearchDoc {
 }
 
 async function searchAuthor(author: string, rows: number): Promise<SearchDoc[]> {
-  const q = `creator:("${author}") AND mediatype:texts AND format:(PDF) AND year:[1500 TO 1929]`;
+  const q = `creator:("${author}") AND mediatype:texts AND format:(PDF) AND language:(French OR Français OR fre OR fra) AND year:[1500 TO 1929]`;
   const url =
     "https://archive.org/advancedsearch.php?q=" +
     encodeURIComponent(q) +
