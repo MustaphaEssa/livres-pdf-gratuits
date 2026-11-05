@@ -9,6 +9,17 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
+  // Ignore les requêtes de préchargement (Next ou navigateur) : on ne sert pas
+  // le PDF et on ne comptabilise pas un faux téléchargement.
+  const h = request.headers;
+  const isPrefetch =
+    h.get("next-router-prefetch") === "1" ||
+    h.get("purpose") === "prefetch" ||
+    (h.get("sec-purpose") ?? "").includes("prefetch");
+  if (isPrefetch) {
+    return new NextResponse(null, { status: 204 });
+  }
+
   const { slug } = await params;
   const book = await getBookBySlug(slug);
 

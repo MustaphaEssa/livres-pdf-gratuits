@@ -109,12 +109,12 @@ export async function BookCard({ book, className }: BookCardProps) {
               {t.book.view}
             </Button>
           </Link>
-          <Link href={`/livre/${book.slug}/telecharger`} className="flex-1">
+          <a href={`/livre/${book.slug}/telecharger`} className="flex-1">
             <Button size="sm" className="w-full bg-amber-500 hover:bg-amber-600">
               <Download className="h-3 w-3 mr-1" />
               {t.book.download}
             </Button>
-          </Link>
+          </a>
         </div>
       </CardContent>
     </Card>
