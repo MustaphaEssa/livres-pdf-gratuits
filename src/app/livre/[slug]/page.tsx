@@ -184,6 +184,7 @@ export default async function BookPage({ params }: BookPageProps) {
                       src={book.coverImage}
                       alt={book.title}
                       fill
+                      sizes="(max-width: 1024px) 100vw, 400px"
                       className="object-cover"
                     />
                   ) : (
