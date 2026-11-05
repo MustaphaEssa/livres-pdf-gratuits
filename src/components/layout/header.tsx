@@ -114,13 +114,6 @@ export function Header() {
 
             {/* Account */}
             <AccountMenu variant="desktop" />
-
-            {/* Admin Link */}
-            <Link href="/admin">
-              <Button variant="outline" size="sm">
-                {t.nav.admin}
-              </Button>
-            </Link>
           </div>
 
           {/* Mobile Menu Button */}
