@@ -8,14 +8,14 @@ module.exports = {
       name: "livrespdfgratuits",
       script: "npm",
       args: "start", // => next start (voir package.json)
-      cwd: "/var/www/livrespdfgratuits", // adapte au chemin réel sur le VPS
+      cwd: "/home/vcp/livrespdfgratuits",
       instances: 1, // Postgres permet de passer en "max" (mode cluster) si besoin
       exec_mode: "fork",
       autorestart: true,
       max_memory_restart: "500M",
       env: {
         NODE_ENV: "production",
-        PORT: 3000,
+        PORT: 3003,
       },
     },
   ],
