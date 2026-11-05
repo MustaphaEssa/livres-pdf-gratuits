@@ -155,6 +155,9 @@ async function importOne(
   const md = meta?.metadata ?? {};
   const files: any[] = meta?.files ?? [];
 
+  // Anti-doublon : livre Internet Archive déjà importé
+  if (await prisma.book.count({ where: { sourceId: identifier } })) return "skip";
+
   // Ne garder que le domaine public accessible
   if (md["access-restricted-item"] === "true") return "skip";
 
@@ -222,6 +225,7 @@ async function importOne(
   await prisma.book.create({
     data: {
       slug,
+      sourceId: identifier,
       title: title.slice(0, 250),
       author: authorName,
       authorSlug: slugify(authorName),

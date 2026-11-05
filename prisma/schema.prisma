@@ -51,7 +51,8 @@ model Book {
   publishedYear Int?
   isbn          String?
   publisher     String?
-  
+  sourceId      String?  @unique // identifiant Internet Archive (anti-doublon)
+
   // Métriques
   downloadCount Int      @default(0)
   viewCount    Int      @default(0)

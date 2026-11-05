@@ -134,12 +134,40 @@ export interface ImportResult {
   authorRaw?: string;
 }
 
+// Règles de détection de catégorie à partir des sujets Internet Archive
+// (texte normalisé sans accents)
+const SUBJECT_RULES: { slug: string; re: RegExp }[] = [
+  { slug: "poesie", re: /poesie|poeme|poetry|poetique/ },
+  { slug: "romans", re: /fiction|roman|nouvelle|novel|conte|recit|theatre|drame|comedie/ },
+  { slug: "histoire", re: /histoire|history|historique|guerre|revolution|antiquite|moyen age/ },
+  { slug: "sciences", re: /science|physique|chimie|astronomie|biolog|mathemat|geolog|medecine|botani|zoolog|naturelle/ },
+  { slug: "philosophie", re: /philosoph|morale|ethique|metaphysique|logique/ },
+  { slug: "religion", re: /religion|theolog|bible|islam|coran|chretien|christian|catholic|protestant|sermon|spiritualite|eglise/ },
+  { slug: "informatique", re: /informatique|mecanique|technique|ingenierie|technolog/ },
+  { slug: "biographies", re: /biographie|memoire|correspondance|lettres|autobiograph/ },
+];
+
+// Déduit les slugs de catégories depuis les métadonnées (sujets + titre)
+function detectCategorySlugs(md: Record<string, unknown>): string[] {
+  const subject = Array.isArray(md.subject) ? md.subject.map(String).join(" ") : one(md.subject) ?? "";
+  const hay = norm(`${subject} ${one(md.title) ?? ""}`);
+  const slugs = new Set<string>();
+  for (const r of SUBJECT_RULES) if (r.re.test(hay)) slugs.add(r.slug);
+  return Array.from(slugs);
+}
+
 // Importe un livre depuis Internet Archive (PDF + couverture + métadonnées)
 export async function importBook(
   identifier: string,
   fallbackAuthor: string,
-  catId: string | null
+  categoryMap: Record<string, string> // slug -> id des catégories existantes
 ): Promise<ImportResult> {
+  // Anti-doublon : si ce livre d'Internet Archive est déjà importé, on saute
+  // (avant tout téléchargement)
+  if (await prisma.book.count({ where: { sourceId: identifier } })) {
+    return { status: "skip" };
+  }
+
   let meta: { metadata?: Record<string, unknown>; files?: { name: string; size?: string }[] };
   try {
     meta = (await fetchJson(`https://archive.org/metadata/${identifier}`)) as typeof meta;
@@ -203,9 +231,15 @@ export async function importBook(
   const authorRaw = (fixEncoding(one(md.creator)) || fallbackAuthor).slice(0, 200);
   const authorSlug = slugify(authorRaw);
 
+  // Catégories détectées automatiquement (celles qui existent en base)
+  const catIds = detectCategorySlugs(md)
+    .map((s) => categoryMap[s])
+    .filter((id): id is string => Boolean(id));
+
   await prisma.book.create({
     data: {
       slug,
+      sourceId: identifier,
       title: title.slice(0, 250),
       author: authorRaw,
       authorSlug,
@@ -220,7 +254,9 @@ export async function importBook(
       isbn: one(md.isbn) ?? null,
       isPublished: true,
       isFeatured: false,
-      categories: catId ? { create: [{ categoryId: catId }] } : undefined,
+      categories: catIds.length
+        ? { create: catIds.map((categoryId) => ({ categoryId })) }
+        : undefined,
     },
   });
 

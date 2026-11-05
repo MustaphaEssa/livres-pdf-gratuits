@@ -122,6 +122,9 @@ async function searchAuthor(author: string, rows: number): Promise<SearchDoc[]> 
 }
 
 async function importOne(identifier: string, catId: string | null): Promise<"ok" | "skip" | "fail"> {
+  // Anti-doublon : livre Internet Archive déjà importé
+  if (await prisma.book.count({ where: { sourceId: identifier } })) return "skip";
+
   let meta: any;
   try {
     meta = await fetchJson(`https://archive.org/metadata/${identifier}`);
@@ -186,6 +189,7 @@ async function importOne(identifier: string, catId: string | null): Promise<"ok"
   await prisma.book.create({
     data: {
       slug,
+      sourceId: identifier,
       title: title.slice(0, 250),
       author: authorName,
       authorSlug: slugify(authorName),

@@ -26,7 +26,7 @@ function prune() {
   }
 }
 
-async function run(job: Job, author: string, max: number, catId: string | null) {
+async function run(job: Job, author: string, max: number, categoryMap: Record<string, string>) {
   try {
     const docs = await searchAuthor(author, max * 4);
     job.found = docs.length;
@@ -36,7 +36,7 @@ async function run(job: Job, author: string, max: number, catId: string | null) 
     for (const doc of docs) {
       if (job.imported >= max) break;
       try {
-        const res = await importBook(doc.identifier, author, catId);
+        const res = await importBook(doc.identifier, author, categoryMap);
         if (res.status === "ok") {
           job.imported++;
           job.log.push(`✓ ${res.title}`);
@@ -73,22 +73,23 @@ export async function POST(request: Request) {
   }
 
   const author = String(body.author || "").trim();
-  const category = String(body.category || "").trim();
   const max = Math.min(50, Math.max(1, Number(body.max) || 20));
   if (!author) return NextResponse.json({ error: "Nom d'auteur requis" }, { status: 400 });
 
-  let catId: string | null = null;
-  if (category) {
-    const c = await prisma.category.findUnique({ where: { slug: category } });
-    catId = c?.id ?? null;
-  }
+  // Carte slug -> id des catégories de livres (pour la détection automatique)
+  const cats = await prisma.category.findMany({
+    where: { type: "BOOK" },
+    select: { slug: true, id: true },
+  });
+  const categoryMap: Record<string, string> = {};
+  for (const c of cats) categoryMap[c.slug] = c.id;
 
   const id = crypto.randomUUID();
   const job: Job = { id, status: "running", author, found: 0, imported: 0, log: [] };
   jobs.set(id, job);
   prune();
   // Lance en arrière-plan (pas de await) — le serveur Node persistant poursuit la tâche
-  void run(job, author, max, catId);
+  void run(job, author, max, categoryMap);
 
   return NextResponse.json({ jobId: id });
 }

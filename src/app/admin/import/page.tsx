@@ -7,10 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { AdminShell } from "@/components/admin/admin-shell";
 
-interface CategoryOption {
-  name: string;
-  slug: string;
-}
 interface Job {
   status: "running" | "done" | "error";
   author: string;
@@ -21,9 +17,7 @@ interface Job {
 }
 
 export default function AdminImportPage() {
-  const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [author, setAuthor] = useState("");
-  const [category, setCategory] = useState("");
   const [max, setMax] = useState(20);
   const [job, setJob] = useState<Job | null>(null);
   const [starting, setStarting] = useState(false);
@@ -31,17 +25,6 @@ export default function AdminImportPage() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    (async () => {
-      const res = await fetch("/api/admin/categories");
-      if (res.ok) {
-        const data = await res.json();
-        setCategories(
-          (data.categories ?? [])
-            .filter((c: { type: string }) => c.type === "BOOK")
-            .map((c: { name: string; slug: string }) => ({ name: c.name, slug: c.slug }))
-        );
-      }
-    })();
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
@@ -59,7 +42,7 @@ export default function AdminImportPage() {
       const res = await fetch("/api/admin/import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ author: author.trim(), category, max }),
+        body: JSON.stringify({ author: author.trim(), max }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Échec du démarrage");
@@ -108,33 +91,20 @@ export default function AdminImportPage() {
                   disabled={running}
                 />
               </div>
-              <div className="flex flex-wrap gap-4">
-                <div className="flex-1 min-w-[180px]">
-                  <label className="block text-sm font-medium mb-1">Catégorie</label>
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    disabled={running}
-                    className="w-full h-10 px-3 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm"
-                  >
-                    <option value="">(aucune)</option>
-                    {categories.map((c) => (
-                      <option key={c.slug} value={c.slug}>{c.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="w-32">
-                  <label className="block text-sm font-medium mb-1">Nombre max</label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={50}
-                    value={max}
-                    onChange={(e) => setMax(Number(e.target.value))}
-                    disabled={running}
-                  />
-                </div>
+              <div className="w-32">
+                <label className="block text-sm font-medium mb-1">Nombre max</label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={max}
+                  onChange={(e) => setMax(Number(e.target.value))}
+                  disabled={running}
+                />
               </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                La catégorie est détectée automatiquement d&apos;après les sujets du livre.
+              </p>
               <Button
                 type="submit"
                 disabled={starting || running || !author.trim()}
