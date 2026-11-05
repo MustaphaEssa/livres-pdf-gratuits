@@ -17,7 +17,7 @@ export default async function HomePage() {
   const [{ t }, featuredBooks, latestBooks, categories] = await Promise.all([
     getServerI18n(),
     getFeaturedBooks(settings.featuredBooksCount),
-    getLatestBooks(6),
+    getLatestBooks(12),
     getCategoriesWithCounts(),
   ]);
 
@@ -97,6 +97,34 @@ export default async function HomePage() {
           </div>
         </section>
 
+        {/* Nouveautés — mis en avant tout en haut */}
+        <section className="py-16">
+          <div className="container mx-auto px-4">
+            <div className="flex items-center justify-between mb-12">
+              <div>
+                <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
+                  {t.home.newestTitle}
+                </h2>
+                <p className="text-slate-600 dark:text-slate-400">
+                  {t.home.newestSubtitle}
+                </p>
+              </div>
+              <Link href="/catalogue?sort=newest">
+                <Button variant="ghost">
+                  {t.home.seeAll}
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+              {latestBooks.map((book) => (
+                <BookCard key={book.id} book={book} />
+              ))}
+            </div>
+          </div>
+        </section>
+
         <section className="py-16 bg-slate-50 dark:bg-slate-900/50">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
@@ -158,33 +186,6 @@ export default async function HomePage() {
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
               {featuredBooks.map((book) => (
-                <BookCard key={book.id} book={book} />
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="py-16 bg-slate-50 dark:bg-slate-900/50">
-          <div className="container mx-auto px-4">
-            <div className="flex items-center justify-between mb-12">
-              <div>
-                <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
-                  {t.home.newestTitle}
-                </h2>
-                <p className="text-slate-600 dark:text-slate-400">
-                  {t.home.newestSubtitle}
-                </p>
-              </div>
-              <Link href="/catalogue?sort=newest">
-                <Button variant="ghost">
-                  {t.home.seeAll}
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
-              {latestBooks.map((book) => (
                 <BookCard key={book.id} book={book} />
               ))}
             </div>
