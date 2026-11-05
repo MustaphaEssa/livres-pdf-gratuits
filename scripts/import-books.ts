@@ -217,11 +217,14 @@ async function importOne(
   const descRaw = fixEncoding(one(md.description));
   const description = descRaw ? stripHtml(descRaw).slice(0, 1200) : null;
 
+  const authorName = (fixEncoding(one(md.creator)) || "Auteur inconnu").slice(0, 200);
+
   await prisma.book.create({
     data: {
       slug,
       title: title.slice(0, 250),
-      author: (fixEncoding(one(md.creator)) || "Auteur inconnu").slice(0, 200),
+      author: authorName,
+      authorSlug: slugify(authorName),
       description,
       pdfUrl: `/uploads/books/${pdfFileName}`,
       pdfSize: pdf.size,

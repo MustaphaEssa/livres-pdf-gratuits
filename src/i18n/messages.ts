@@ -2,7 +2,7 @@ import type { Locale } from "./config";
 
 // Structure d'un dictionnaire d'interface.
 export interface Messages {
-  nav: { home: string; catalogue: string; blog: string; about: string; contact: string; admin: string };
+  nav: { home: string; catalogue: string; authors: string; blog: string; about: string; contact: string; admin: string };
   search: { placeholder: string; button: string };
   account: { login: string; register: string; myAccount: string; logout: string };
   common: {
@@ -110,7 +110,7 @@ export interface Messages {
 }
 
 const fr: Messages = {
-  nav: { home: "Accueil", catalogue: "Catalogue", blog: "Blog", about: "À propos", contact: "Contact", admin: "Admin" },
+  nav: { home: "Accueil", catalogue: "Catalogue", authors: "Auteurs", blog: "Blog", about: "À propos", contact: "Contact", admin: "Admin" },
   search: { placeholder: "Rechercher un livre...", button: "Rechercher" },
   account: { login: "Connexion", register: "Créer un compte", myAccount: "Mon compte", logout: "Déconnexion" },
   common: { loading: "Chargement...", cancel: "Annuler", back: "Retour", previous: "Précédent", next: "Suivant", seeAll: "Voir tout", by: "par", downloads: "téléchargements", reviews: "avis" },
@@ -215,7 +215,7 @@ const fr: Messages = {
 };
 
 const ar: Messages = {
-  nav: { home: "الرئيسية", catalogue: "الفهرس", blog: "المدونة", about: "من نحن", contact: "اتصل بنا", admin: "الإدارة" },
+  nav: { home: "الرئيسية", catalogue: "الفهرس", authors: "المؤلفون", blog: "المدونة", about: "من نحن", contact: "اتصل بنا", admin: "الإدارة" },
   search: { placeholder: "ابحث عن كتاب...", button: "بحث" },
   account: { login: "تسجيل الدخول", register: "إنشاء حساب", myAccount: "حسابي", logout: "تسجيل الخروج" },
   common: { loading: "جارٍ التحميل...", cancel: "إلغاء", back: "رجوع", previous: "السابق", next: "التالي", seeAll: "عرض الكل", by: "بقلم", downloads: "تحميلات", reviews: "مراجعات" },
@@ -320,7 +320,7 @@ const ar: Messages = {
 };
 
 const en: Messages = {
-  nav: { home: "Home", catalogue: "Catalogue", blog: "Blog", about: "About", contact: "Contact", admin: "Admin" },
+  nav: { home: "Home", catalogue: "Catalogue", authors: "Authors", blog: "Blog", about: "About", contact: "Contact", admin: "Admin" },
   search: { placeholder: "Search for a book...", button: "Search" },
   account: { login: "Sign in", register: "Sign up", myAccount: "My account", logout: "Sign out" },
   common: { loading: "Loading...", cancel: "Cancel", back: "Back", previous: "Previous", next: "Next", seeAll: "See all", by: "by", downloads: "downloads", reviews: "reviews" },

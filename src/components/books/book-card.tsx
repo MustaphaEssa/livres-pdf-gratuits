@@ -12,6 +12,7 @@ interface BookCardProps {
     slug: string;
     title: string;
     author: string;
+    authorSlug?: string | null;
     coverImage?: string | null;
     pdfSize?: number | null;
     downloadCount: number;
@@ -67,9 +68,16 @@ export async function BookCard({ book, className }: BookCardProps) {
         </Link>
 
         {/* Author */}
-        <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
-          {book.author}
-        </p>
+        {book.authorSlug ? (
+          <Link
+            href={`/auteur/${book.authorSlug}`}
+            className="text-xs text-slate-500 dark:text-slate-400 mb-2 inline-block hover:text-amber-500 hover:underline"
+          >
+            {book.author}
+          </Link>
+        ) : (
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">{book.author}</p>
+        )}
 
         {/* Stats */}
         <div className="flex items-center gap-3 text-xs text-slate-400 mb-3">

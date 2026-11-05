@@ -41,7 +41,8 @@ model Book {
   slug          String   @unique
   title         String
   author        String
-  description   String? 
+  authorSlug    String?  // pour les pages/liens par auteur
+  description   String?
   coverImage    String?
   pdfUrl        String
   pdfSize       Int?     // Taille en bytes
@@ -73,6 +74,7 @@ model Book {
   @@index([slug])
   @@index([title])
   @@index([author])
+  @@index([authorSlug])
   @@index([isFeatured])
   @@index([downloadCount])
   @@index([createdAt])

@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import prisma from "@/lib/db";
+import { slugify } from "@/lib/utils";
 
 // Nombre de livres par page du catalogue
 export const PAGE_SIZE = 12;
@@ -155,6 +156,77 @@ export async function getRelatedBooks(
   return [...related, ...fill];
 }
 
+// Autres livres du même auteur (hors livre courant)
+export async function getSameAuthorBooks(
+  bookId: string,
+  authorSlug: string | null,
+  limit = 6
+): Promise<BookWithCategories[]> {
+  if (!authorSlug) return [];
+  return prisma.book.findMany({
+    where: { isPublished: true, authorSlug, id: { not: bookId } },
+    include: bookWithCategories.include,
+    orderBy: { downloadCount: "desc" },
+    take: limit,
+  });
+}
+
+// Livres d'un auteur (paginés) + nom affiché de l'auteur
+export async function getBooksByAuthorSlug(
+  authorSlug: string,
+  page = 1,
+  pageSize = PAGE_SIZE
+): Promise<SearchBooksResult & { authorName: string | null }> {
+  const where: Prisma.BookWhereInput = { isPublished: true, authorSlug };
+  const currentPage = Math.max(1, page);
+
+  const [total, books] = await Promise.all([
+    prisma.book.count({ where }),
+    prisma.book.findMany({
+      where,
+      include: bookWithCategories.include,
+      orderBy: { downloadCount: "desc" },
+      skip: (currentPage - 1) * pageSize,
+      take: pageSize,
+    }),
+  ]);
+
+  return {
+    books,
+    total,
+    page: currentPage,
+    pageSize,
+    totalPages: Math.max(1, Math.ceil(total / pageSize)),
+    authorName: books[0]?.author ?? null,
+  };
+}
+
+// Liste des auteurs (slug + nom + nombre de livres publiés), triée par nom
+export async function getAuthorsWithCounts(): Promise<
+  { slug: string; name: string; count: number }[]
+> {
+  const rows = await prisma.book.groupBy({
+    by: ["authorSlug", "author"],
+    where: { isPublished: true, authorSlug: { not: null } },
+    _count: { _all: true },
+  });
+
+  // Regroupe par slug (plusieurs variantes de nom possibles → on garde la 1re)
+  const bySlug = new Map<string, { slug: string; name: string; count: number }>();
+  for (const r of rows) {
+    const slug = r.authorSlug as string;
+    const existing = bySlug.get(slug);
+    if (existing) {
+      existing.count += r._count._all;
+    } else {
+      bySlug.set(slug, { slug, name: r.author, count: r._count._all });
+    }
+  }
+  return Array.from(bySlug.values()).sort((a, b) =>
+    a.name.localeCompare(b.name, "fr")
+  );
+}
+
 // Fiche d'un livre par slug
 export async function getBookBySlug(
   slug: string
@@ -224,6 +296,7 @@ export async function createBook(
   return prisma.book.create({
     data: {
       ...data,
+      authorSlug: data.author ? slugify(data.author) : null,
       language: data.language ?? "fr",
       categories: categoryConnect,
     },
@@ -262,6 +335,12 @@ export async function updateBook(
 ): Promise<BookWithCategories> {
   const { categorySlug, ...data } = input;
 
+  // Recalcule le slug auteur si l'auteur change
+  const dataWithAuthorSlug: UpdateBookInput & { authorSlug?: string } =
+    typeof data.author === "string"
+      ? { ...data, authorSlug: slugify(data.author) }
+      : data;
+
   // Remplace la catégorie si fournie
   if (categorySlug !== undefined) {
     const category = await prisma.category.findUnique({
@@ -277,7 +356,7 @@ export async function updateBook(
 
   return prisma.book.update({
     where: { id },
-    data,
+    data: dataWithAuthorSlug,
     include: bookWithCategories.include,
   });
 }

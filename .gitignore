@@ -45,6 +45,9 @@ prisma/migrations
 # Sauvegardes locales (peuvent contenir des secrets)
 *.bak
 
+# Dump de migration de données (ne pas versionner)
+data-export.json
+
 # Uploads
 public/uploads/books/*
 !public/uploads/books/.gitkeep

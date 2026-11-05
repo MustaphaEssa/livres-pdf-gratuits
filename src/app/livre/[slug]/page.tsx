@@ -20,7 +20,7 @@ import { FavoriteButton } from "@/components/books/favorite-button";
 import { Reviews } from "@/components/books/reviews";
 import { BookCard } from "@/components/books/book-card";
 import { formatFileSize } from "@/lib/utils";
-import { getBookBySlug, getRelatedBooks, incrementViewCount } from "@/lib/books";
+import { getBookBySlug, getRelatedBooks, getSameAuthorBooks, incrementViewCount } from "@/lib/books";
 import { getUserSession } from "@/lib/user-server";
 import prisma from "@/lib/db";
 import { SITE_URL, SITE_NAME } from "@/lib/site";
@@ -61,10 +61,11 @@ export default async function BookPage({ params }: BookPageProps) {
   }
 
   // Requêtes indépendantes lancées en parallèle (en-têtes, i18n, similaires, session)
-  const [hdrs, { t }, relatedBooks, session] = await Promise.all([
+  const [hdrs, { t }, relatedBooks, sameAuthorBooks, session] = await Promise.all([
     headers(),
     getServerI18n(),
     getRelatedBooks(book.id, book.categories.map((c) => c.categoryId), 4),
+    getSameAuthorBooks(book.id, book.authorSlug, 4),
     getUserSession(),
   ]);
 
@@ -246,9 +247,16 @@ export default async function BookPage({ params }: BookPageProps) {
                 <User className="h-5 w-5" />
                 <span>
                   par{" "}
-                  <strong className="text-slate-900 dark:text-white">
-                    {book.author}
-                  </strong>
+                  {book.authorSlug ? (
+                    <Link
+                      href={`/auteur/${book.authorSlug}`}
+                      className="font-bold text-slate-900 dark:text-white hover:text-amber-500 hover:underline"
+                    >
+                      {book.author}
+                    </Link>
+                  ) : (
+                    <strong className="text-slate-900 dark:text-white">{book.author}</strong>
+                  )}
                 </span>
               </div>
 
@@ -387,6 +395,30 @@ export default async function BookPage({ params }: BookPageProps) {
               </div>
             </div>
           </div>
+
+          {/* Du même auteur */}
+          {sameAuthorBooks.length > 0 && (
+            <section className="mt-16">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+                  Du même auteur
+                </h2>
+                {book.authorSlug && (
+                  <Link
+                    href={`/auteur/${book.authorSlug}`}
+                    className="text-sm text-amber-600 hover:underline"
+                  >
+                    Voir tout
+                  </Link>
+                )}
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                {sameAuthorBooks.map((b) => (
+                  <BookCard key={b.id} book={b} />
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* Livres similaires */}
           {relatedBooks.length > 0 && (
