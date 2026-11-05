@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* Mode sombre désactivé : les classes `dark:` ne s'activent que via une classe
+   `.dark` (jamais appliquée), donc elles restent inertes → site toujours clair. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   /* Colors - Primary */
   --color-primary: #1e3a5f;

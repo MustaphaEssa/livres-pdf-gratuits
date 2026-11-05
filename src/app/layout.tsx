@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import { Inter, Noto_Sans_Arabic } from "next/font/google";
-import { ThemeProvider } from "@/components/providers";
 import { I18nProvider } from "@/components/i18n-provider";
 import { SettingsProvider } from "@/components/settings-provider";
 import { getLocale } from "@/i18n/server";
@@ -83,16 +82,9 @@ export default async function RootLayout({
           rtl ? "font-arabic" : "font-sans"
         } antialiased`}
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <I18nProvider locale={locale}>
-            <SettingsProvider settings={settings}>{children}</SettingsProvider>
-          </I18nProvider>
-        </ThemeProvider>
+        <I18nProvider locale={locale}>
+          <SettingsProvider settings={settings}>{children}</SettingsProvider>
+        </I18nProvider>
 
         {/* Google Analytics (si configuré dans les paramètres du site) */}
         {settings.googleAnalyticsId && (

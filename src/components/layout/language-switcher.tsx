@@ -61,8 +61,7 @@ export function LanguageSwitcher() {
         )}
       >
         <Globe className="h-4 w-4 text-amber-500" />
-        <span className="hidden sm:inline">{current.flag}</span>
-        <span>{current.label}</span>
+        <span className="text-base leading-none">{current.flag}</span>
         <ChevronDown
           className={cn("h-4 w-4 text-slate-400 transition-transform duration-200", open && "rotate-180")}
         />

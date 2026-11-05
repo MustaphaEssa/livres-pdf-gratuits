@@ -3,9 +3,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useTheme } from "next-themes";
-import { Menu, X, Sun, Moon, BookOpen } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Menu, X, BookOpen } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AccountMenu } from "@/components/layout/account-menu";
@@ -29,14 +28,8 @@ export function Header() {
   const { t } = useI18n();
   const settings = useSiteSettings();
   const siteName = settings?.siteName ?? "Livre PDF Gratuit";
-  const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,21 +90,6 @@ export function Header() {
             {/* Language Switcher */}
             <LanguageSwitcher />
 
-            {/* Theme Toggle */}
-            {mounted && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              >
-                {theme === "dark" ? (
-                  <Sun className="h-5 w-5" />
-                ) : (
-                  <Moon className="h-5 w-5" />
-                )}
-              </Button>
-            )}
-
             {/* Account */}
             <AccountMenu variant="desktop" />
           </div>
@@ -160,19 +138,6 @@ export function Header() {
               ))}
               <div className="flex items-center gap-2 pt-2">
                 <LanguageSwitcher />
-                {mounted && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                  >
-                    {theme === "dark" ? (
-                      <Sun className="h-5 w-5" />
-                    ) : (
-                      <Moon className="h-5 w-5" />
-                    )}
-                  </Button>
-                )}
               </div>
               <AccountMenu variant="mobile" />
             </nav>
