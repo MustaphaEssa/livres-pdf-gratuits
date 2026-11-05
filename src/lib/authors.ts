@@ -1,49 +1,48 @@
 import "server-only";
+import prisma from "@/lib/db";
 
 // Normalise un nom d'auteur type Internet Archive vers un nom affichable.
 // "Hugo, Victor, 1802-1885" -> "Victor Hugo"
 export function formatAuthorName(raw: string): string {
-  // Retire les dates en fin de chaîne (", 1802-1885", ", 1802-", etc.)
-  let s = raw.replace(/,\s*\d{3,4}\s*-?\s*\d{0,4}\.?\s*$/g, "").trim();
+  const s = raw
+    .replace(/\[.*?\]/g, "")
+    .replace(/\d{3,4}\s*-\s*\d{0,4}/g, "")
+    .replace(/[;,]\s*$/g, "")
+    .trim();
   const parts = s.split(",").map((p) => p.trim()).filter(Boolean);
-  // Format "Nom, Prénom" -> "Prénom Nom"
   if (parts.length === 2) return `${parts[1]} ${parts[0]}`;
-  return s || raw;
+  return (parts[0] || s || raw).trim();
 }
 
 export interface AuthorInfo {
-  name: string; // nom affichable
-  image: string | null; // photo (Wikipédia) ou null
-  bio: string | null; // courte bio ou null
+  name: string;
+  image: string | null;
+  bio: string | null;
+  birthYear: number | null;
+  deathYear: number | null;
 }
 
-// Récupère photo + bio d'un auteur depuis Wikipédia (FR), mis en cache 7 jours.
-// Ne lève jamais : renvoie image/bio à null si introuvable.
-export async function getAuthorInfo(rawName: string): Promise<AuthorInfo> {
-  const name = formatAuthorName(rawName);
-  try {
-    const res = await fetch(
-      `https://fr.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(name)}`,
-      {
-        headers: { "User-Agent": "livrespdfgratuits.com (contact@livrespdfgratuits.com)" },
-        next: { revalidate: 60 * 60 * 24 * 7 },
-      }
-    );
-    if (!res.ok) return { name, image: null, bio: null };
-    const d = (await res.json()) as {
-      type?: string;
-      extract?: string;
-      thumbnail?: { source?: string };
-      originalimage?: { source?: string };
-    };
-    // Évite les pages d'homonymie
-    if (d.type === "disambiguation") return { name, image: null, bio: null };
+// Fiche auteur depuis la base (photo + bio + dates, stockées localement).
+// Repli sur le nom formaté si aucune fiche n'existe encore.
+export async function getAuthorInfo(
+  slug: string,
+  fallbackRawName: string
+): Promise<AuthorInfo> {
+  const a = await prisma.author.findUnique({ where: { slug } });
+  if (a) {
     return {
-      name,
-      image: d.thumbnail?.source ?? d.originalimage?.source ?? null,
-      bio: d.extract ?? null,
+      name: a.name,
+      image: a.image,
+      bio: a.bio,
+      birthYear: a.birthYear,
+      deathYear: a.deathYear,
     };
-  } catch {
-    return { name, image: null, bio: null };
   }
+  return {
+    name: formatAuthorName(fallbackRawName),
+    image: null,
+    bio: null,
+    birthYear: null,
+    deathYear: null,
+  };
 }

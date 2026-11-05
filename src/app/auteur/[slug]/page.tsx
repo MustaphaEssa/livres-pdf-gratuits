@@ -34,7 +34,7 @@ export default async function AuthorPage({ params, searchParams }: AuthorPagePro
 
   if (!authorName || total === 0) notFound();
 
-  const author = await getAuthorInfo(authorName);
+  const author = await getAuthorInfo(slug, authorName);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -67,11 +67,16 @@ export default async function AuthorPage({ params, searchParams }: AuthorPagePro
             </div>
             <div className="flex-1">
               <h1 className="text-3xl font-bold text-slate-900 dark:text-white">{author.name}</h1>
-              <p className="text-slate-600 dark:text-slate-400 mb-3">
+              {(author.birthYear || author.deathYear) && (
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  {author.birthYear ?? "?"} – {author.deathYear ?? "?"}
+                </p>
+              )}
+              <p className="text-slate-600 dark:text-slate-400 mt-1 mb-3">
                 {total} livre{total > 1 ? "s" : ""} disponible{total > 1 ? "s" : ""}
               </p>
               {author.bio && (
-                <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed max-w-3xl line-clamp-4">
+                <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed max-w-3xl line-clamp-5">
                   {author.bio}
                   <span className="text-slate-400"> — source : Wikipédia</span>
                 </p>

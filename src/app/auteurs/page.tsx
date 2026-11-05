@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { User } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
@@ -34,8 +35,12 @@ export default async function AuthorsPage() {
                   href={`/auteur/${a.slug}`}
                   className="flex items-center gap-3 p-4 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-amber-500 dark:hover:border-amber-500 transition-colors"
                 >
-                  <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center shrink-0">
-                    <User className="h-5 w-5 text-amber-500" />
+                  <div className="w-12 h-12 rounded-full overflow-hidden bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center shrink-0">
+                    {a.image ? (
+                      <Image src={a.image} alt={a.name} width={48} height={48} className="w-full h-full object-cover" />
+                    ) : (
+                      <User className="h-5 w-5 text-amber-500" />
+                    )}
                   </div>
                   <div className="min-w-0">
                     <div className="font-medium text-slate-900 dark:text-white truncate">{a.name}</div>

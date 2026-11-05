@@ -201,9 +201,10 @@ export async function getBooksByAuthorSlug(
   };
 }
 
-// Liste des auteurs (slug + nom + nombre de livres publiés), triée par nom
+// Liste des auteurs (slug + nom + photo + nombre de livres), triée par nom.
+// Le nom et la photo proviennent de la table Author quand elle est remplie.
 export async function getAuthorsWithCounts(): Promise<
-  { slug: string; name: string; count: number }[]
+  { slug: string; name: string; count: number; image: string | null }[]
 > {
   const rows = await prisma.book.groupBy({
     by: ["authorSlug", "author"],
@@ -211,17 +212,33 @@ export async function getAuthorsWithCounts(): Promise<
     _count: { _all: true },
   });
 
-  // Regroupe par slug (plusieurs variantes de nom possibles → on garde la 1re)
-  const bySlug = new Map<string, { slug: string; name: string; count: number }>();
+  const bySlug = new Map<
+    string,
+    { slug: string; name: string; count: number; image: string | null }
+  >();
   for (const r of rows) {
     const slug = r.authorSlug as string;
     const existing = bySlug.get(slug);
     if (existing) {
       existing.count += r._count._all;
     } else {
-      bySlug.set(slug, { slug, name: r.author, count: r._count._all });
+      bySlug.set(slug, { slug, name: r.author, count: r._count._all, image: null });
     }
   }
+
+  // Enrichit avec la fiche Author (nom affichable propre + photo)
+  const authors = await prisma.author.findMany({
+    where: { slug: { in: Array.from(bySlug.keys()) } },
+    select: { slug: true, name: true, image: true },
+  });
+  for (const a of authors) {
+    const e = bySlug.get(a.slug);
+    if (e) {
+      e.name = a.name;
+      e.image = a.image;
+    }
+  }
+
   return Array.from(bySlug.values()).sort((a, b) =>
     a.name.localeCompare(b.name, "fr")
   );

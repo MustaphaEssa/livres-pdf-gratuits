@@ -81,6 +81,21 @@ model Book {
   @@index([isPublished])
 }
 
+// Auteur (fiche : photo + bio). Relié aux livres via Book.authorSlug = Author.slug
+model Author {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  image     String?  // chemin local (ex: /uploads/authors/victor-hugo.jpg)
+  bio       String?
+  birthYear Int?
+  deathYear Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+}
+
 // Relation many-to-many Book-Category
 model BookCategory {
   bookId     String

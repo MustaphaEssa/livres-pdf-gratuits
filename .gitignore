@@ -53,3 +53,5 @@ public/uploads/books/*
 !public/uploads/books/.gitkeep
 public/uploads/covers/*
 !public/uploads/covers/.gitkeep
+public/uploads/authors/*
+!public/uploads/authors/.gitkeep
