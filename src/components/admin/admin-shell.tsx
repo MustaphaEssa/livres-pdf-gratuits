@@ -13,6 +13,7 @@ import {
   Users,
   Star,
   Settings,
+  Download,
   LogOut,
   Menu,
   X,
@@ -23,6 +24,7 @@ import { Button } from "@/components/ui/button";
 export type AdminNavKey =
   | "dashboard"
   | "livres"
+  | "import"
   | "categories"
   | "blog"
   | "utilisateurs"
@@ -51,6 +53,7 @@ export function AdminShell({ active, children }: AdminShellProps) {
   const navItems: { key: AdminNavKey; href: string; label: string; Icon: typeof BookOpen }[] = [
     { key: "dashboard", href: "/admin/dashboard", label: t.admin.dashboard, Icon: BarChart3 },
     { key: "livres", href: "/admin/livres", label: t.admin.books, Icon: BookOpen },
+    { key: "import", href: "/admin/import", label: "Import", Icon: Download },
     { key: "categories", href: "/admin/categories", label: t.admin.categories, Icon: Filter },
     { key: "blog", href: "/admin/blog", label: t.admin.blog, Icon: MessageSquare },
     { key: "utilisateurs", href: "/admin/utilisateurs", label: "Utilisateurs", Icon: Users },
