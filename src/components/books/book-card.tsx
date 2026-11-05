@@ -3,7 +3,7 @@ import Image from "next/image";
 import { Download, Eye, Star } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn, formatAuthorName } from "@/lib/utils";
 import { getServerI18n } from "@/i18n/server";
 
 interface BookCardProps {
@@ -32,8 +32,11 @@ export async function BookCard({ book, className }: BookCardProps) {
   const { t } = await getServerI18n();
   return (
     <Card className={cn("overflow-hidden group hover:shadow-lg transition-shadow", className)}>
-      {/* Cover Image */}
-      <div className="relative aspect-[2/3] overflow-hidden bg-slate-100 dark:bg-slate-800">
+      {/* Cover Image (cliquable) */}
+      <Link
+        href={`/livre/${book.slug}`}
+        className="relative block aspect-[2/3] overflow-hidden bg-slate-100 dark:bg-slate-800"
+      >
         {book.coverImage ? (
           <Image
             src={book.coverImage}
@@ -49,7 +52,7 @@ export async function BookCard({ book, className }: BookCardProps) {
             </span>
           </div>
         )}
-        
+
         {/* Category Badge */}
         {book.categories && book.categories.length > 0 && (
           <div className="absolute top-2 left-2">
@@ -58,7 +61,7 @@ export async function BookCard({ book, className }: BookCardProps) {
             </span>
           </div>
         )}
-      </div>
+      </Link>
 
       <CardContent className="p-4">
         {/* Title */}
@@ -74,10 +77,10 @@ export async function BookCard({ book, className }: BookCardProps) {
             href={`/auteur/${book.authorSlug}`}
             className="text-xs text-slate-500 dark:text-slate-400 mb-2 inline-block hover:text-amber-500 hover:underline"
           >
-            {book.author}
+            {formatAuthorName(book.author)}
           </Link>
         ) : (
-          <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">{book.author}</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">{formatAuthorName(book.author)}</p>
         )}
 
         {/* Stats */}

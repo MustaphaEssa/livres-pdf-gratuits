@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { formatAuthorName } from "@/lib/utils";
 
 interface Book {
   id: string;
@@ -186,7 +187,7 @@ export default function AdminBooksPage() {
                           </div>
                           <div>
                             <h4 className="font-medium text-slate-900 dark:text-white">{book.title}</h4>
-                            <p className="text-sm text-slate-500">{book.author}</p>
+                            <p className="text-sm text-slate-500">{formatAuthorName(book.author)}</p>
                           </div>
                         </div>
                       </td>

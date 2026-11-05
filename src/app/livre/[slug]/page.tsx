@@ -19,7 +19,7 @@ import { PdfReader } from "@/components/books/pdf-reader";
 import { FavoriteButton } from "@/components/books/favorite-button";
 import { Reviews } from "@/components/books/reviews";
 import { BookCard } from "@/components/books/book-card";
-import { formatFileSize } from "@/lib/utils";
+import { formatFileSize, formatAuthorName } from "@/lib/utils";
 import { getBookBySlug, getRelatedBooks, getSameAuthorBooks, incrementViewCount } from "@/lib/books";
 import { getUserSession } from "@/lib/user-server";
 import prisma from "@/lib/db";
@@ -253,10 +253,10 @@ export default async function BookPage({ params }: BookPageProps) {
                       href={`/auteur/${book.authorSlug}`}
                       className="font-bold text-slate-900 dark:text-white hover:text-amber-500 hover:underline"
                     >
-                      {book.author}
+                      {formatAuthorName(book.author)}
                     </Link>
                   ) : (
-                    <strong className="text-slate-900 dark:text-white">{book.author}</strong>
+                    <strong className="text-slate-900 dark:text-white">{formatAuthorName(book.author)}</strong>
                   )}
                 </span>
               </div>

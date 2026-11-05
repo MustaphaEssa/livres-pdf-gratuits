@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Script from "next/script";
+import NextTopLoader from "nextjs-toploader";
 import { Inter, Noto_Sans_Arabic } from "next/font/google";
 import { I18nProvider } from "@/components/i18n-provider";
 import { SettingsProvider } from "@/components/settings-provider";
@@ -82,6 +83,7 @@ export default async function RootLayout({
           rtl ? "font-arabic" : "font-sans"
         } antialiased`}
       >
+        <NextTopLoader color="#f59e0b" height={3} showSpinner={false} />
         <I18nProvider locale={locale}>
           <SettingsProvider settings={settings}>{children}</SettingsProvider>
         </I18nProvider>

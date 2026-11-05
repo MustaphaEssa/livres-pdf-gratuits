@@ -1,18 +1,9 @@
 import "server-only";
 import prisma from "@/lib/db";
+import { formatAuthorName } from "@/lib/utils";
 
-// Normalise un nom d'auteur type Internet Archive vers un nom affichable.
-// "Hugo, Victor, 1802-1885" -> "Victor Hugo"
-export function formatAuthorName(raw: string): string {
-  const s = raw
-    .replace(/\[.*?\]/g, "")
-    .replace(/\d{3,4}\s*-\s*\d{0,4}/g, "")
-    .replace(/[;,]\s*$/g, "")
-    .trim();
-  const parts = s.split(",").map((p) => p.trim()).filter(Boolean);
-  if (parts.length === 2) return `${parts[1]} ${parts[0]}`;
-  return (parts[0] || s || raw).trim();
-}
+// Ré-export pour compatibilité des imports existants
+export { formatAuthorName };
 
 export interface AuthorInfo {
   name: string;
