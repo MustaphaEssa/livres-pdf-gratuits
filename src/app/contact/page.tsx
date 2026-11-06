@@ -165,40 +165,38 @@ export default function ContactPage() {
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardContent className="p-6">
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
-                    {t.contact.hoursTitle}
-                  </h3>
-                  <div className="space-y-2 text-slate-600 dark:text-slate-400">
-                    <p>{t.contact.hoursWeek}</p>
-                    <p>{t.contact.hoursSat}</p>
-                    <p>{t.contact.hoursSun}</p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
-                    {t.contact.otherTitle}
-                  </h3>
-                  <p className="text-slate-600 dark:text-slate-400 mb-4">
-                    {t.contact.otherText}
-                  </p>
-                  <div className="flex gap-4">
-                    <a href="#" className="text-slate-400 hover:text-amber-500 transition-colors">
-                      Facebook
-                    </a>
-                    <a href="#" className="text-slate-400 hover:text-amber-500 transition-colors">
-                      Twitter
-                    </a>
-                    <a href="#" className="text-slate-400 hover:text-amber-500 transition-colors">
-                      Instagram
-                    </a>
-                  </div>
-                </CardContent>
-              </Card>
+              {(settings?.facebook || settings?.twitter || settings?.instagram || settings?.youtube) && (
+                <Card>
+                  <CardContent className="p-6">
+                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
+                      {t.contact.otherTitle}
+                    </h3>
+                    <p className="text-slate-600 dark:text-slate-400 mb-4">
+                      {t.contact.otherText}
+                    </p>
+                    <div className="flex gap-4">
+                      {[
+                        { name: "Facebook", href: settings?.facebook },
+                        { name: "Twitter", href: settings?.twitter },
+                        { name: "Instagram", href: settings?.instagram },
+                        { name: "YouTube", href: settings?.youtube },
+                      ]
+                        .filter((s) => s.href)
+                        .map((s) => (
+                          <a
+                            key={s.name}
+                            href={s.href as string}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-slate-400 hover:text-amber-500 transition-colors"
+                          >
+                            {s.name}
+                          </a>
+                        ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </div>
         </div>
