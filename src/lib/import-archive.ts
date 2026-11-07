@@ -99,6 +99,36 @@ async function fetchBuffer(url: string, timeoutMs = 120000): Promise<Buffer> {
     clearTimeout(t);
   }
 }
+
+// Récupère une image en suivant les redirections, et renvoie l'URL finale
+// (pour détecter le placeholder "notfound") + le type réel.
+async function fetchImage(
+  url: string,
+  timeoutMs = 30000
+): Promise<{ buf: Buffer; finalUrl: string } | null> {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { signal: ctrl.signal, headers: { "User-Agent": UA } });
+    if (!res.ok) return null;
+    return { buf: Buffer.from(await res.arrayBuffer()), finalUrl: res.url || url };
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+// Déduit l'extension d'image à partir des octets magiques (évite d'enregistrer
+// un PNG/WebP avec une extension .jpg trompeuse). null = format non reconnu.
+function imageExt(buf: Buffer): "jpg" | "png" | "webp" | null {
+  if (buf.length < 12) return null;
+  if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return "jpg";
+  if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) return "png";
+  if (buf.subarray(0, 4).toString("latin1") === "RIFF" && buf.subarray(8, 12).toString("latin1") === "WEBP")
+    return "webp";
+  return null;
+}
 async function pdfPageCount(data: Uint8Array): Promise<number | null> {
   try {
     const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
@@ -244,16 +274,19 @@ export async function importBook(
   await mkdir(BOOKS_DIR, { recursive: true });
   await writeFile(path.join(BOOKS_DIR, `${slug}.pdf`), pdfBuf);
 
+  // Couverture : le service d'image d'Internet Archive REDIRIGE vers
+  // /images/notfound.png (placeholder générique ~2 Ko) quand l'ouvrage n'a pas
+  // de vraie couverture. On rejette ce placeholder → la page affiche alors son
+  // visuel de repli (initiale du titre) plutôt qu'une image "non trouvée".
   let coverImage: string | null = null;
-  try {
-    const coverBuf = await fetchBuffer(`https://archive.org/services/img/${identifier}`, 30000);
-    if (coverBuf.length > 500) {
+  const img = await fetchImage(`https://archive.org/services/img/${identifier}`, 30000);
+  if (img && !/\/images\/notfound/.test(img.finalUrl)) {
+    const ext = imageExt(img.buf);
+    if (ext && img.buf.length > 1000) {
       await mkdir(COVERS_DIR, { recursive: true });
-      await writeFile(path.join(COVERS_DIR, `${slug}.jpg`), coverBuf);
-      coverImage = `/uploads/covers/${slug}.jpg`;
+      await writeFile(path.join(COVERS_DIR, `${slug}.${ext}`), img.buf);
+      coverImage = `/uploads/covers/${slug}.${ext}`;
     }
-  } catch {
-    /* couverture optionnelle */
   }
 
   let pageCount: number | null = Number(one(md.imagecount)) > 0 ? Number(one(md.imagecount)) : null;
