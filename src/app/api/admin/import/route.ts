@@ -12,6 +12,7 @@ interface Job {
   author: string;
   found: number;
   imported: number;
+  skipped: number; // doublons déjà présents
   log: string[];
   error?: string;
 }
@@ -40,8 +41,11 @@ async function run(job: Job, author: string, max: number, categoryMap: Record<st
         const res = await importBook(doc.identifier, author, categoryMap);
         if (res.status === "ok") {
           job.imported++;
-          job.log.push(`✓ ${res.title}`);
+          job.log.push(`✓ Importé : ${res.title}`);
           if (res.authorSlug && res.authorRaw) authorsSeen.set(res.authorSlug, res.authorRaw);
+        } else if (res.status === "duplicate") {
+          job.skipped++;
+          job.log.push(`⏭️ Doublon (déjà présent) : ${res.title}`);
         }
       } catch {
         /* on saute les échecs */
@@ -59,7 +63,9 @@ async function run(job: Job, author: string, max: number, categoryMap: Record<st
     }
 
     job.status = "done";
-    job.log.push(`✅ Terminé : ${job.imported} livre(s) importé(s).`);
+    job.log.push(
+      `✅ Terminé : ${job.imported} importé(s), ${job.skipped} doublon(s) ignoré(s).`
+    );
   } catch (e) {
     job.status = "error";
     job.error = e instanceof Error ? e.message : "Erreur inconnue";
@@ -91,7 +97,7 @@ export async function POST(request: Request) {
   for (const c of cats) categoryMap[c.slug] = c.id;
 
   const id = crypto.randomUUID();
-  const job: Job = { id, status: "running", author, found: 0, imported: 0, log: [] };
+  const job: Job = { id, status: "running", author, found: 0, imported: 0, skipped: 0, log: [] };
   jobs.set(id, job);
   prune();
   // Lance en arrière-plan (pas de await) — le serveur Node persistant poursuit la tâche

@@ -157,7 +157,7 @@ export async function searchAuthor(author: string, rows: number): Promise<Search
 }
 
 export interface ImportResult {
-  status: "ok" | "skip" | "fail";
+  status: "ok" | "skip" | "duplicate" | "fail";
   title?: string;
   authorSlug?: string;
   authorRaw?: string;
@@ -192,9 +192,13 @@ export async function importBook(
   categoryMap: Record<string, string> // slug -> id des catégories existantes
 ): Promise<ImportResult> {
   // Anti-doublon : si ce livre d'Internet Archive est déjà importé, on saute
-  // (avant tout téléchargement)
-  if (await prisma.book.count({ where: { sourceId: identifier } })) {
-    return { status: "skip" };
+  // (avant tout téléchargement) et on renvoie son titre pour le journal
+  const dup = await prisma.book.findFirst({
+    where: { sourceId: identifier },
+    select: { title: true },
+  });
+  if (dup) {
+    return { status: "duplicate", title: dup.title };
   }
 
   let meta: { metadata?: Record<string, unknown>; files?: { name: string; size?: string }[] };

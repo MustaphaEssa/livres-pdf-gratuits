@@ -12,6 +12,7 @@ interface Job {
   author: string;
   found: number;
   imported: number;
+  skipped: number;
   log: string[];
   error?: string;
 }
@@ -170,8 +171,8 @@ export default function AdminImportPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-base">
-                {job.author} — {job.imported} importé(s)
-                {job.found > 0 && ` / ${job.found} trouvé(s)`}
+                {job.author} — {job.imported} importé(s), {job.skipped} doublon(s)
+                {job.found > 0 && ` · ${job.found} trouvé(s)`}
               </CardTitle>
               {running ? (
                 <span className="flex items-center gap-1 text-sm text-amber-600">
