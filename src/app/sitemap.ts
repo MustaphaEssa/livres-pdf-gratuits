@@ -3,7 +3,7 @@ import prisma from "@/lib/db";
 import { SITE_URL } from "@/lib/site";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [books, categories] = await Promise.all([
+  const [books, categories, posts, authors] = await Promise.all([
     prisma.book.findMany({
       where: { isPublished: true },
       select: { slug: true, updatedAt: true },
@@ -12,19 +12,41 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       where: { type: "BOOK" },
       select: { slug: true },
     }),
+    prisma.post.findMany({
+      where: { isPublished: true },
+      select: { slug: true, updatedAt: true },
+    }),
+    prisma.book.findMany({
+      where: { isPublished: true, authorSlug: { not: null } },
+      select: { authorSlug: true },
+      distinct: ["authorSlug"],
+    }),
   ]);
 
-  const staticRoutes: MetadataRoute.Sitemap = [
-    "",
-    "/catalogue",
-    "/blog",
-    "/a-propos",
-    "/contact",
-  ].map((p) => ({
+  // Pages principales
+  const mainRoutes: MetadataRoute.Sitemap = [
+    { p: "", priority: 1, freq: "daily" as const },
+    { p: "/catalogue", priority: 0.9, freq: "daily" as const },
+    { p: "/auteurs", priority: 0.8, freq: "weekly" as const },
+    { p: "/blog", priority: 0.7, freq: "weekly" as const },
+    { p: "/a-propos", priority: 0.5, freq: "monthly" as const },
+    { p: "/contact", priority: 0.5, freq: "monthly" as const },
+  ].map(({ p, priority, freq }) => ({
     url: `${SITE_URL}${p}`,
     lastModified: new Date(),
-    changeFrequency: "weekly",
-    priority: p === "" ? 1 : 0.7,
+    changeFrequency: freq,
+    priority,
+  }));
+
+  // Pages légales (faible priorité)
+  const legalRoutes: MetadataRoute.Sitemap = [
+    "/confidentialite",
+    "/mentions-legales",
+    "/conditions",
+  ].map((p) => ({
+    url: `${SITE_URL}${p}`,
+    changeFrequency: "yearly",
+    priority: 0.2,
   }));
 
   const categoryRoutes: MetadataRoute.Sitemap = categories.map((c) => ({
@@ -33,6 +55,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
+  const authorRoutes: MetadataRoute.Sitemap = authors
+    .filter((a) => a.authorSlug)
+    .map((a) => ({
+      url: `${SITE_URL}/auteur/${a.authorSlug}`,
+      changeFrequency: "weekly",
+      priority: 0.6,
+    }));
+
   const bookRoutes: MetadataRoute.Sitemap = books.map((b) => ({
     url: `${SITE_URL}/livre/${b.slug}`,
     lastModified: b.updatedAt,
@@ -40,5 +70,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
-  return [...staticRoutes, ...categoryRoutes, ...bookRoutes];
+  const postRoutes: MetadataRoute.Sitemap = posts.map((p) => ({
+    url: `${SITE_URL}/blog/${p.slug}`,
+    lastModified: p.updatedAt,
+    changeFrequency: "monthly",
+    priority: 0.6,
+  }));
+
+  return [
+    ...mainRoutes,
+    ...legalRoutes,
+    ...categoryRoutes,
+    ...authorRoutes,
+    ...bookRoutes,
+    ...postRoutes,
+  ];
 }

@@ -31,8 +31,8 @@ export default async function LegalNoticePage() {
                 Le site <strong>{site}</strong> ({host}) est édité par :
               </p>
               <ul className="list-none pl-0 mt-2 space-y-1">
-                <li>Responsable de la publication : <strong>[À compléter : nom et prénom]</strong></li>
-                <li>Statut : <strong>[À compléter : particulier / auto-entrepreneur / société]</strong></li>
+                <li>Responsable de la publication : <strong>Mustapha Essaadaoui</strong></li>
+                <li>Statut : <strong>Particulier</strong></li>
                 <li>Contact : <a className="text-amber-600 hover:underline" href={`mailto:${email}`}>{email}</a></li>
                 <li>Pays : Maroc</li>
               </ul>

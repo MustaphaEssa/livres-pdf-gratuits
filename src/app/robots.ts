@@ -7,7 +7,13 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/admin", "/api", "/compte", "/auth"],
+        disallow: [
+          "/admin",
+          "/api",
+          "/compte",
+          "/auth",
+          "/*/telecharger", // routes de téléchargement PDF (évite le gaspillage de crawl)
+        ],
       },
     ],
     sitemap: `${SITE_URL}/sitemap.xml`,
