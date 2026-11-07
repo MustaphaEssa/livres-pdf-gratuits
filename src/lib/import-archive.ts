@@ -302,46 +302,64 @@ export async function importBook(
   return { status: "ok", title: cleanTitle, authorSlug, authorRaw: authorName };
 }
 
-// Crée/complète la fiche auteur (photo Wikipédia + bio + dates)
+// Recherche un auteur sur Wikipédia (API de recherche, tolérante aux variantes
+// de nom) et renvoie la photo + l'intro. `lang` = "fr" ou "en".
+async function wikipediaLookup(
+  name: string,
+  lang: string
+): Promise<{ image: string | null; bio: string | null }> {
+  try {
+    const url =
+      `https://${lang}.wikipedia.org/w/api.php?action=query&format=json&redirects=1` +
+      `&prop=pageimages|extracts&piprop=thumbnail&pithumbsize=500&exintro=1&explaintext=1` +
+      `&generator=search&gsrsearch=${encodeURIComponent(name)}&gsrlimit=1`;
+    const res = await fetch(url, { headers: { "User-Agent": UA } });
+    if (!res.ok) return { image: null, bio: null };
+    const d = (await res.json()) as {
+      query?: { pages?: Record<string, { thumbnail?: { source?: string }; extract?: string }> };
+    };
+    const pages = d?.query?.pages;
+    if (!pages) return { image: null, bio: null };
+    const page = Object.values(pages)[0];
+    return {
+      image: page?.thumbnail?.source ?? null,
+      bio: page?.extract ? page.extract.slice(0, 1200) : null,
+    };
+  } catch {
+    return { image: null, bio: null };
+  }
+}
+
+// Crée/complète la fiche auteur (photo + bio Wikipédia FR, repli EN pour la photo)
 export async function upsertAuthorProfile(authorSlug: string, rawName: string): Promise<boolean> {
   const name = formatAuthorName(rawName);
   const { birthYear, deathYear } = parseDates(rawName);
+
+  // FR d'abord (bio en français), puis EN en secours pour la photo
+  const fr = await wikipediaLookup(name, "fr");
+  let imgUrl = fr.image;
+  let bio = fr.bio;
+  if (!imgUrl) {
+    const en = await wikipediaLookup(name, "en");
+    imgUrl = en.image;
+    if (!bio) bio = en.bio; // bio EN seulement si aucune bio FR
+  }
+
   let image: string | null = null;
-  let bio: string | null = null;
-  try {
-    const res = await fetch(
-      `https://fr.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(name)}`,
-      { headers: { "User-Agent": UA } }
-    );
-    if (res.ok) {
-      const d = (await res.json()) as {
-        type?: string;
-        extract?: string;
-        thumbnail?: { source?: string };
-        originalimage?: { source?: string };
-      };
-      if (d.type !== "disambiguation") {
-        bio = d.extract ?? null;
-        const imgUrl = d.thumbnail?.source ?? d.originalimage?.source ?? null;
-        if (imgUrl) {
-          try {
-            const buf = await fetchBuffer(imgUrl, 30000);
-            if (buf.length > 500) {
-              const ext = (imgUrl.match(/\.(jpe?g|png|webp)(?:$|\?)/i)?.[1] ?? "jpg")
-                .toLowerCase()
-                .replace("jpeg", "jpg");
-              await mkdir(AUTHORS_DIR, { recursive: true });
-              await writeFile(path.join(AUTHORS_DIR, `${authorSlug}.${ext}`), buf);
-              image = `/uploads/authors/${authorSlug}.${ext}`;
-            }
-          } catch {
-            /* image optionnelle */
-          }
-        }
+  if (imgUrl) {
+    try {
+      const buf = await fetchBuffer(imgUrl, 30000);
+      if (buf.length > 500) {
+        const ext = (imgUrl.match(/\.(jpe?g|png|webp)(?:$|\?)/i)?.[1] ?? "jpg")
+          .toLowerCase()
+          .replace("jpeg", "jpg");
+        await mkdir(AUTHORS_DIR, { recursive: true });
+        await writeFile(path.join(AUTHORS_DIR, `${authorSlug}.${ext}`), buf);
+        image = `/uploads/authors/${authorSlug}.${ext}`;
       }
+    } catch {
+      /* image optionnelle */
     }
-  } catch {
-    /* Wikipédia optionnel */
   }
 
   await prisma.author.upsert({

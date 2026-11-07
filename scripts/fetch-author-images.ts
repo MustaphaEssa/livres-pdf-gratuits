@@ -33,27 +33,32 @@ function parseDates(raw: string): { birthYear: number | null; deathYear: number 
   return { birthYear: Number(m[1]), deathYear: m[2] ? Number(m[2]) : null };
 }
 
-async function wiki(name: string): Promise<{ image: string | null; bio: string | null }> {
+async function wikiLang(name: string, lang: string): Promise<{ image: string | null; bio: string | null }> {
   try {
-    const res = await fetch(
-      `https://fr.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(name)}`,
-      { headers: { "User-Agent": UA } }
-    );
+    const url =
+      `https://${lang}.wikipedia.org/w/api.php?action=query&format=json&redirects=1` +
+      `&prop=pageimages|extracts&piprop=thumbnail&pithumbsize=500&exintro=1&explaintext=1` +
+      `&generator=search&gsrsearch=${encodeURIComponent(name)}&gsrlimit=1`;
+    const res = await fetch(url, { headers: { "User-Agent": UA } });
     if (!res.ok) return { image: null, bio: null };
     const d = (await res.json()) as {
-      type?: string;
-      extract?: string;
-      thumbnail?: { source?: string };
-      originalimage?: { source?: string };
+      query?: { pages?: Record<string, { thumbnail?: { source?: string }; extract?: string }> };
     };
-    if (d.type === "disambiguation") return { image: null, bio: null };
-    return {
-      image: d.thumbnail?.source ?? d.originalimage?.source ?? null,
-      bio: d.extract ?? null,
-    };
+    const pages = d?.query?.pages;
+    if (!pages) return { image: null, bio: null };
+    const p = Object.values(pages)[0];
+    return { image: p?.thumbnail?.source ?? null, bio: p?.extract ? p.extract.slice(0, 1200) : null };
   } catch {
     return { image: null, bio: null };
   }
+}
+
+// FR d'abord (bio française), repli EN pour la photo
+async function wiki(name: string): Promise<{ image: string | null; bio: string | null }> {
+  const fr = await wikiLang(name, "fr");
+  if (fr.image) return fr;
+  const en = await wikiLang(name, "en");
+  return { image: en.image, bio: fr.bio ?? en.bio };
 }
 
 async function download(url: string, slug: string): Promise<string | null> {
