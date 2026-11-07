@@ -93,6 +93,9 @@ model Author {
   bio       String?
   birthYear Int?
   deathYear Int?
+  // Vrai quand un import complet n'a plus rien de nouveau à télécharger pour
+  // cet auteur (toutes ses œuvres disponibles sont déjà en base) → puce « à jour »
+  fullyImported Boolean @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

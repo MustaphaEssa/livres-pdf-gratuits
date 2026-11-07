@@ -29,9 +29,18 @@ function prune() {
   }
 }
 
-async function run(job: Job, author: string, max: number, categoryMap: Record<string, string>) {
+async function run(
+  job: Job,
+  author: string,
+  max: number,
+  categoryMap: Record<string, string>,
+  importAll: boolean
+) {
   try {
-    const docs = await searchAuthor(author, max * 4);
+    // En mode « tout importer » on récupère l'intégralité du corpus de l'auteur ;
+    // sinon on prend une marge (max*4) pour compenser doublons et écarts.
+    const rows = importAll ? 5000 : max * 4;
+    const docs = await searchAuthor(author, rows);
     job.found = docs.length;
     job.log.push(`${docs.length} résultat(s) trouvé(s) sur Internet Archive`);
 
@@ -67,6 +76,17 @@ async function run(job: Job, author: string, max: number, categoryMap: Record<st
       await upsertAuthorProfile(slug, raw).catch(() => {});
     }
 
+    // Marque l'auteur « à jour » si un import COMPLET non interrompu n'a rien
+    // ramené de nouveau (tout son corpus disponible est déjà en base).
+    if (importAll && !job.cancelled) {
+      await prisma.author
+        .update({
+          where: { slug: slugify(searchedName) },
+          data: { fullyImported: job.imported === 0 },
+        })
+        .catch(() => {});
+    }
+
     job.status = "done";
     job.log.push(
       `${job.cancelled ? "⏹️ Arrêté" : "✅ Terminé"} : ${job.imported} importé(s), ${job.skipped} doublon(s) ignoré(s).`
@@ -90,7 +110,9 @@ export async function POST(request: Request) {
   }
 
   const author = String(body.author || "").trim();
-  const max = Math.min(300, Math.max(1, Number(body.max) || 20));
+  const importAll = body.all === true;
+  // Mode « tout importer » : plafond haut (corpus complet) ; sinon valeur demandée
+  const max = importAll ? 5000 : Math.min(300, Math.max(1, Number(body.max) || 20));
   if (!author) return NextResponse.json({ error: "Nom d'auteur requis" }, { status: 400 });
 
   // Carte slug -> id des catégories de livres (pour la détection automatique)
@@ -106,7 +128,7 @@ export async function POST(request: Request) {
   jobs.set(id, job);
   prune();
   // Lance en arrière-plan (pas de await) — le serveur Node persistant poursuit la tâche
-  void run(job, author, max, categoryMap);
+  void run(job, author, max, categoryMap, importAll);
 
   return NextResponse.json({ jobId: id });
 }

@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { Download, Loader2, Search, Square } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Download, Loader2, Search, Square, Check, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { SUGGESTED_AUTHORS } from "@/lib/suggested-authors";
 
 interface Job {
   status: "running" | "done" | "error";
@@ -17,95 +18,60 @@ interface Job {
   error?: string;
 }
 
-// Auteurs classiques du domaine public (morts depuis +70 ans). Pour les auteurs
-// étrangers, l'import récupère leurs œuvres traduites en français sur Internet Archive.
-const SUGGESTED_AUTHORS = [
-  // Français
-  "Victor Hugo",
-  "Émile Zola",
-  "Honoré de Balzac",
-  "Alexandre Dumas",
-  "Jules Verne",
-  "Gustave Flaubert",
-  "Guy de Maupassant",
-  "Stendhal",
-  "George Sand",
-  "Voltaire",
-  "Jean-Jacques Rousseau",
-  "Molière",
-  "Jean de La Fontaine",
-  "Charles Baudelaire",
-  "Alphonse Daudet",
-  "Anatole France",
-  "Pierre Loti",
-  "Théophile Gautier",
-  "Prosper Mérimée",
-  "Chateaubriand",
-  "Denis Diderot",
-  "Montesquieu",
-  "Jean Racine",
-  "Pierre Corneille",
-  "Arthur Rimbaud",
-  "Paul Verlaine",
-  "Alfred de Musset",
-  "Beaumarchais",
-  "Michel de Montaigne",
-  "Alphonse de Lamartine",
-  // Anglais / Américains
-  "William Shakespeare",
-  "Charles Dickens",
-  "Edgar Allan Poe",
-  "Mark Twain",
-  "Oscar Wilde",
-  "Jack London",
-  "Daniel Defoe",
-  "Jonathan Swift",
-  "Walter Scott",
-  // Russes
-  "Léon Tolstoï",
-  "Fiodor Dostoïevski",
-  "Anton Tchekhov",
-  "Ivan Tourgueniev",
-  // Autres
-  "Johann Wolfgang von Goethe",
-  "Miguel de Cervantes",
-  "Dante Alighieri",
-  "Homère",
-  "Platon",
-  "Edmondo De Amicis",
-];
+interface AuthorStatus {
+  name: string;
+  slug: string;
+  inDb: number;
+  fullyImported: boolean;
+}
 
 export default function AdminImportPage() {
   const [author, setAuthor] = useState("");
   const [max, setMax] = useState(20);
   const [job, setJob] = useState<Job | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
+  const [runningAuthor, setRunningAuthor] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
   const [stopping, setStopping] = useState(false);
   const [error, setError] = useState("");
+  const [statuses, setStatuses] = useState<AuthorStatus[]>([]);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
-  }, []);
 
   const running = job?.status === "running";
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!author.trim() || starting || running) return;
+  // Charge le statut (compte + « à jour ») de chaque auteur suggéré
+  const fetchStatuses = useCallback(async () => {
+    try {
+      const r = await fetch("/api/admin/import/authors-status");
+      if (!r.ok) return;
+      const d = await r.json();
+      setStatuses(d.authors as AuthorStatus[]);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchStatuses();
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, [fetchStatuses]);
+
+  // Démarre un import (manuel ou « tout importer ») et suit sa progression
+  const startJob = async (opts: { author: string; all?: boolean; max?: number }) => {
+    if (starting || running) return;
     setStarting(true);
     setStopping(false);
     setError("");
     setJob(null);
     setJobId(null);
+    setRunningAuthor(opts.author);
     try {
       const res = await fetch("/api/admin/import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ author: author.trim(), max }),
+        body: JSON.stringify({ author: opts.author, all: opts.all, max: opts.max }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Échec du démarrage");
@@ -120,13 +86,22 @@ export default function AdminImportPage() {
         if (j.status !== "running" && pollRef.current) {
           clearInterval(pollRef.current);
           pollRef.current = null;
+          setRunningAuthor(null);
+          fetchStatuses(); // rafraîchit les puces « à jour »
         }
       }, 1500);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur");
+      setRunningAuthor(null);
     } finally {
       setStarting(false);
     }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!author.trim()) return;
+    startJob({ author: author.trim(), max });
   };
 
   // Demande l'arrêt de l'import en cours (les livres déjà importés sont gardés)
@@ -136,7 +111,7 @@ export default function AdminImportPage() {
     try {
       await fetch(`/api/admin/import?jobId=${jobId}`, { method: "DELETE" });
     } catch {
-      /* ignore — la boucle s'arrêtera au prochain tour */
+      /* la boucle s'arrêtera au prochain tour */
     }
   };
 
@@ -147,13 +122,15 @@ export default function AdminImportPage() {
           Importer des livres
         </h1>
         <p className="text-slate-600 dark:text-slate-400 mb-6">
-          Depuis Internet Archive (livres du domaine public). Renseigne un auteur, la
-          catégorie et le nombre de livres, puis lance l&apos;import.
+          Depuis Internet Archive (livres du domaine public). Importe un auteur
+          précis, ou télécharge d&apos;un coup <strong>tout le corpus</strong> d&apos;un
+          auteur listé ci-dessous.
         </p>
 
+        {/* Import manuel (auteur libre + nombre) */}
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle className="text-base">Nouvel import par auteur</CardTitle>
+            <CardTitle className="text-base">Import par auteur (manuel)</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -165,24 +142,6 @@ export default function AdminImportPage() {
                   placeholder="ex. Victor Hugo"
                   disabled={running}
                 />
-                <div className="mt-2">
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-1.5">
-                    Auteurs suggérés (domaine public) — clique pour remplir :
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {SUGGESTED_AUTHORS.map((a) => (
-                      <button
-                        key={a}
-                        type="button"
-                        disabled={running}
-                        onClick={() => setAuthor(a)}
-                        className="text-xs px-2.5 py-1 rounded-full border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors disabled:opacity-50"
-                      >
-                        {a}
-                      </button>
-                    ))}
-                  </div>
-                </div>
               </div>
               <div className="w-32">
                 <label className="block text-sm font-medium mb-1">Nombre max</label>
@@ -230,6 +189,81 @@ export default function AdminImportPage() {
               </div>
               {error && <p className="text-sm text-red-500">{error}</p>}
             </form>
+          </CardContent>
+        </Card>
+
+        {/* Auteurs suggérés : statut + import complet */}
+        <Card className="mb-6">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-base">Auteurs du domaine public</CardTitle>
+            <button
+              type="button"
+              onClick={fetchStatuses}
+              className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-amber-600"
+              title="Rafraîchir les statuts"
+            >
+              <RefreshCw className="h-3.5 w-3.5" /> Actualiser
+            </button>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+              « Tout importer » télécharge l&apos;intégralité des œuvres disponibles de
+              l&apos;auteur, au fur et à mesure. La puce{" "}
+              <span className="inline-flex items-center gap-0.5 rounded-full bg-green-100 px-1.5 text-[11px] font-medium text-green-700">
+                <Check className="h-3 w-3" /> À jour
+              </span>{" "}
+              apparaît quand il n&apos;y a plus rien de nouveau.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {SUGGESTED_AUTHORS.map((name) => {
+                const st = statuses.find((s) => s.name === name);
+                const inDb = st?.inDb ?? 0;
+                const done = st?.fullyImported ?? false;
+                const isRunning = runningAuthor === name;
+                return (
+                  <div
+                    key={name}
+                    className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2"
+                  >
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-medium text-slate-800 dark:text-slate-200">
+                        {name}
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                        <span>{inDb} livre{inDb > 1 ? "s" : ""}</span>
+                        {done && (
+                          <span className="inline-flex items-center gap-0.5 rounded-full bg-green-100 px-1.5 py-0.5 font-medium text-green-700 dark:bg-green-500/15 dark:text-green-400">
+                            <Check className="h-3 w-3" /> À jour
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={done ? "outline" : "default"}
+                      disabled={running}
+                      onClick={() => startJob({ author: name, all: true })}
+                      className={
+                        done
+                          ? "shrink-0"
+                          : "shrink-0 bg-amber-500 hover:bg-amber-600"
+                      }
+                    >
+                      {isRunning ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : done ? (
+                        "Revérifier"
+                      ) : inDb > 0 ? (
+                        "Compléter"
+                      ) : (
+                        "Tout importer"
+                      )}
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
           </CardContent>
         </Card>
 
