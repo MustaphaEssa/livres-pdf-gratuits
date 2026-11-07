@@ -20,6 +20,9 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://livrespdfgratuits.
 const PAGE_ID = process.env.FACEBOOK_PAGE_ID;
 const TOKEN = process.env.FACEBOOK_PAGE_TOKEN;
 const GRAPH = process.env.FACEBOOK_GRAPH_VERSION || "v21.0";
+// Quoi partager : "books" (livres seulement), "posts" (articles seulement),
+// "all" (articles prioritaires puis livres). Défaut : all.
+const SHARE = (process.env.FACEBOOK_SHARE || "all").toLowerCase();
 
 async function postToFacebook(message: string, link: string): Promise<string> {
   const url = `https://graph.facebook.com/${GRAPH}/${PAGE_ID}/feed`;
@@ -38,33 +41,37 @@ async function main() {
     process.exit(1);
   }
 
-  // 1. Article de blog non encore partagé (priorité)
-  const post = await prisma.post.findFirst({
-    where: { isPublished: true, fbPostedAt: null },
-    orderBy: { publishedAt: "desc" },
-  });
-  if (post) {
-    const link = `${SITE_URL}/blog/${post.slug}`;
-    const msg = `📝 ${post.title}${post.excerpt ? `\n\n${post.excerpt}` : ""}\n\nÀ lire sur notre blog 👇`;
-    const fbId = await postToFacebook(msg, link);
-    await prisma.post.update({ where: { id: post.id }, data: { fbPostedAt: new Date() } });
-    console.log(`✅ Article partagé : « ${post.title} » (post Facebook ${fbId})`);
-    return;
+  // 1. Article de blog non encore partagé (priorité) — sauf en mode "books"
+  if (SHARE !== "books") {
+    const post = await prisma.post.findFirst({
+      where: { isPublished: true, fbPostedAt: null },
+      orderBy: { publishedAt: "desc" },
+    });
+    if (post) {
+      const link = `${SITE_URL}/blog/${post.slug}`;
+      const msg = `📝 ${post.title}${post.excerpt ? `\n\n${post.excerpt}` : ""}\n\nÀ lire sur notre blog 👇`;
+      const fbId = await postToFacebook(msg, link);
+      await prisma.post.update({ where: { id: post.id }, data: { fbPostedAt: new Date() } });
+      console.log(`✅ Article partagé : « ${post.title} » (post Facebook ${fbId})`);
+      return;
+    }
   }
 
-  // 2. Sinon, un livre non encore partagé (les plus anciens d'abord → drip complet)
-  const book = await prisma.book.findFirst({
-    where: { isPublished: true, fbPostedAt: null },
-    orderBy: { createdAt: "asc" },
-    select: { id: true, slug: true, title: true, author: true },
-  });
-  if (book) {
-    const link = `${SITE_URL}/livre/${book.slug}`;
-    const msg = `📖 ${book.title}\n\npar ${formatAuthorName(book.author)} — livre gratuit à télécharger en PDF et à lire en ligne 👇`;
-    const fbId = await postToFacebook(msg, link);
-    await prisma.book.update({ where: { id: book.id }, data: { fbPostedAt: new Date() } });
-    console.log(`✅ Livre partagé : « ${book.title} » (post Facebook ${fbId})`);
-    return;
+  // 2. Un livre non encore partagé (les plus anciens d'abord) — sauf en mode "posts"
+  if (SHARE !== "posts") {
+    const book = await prisma.book.findFirst({
+      where: { isPublished: true, fbPostedAt: null },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, slug: true, title: true, author: true },
+    });
+    if (book) {
+      const link = `${SITE_URL}/livre/${book.slug}`;
+      const msg = `📖 ${book.title}\n\npar ${formatAuthorName(book.author)} — livre gratuit à télécharger en PDF et à lire en ligne 👇`;
+      const fbId = await postToFacebook(msg, link);
+      await prisma.book.update({ where: { id: book.id }, data: { fbPostedAt: new Date() } });
+      console.log(`✅ Livre partagé : « ${book.title} » (post Facebook ${fbId})`);
+      return;
+    }
   }
 
   console.log("Rien de nouveau à partager — tout a déjà été publié sur Facebook.");
