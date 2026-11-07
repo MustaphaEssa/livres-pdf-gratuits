@@ -40,6 +40,12 @@ export async function generateMetadata({ params }: BookPageProps) {
     return { title: "Livre non trouvé" };
   }
 
+  const image = book.coverImage
+    ? book.coverImage.startsWith("http")
+      ? book.coverImage
+      : `${SITE_URL}${book.coverImage}`
+    : `${SITE_URL}/og-image.png`;
+
   return {
     title: book.title,
     description: book.description ?? undefined,
@@ -47,7 +53,15 @@ export async function generateMetadata({ params }: BookPageProps) {
       title: book.title,
       description: book.description ?? undefined,
       type: "book",
+      url: `${SITE_URL}/livre/${book.slug}`,
       authors: [book.author],
+      images: [{ url: image }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: book.title,
+      description: book.description ?? undefined,
+      images: [image],
     },
   };
 }
