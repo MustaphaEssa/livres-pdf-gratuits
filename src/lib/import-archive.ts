@@ -140,10 +140,12 @@ function surname(input: string): string {
 }
 
 // Recherche les livres d'un auteur (domaine public, PDF) sur Internet Archive.
-// Requête stricte sur le format "Nom, Prénom" pour éviter les faux positifs.
+// Recherche par mots-clés (tolère les accents et l'ordre nom/prénom) ; la
+// vérification du nom de famille dans importBook filtre les faux positifs.
 export async function searchAuthor(author: string, rows: number): Promise<SearchDoc[]> {
-  const creator = toArchiveCreator(author);
-  const q = `creator:"${creator}" AND mediatype:texts AND format:(PDF) AND language:(French OR Français OR fre OR fra) AND year:[1500 TO 1929]`;
+  const tokens = norm(author).split(/\s+/).filter((t) => t.length > 1);
+  const creatorQ = tokens.length ? `creator:(${tokens.join(" AND ")})` : `creator:(${author})`;
+  const q = `${creatorQ} AND mediatype:texts AND format:(PDF) AND language:(French OR Français OR fre OR fra) AND year:[1500 TO 1929]`;
   const url =
     "https://archive.org/advancedsearch.php?q=" +
     encodeURIComponent(q) +
@@ -254,15 +256,19 @@ export async function importBook(
   if (!pageCount) pageCount = await pdfPageCount(new Uint8Array(pdfBuf));
 
   const cleanTitle = title.slice(0, 250);
-  const authorRaw = (fixEncoding(one(md.creator)) || fallbackAuthor).slice(0, 200);
-  const authorSlug = slugify(authorRaw);
+  // On rattache tous les livres à l'auteur RECHERCHÉ (nom propre et slug
+  // cohérents), sinon Internet Archive renvoie des variantes du créateur
+  // ("Hugo, Victor, 1802-1885", "Victor Hugo"…) → slugs incohérents + fiche
+  // auteur qui ne correspond à aucun livre.
+  const authorName = formatAuthorName(fallbackAuthor).slice(0, 200);
+  const authorSlug = slugify(authorName);
   const year = parseYear(md);
   const publisher = fixEncoding(one(md.publisher))?.slice(0, 200) ?? null;
 
   // Description : la vraie si elle est exploitable, sinon on en génère une propre
   const description =
     cleanDescription(md.description) ??
-    composeDescription(cleanTitle, formatAuthorName(authorRaw), year, publisher, pageCount);
+    composeDescription(cleanTitle, authorName, year, publisher, pageCount);
 
   // Catégories détectées automatiquement (celles qui existent en base)
   const catIds = detectCategorySlugs(md)
@@ -274,7 +280,7 @@ export async function importBook(
       slug,
       sourceId: identifier,
       title: cleanTitle,
-      author: authorRaw,
+      author: authorName,
       authorSlug,
       description,
       pdfUrl: `/uploads/books/${slug}.pdf`,
@@ -293,7 +299,7 @@ export async function importBook(
     },
   });
 
-  return { status: "ok", title: title.slice(0, 250), authorSlug, authorRaw };
+  return { status: "ok", title: cleanTitle, authorSlug, authorRaw: authorName };
 }
 
 // Crée/complète la fiche auteur (photo Wikipédia + bio + dates)
