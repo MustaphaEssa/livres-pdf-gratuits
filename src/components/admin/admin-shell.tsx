@@ -25,6 +25,7 @@ export type AdminNavKey =
   | "dashboard"
   | "livres"
   | "import"
+  | "auteurs"
   | "categories"
   | "blog"
   | "utilisateurs"
@@ -54,6 +55,7 @@ export function AdminShell({ active, children }: AdminShellProps) {
     { key: "dashboard", href: "/admin/dashboard", label: t.admin.dashboard, Icon: BarChart3 },
     { key: "livres", href: "/admin/livres", label: t.admin.books, Icon: BookOpen },
     { key: "import", href: "/admin/import", label: "Import", Icon: Download },
+    { key: "auteurs", href: "/admin/auteurs", label: "Auteurs", Icon: Users },
     { key: "categories", href: "/admin/categories", label: t.admin.categories, Icon: Filter },
     { key: "blog", href: "/admin/blog", label: t.admin.blog, Icon: MessageSquare },
     { key: "utilisateurs", href: "/admin/utilisateurs", label: "Utilisateurs", Icon: Users },
