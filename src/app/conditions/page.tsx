@@ -74,11 +74,14 @@ export default async function TermsPage() {
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">6. Liens et publicité</h2>
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">6. Publicité et liens d&apos;affiliation</h2>
               <p>
-                Le site peut contenir des annonces publicitaires et des liens vers des sites
-                tiers (y compris des liens d&apos;affiliation). {site} n&apos;est pas responsable du
-                contenu de ces sites externes ni des transactions qui y sont effectuées.
+                Le site peut afficher des annonces publicitaires et contenir des{" "}
+                <strong>liens d&apos;affiliation</strong>. Cela signifie que si vous cliquez sur
+                certains liens et effectuez un achat, nous pouvons percevoir une{" "}
+                <strong>commission, sans aucun surcoût pour vous</strong>. Ces partenariats n&apos;influencent
+                pas notre contenu. {site} n&apos;est pas responsable du contenu des sites tiers ni
+                des transactions qui y sont effectuées.
               </p>
             </section>
 

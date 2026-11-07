@@ -373,6 +373,17 @@ export default async function BookPage({ params }: BookPageProps) {
                 </div>
               </div>
 
+              {/* Domaine public */}
+              <div className="mb-8 flex items-start gap-3 rounded-lg border border-green-200 bg-green-50 dark:border-green-900/40 dark:bg-green-900/10 p-4">
+                <svg className="h-5 w-5 text-green-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-sm text-green-800 dark:text-green-300">
+                  <strong>Œuvre du domaine public</strong> — ce livre est libre de droits et peut
+                  être lu, téléchargé et partagé gratuitement. Source : Internet Archive.
+                </p>
+              </div>
+
               {/* Lecture en ligne */}
               <div id="lecture" className="scroll-mt-24">
                 <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-4">
