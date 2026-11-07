@@ -140,7 +140,7 @@ export default function AdminImportPage() {
                 <Input
                   type="number"
                   min={1}
-                  max={50}
+                  max={300}
                   value={max}
                   onChange={(e) => setMax(Number(e.target.value))}
                   disabled={running}

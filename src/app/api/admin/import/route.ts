@@ -85,7 +85,7 @@ export async function POST(request: Request) {
   }
 
   const author = String(body.author || "").trim();
-  const max = Math.min(50, Math.max(1, Number(body.max) || 20));
+  const max = Math.min(300, Math.max(1, Number(body.max) || 20));
   if (!author) return NextResponse.json({ error: "Nom d'auteur requis" }, { status: 400 });
 
   // Carte slug -> id des catégories de livres (pour la détection automatique)
