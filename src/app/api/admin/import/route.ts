@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth-server";
 import prisma from "@/lib/db";
 import { searchAuthor, importBook, upsertAuthorProfile } from "@/lib/import-archive";
+import { slugify, formatAuthorName } from "@/lib/utils";
 
 export const runtime = "nodejs";
 
@@ -47,6 +48,11 @@ async function run(job: Job, author: string, max: number, categoryMap: Record<st
       }
       if (job.log.length > 300) job.log.splice(0, job.log.length - 300);
     }
+
+    // Toujours (re)créer la fiche de l'auteur recherché — même si tous les
+    // livres existaient déjà (anti-doublon) → garantit la photo/bio.
+    const searchedName = formatAuthorName(author);
+    authorsSeen.set(slugify(searchedName), searchedName);
 
     for (const [slug, raw] of authorsSeen) {
       await upsertAuthorProfile(slug, raw).catch(() => {});
