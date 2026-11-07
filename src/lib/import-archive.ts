@@ -34,6 +34,33 @@ function parseYear(md: Record<string, unknown>): number | null {
   return m ? parseInt(m[1], 10) : null;
 }
 
+// Descriptions "poubelle" d'Internet Archive (notes de numérisation, pas de vrai contenu)
+const JUNK_DESC = /digiti[sz]ed|internet archive|uploaded|scanned|scann[eé]|google|microsoft|from the (library|collection)|brittle books|t[eé]l[eé]vers|num[eé]ris[eé]/i;
+
+// Nettoie une description IA : jointure si tableau, retrait HTML, rejet si vide/poubelle
+function cleanDescription(raw: unknown): string | null {
+  let s = Array.isArray(raw) ? raw.map(String).join(" ") : typeof raw === "string" ? raw : "";
+  s = stripHtml(fixEncoding(s) ?? "");
+  if (!s || s.length < 40 || JUNK_DESC.test(s)) return null;
+  return s.slice(0, 1500);
+}
+
+// Génère une description propre et lisible à partir des métadonnées réelles
+function composeDescription(
+  title: string,
+  authorName: string,
+  year: number | null,
+  publisher: string | null,
+  pageCount: number | null
+): string {
+  let s = `« ${title} » est un ouvrage de ${authorName}`;
+  if (year) s += `, publié en ${year}`;
+  if (publisher) s += ` aux éditions ${publisher}`;
+  s += ".";
+  s += ` Ce livre du domaine public${pageCount ? ` (${pageCount} pages)` : ""} est disponible gratuitement en téléchargement PDF et en lecture en ligne.`;
+  return s;
+}
+
 export function formatAuthorName(raw: string): string {
   const s = raw
     .replace(/\[.*?\]/g, "")
@@ -226,10 +253,16 @@ export async function importBook(
   let pageCount: number | null = Number(one(md.imagecount)) > 0 ? Number(one(md.imagecount)) : null;
   if (!pageCount) pageCount = await pdfPageCount(new Uint8Array(pdfBuf));
 
-  const descRaw = fixEncoding(one(md.description));
-  const description = descRaw ? stripHtml(descRaw).slice(0, 1200) : null;
+  const cleanTitle = title.slice(0, 250);
   const authorRaw = (fixEncoding(one(md.creator)) || fallbackAuthor).slice(0, 200);
   const authorSlug = slugify(authorRaw);
+  const year = parseYear(md);
+  const publisher = fixEncoding(one(md.publisher))?.slice(0, 200) ?? null;
+
+  // Description : la vraie si elle est exploitable, sinon on en génère une propre
+  const description =
+    cleanDescription(md.description) ??
+    composeDescription(cleanTitle, formatAuthorName(authorRaw), year, publisher, pageCount);
 
   // Catégories détectées automatiquement (celles qui existent en base)
   const catIds = detectCategorySlugs(md)
@@ -240,7 +273,7 @@ export async function importBook(
     data: {
       slug,
       sourceId: identifier,
-      title: title.slice(0, 250),
+      title: cleanTitle,
       author: authorRaw,
       authorSlug,
       description,
@@ -249,8 +282,8 @@ export async function importBook(
       pageCount,
       coverImage,
       language: "fr",
-      publishedYear: parseYear(md),
-      publisher: fixEncoding(one(md.publisher))?.slice(0, 200) ?? null,
+      publishedYear: year,
+      publisher,
       isbn: one(md.isbn) ?? null,
       isPublished: true,
       isFeatured: false,

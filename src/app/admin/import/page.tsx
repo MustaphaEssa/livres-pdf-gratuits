@@ -16,6 +16,31 @@ interface Job {
   error?: string;
 }
 
+// Auteurs classiques du domaine public (morts depuis +70 ans), riches en
+// livres français sur Internet Archive → import fiable
+const SUGGESTED_AUTHORS = [
+  "Victor Hugo",
+  "Émile Zola",
+  "Honoré de Balzac",
+  "Alexandre Dumas",
+  "Jules Verne",
+  "Gustave Flaubert",
+  "Guy de Maupassant",
+  "Stendhal",
+  "George Sand",
+  "Voltaire",
+  "Jean-Jacques Rousseau",
+  "Molière",
+  "Jean de La Fontaine",
+  "Charles Baudelaire",
+  "Alphonse Daudet",
+  "Anatole France",
+  "Pierre Loti",
+  "Théophile Gautier",
+  "Prosper Mérimée",
+  "Chateaubriand",
+];
+
 export default function AdminImportPage() {
   const [author, setAuthor] = useState("");
   const [max, setMax] = useState(20);
@@ -90,6 +115,24 @@ export default function AdminImportPage() {
                   placeholder="ex. Victor Hugo"
                   disabled={running}
                 />
+                <div className="mt-2">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-1.5">
+                    Auteurs suggérés (domaine public) — clique pour remplir :
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {SUGGESTED_AUTHORS.map((a) => (
+                      <button
+                        key={a}
+                        type="button"
+                        disabled={running}
+                        onClick={() => setAuthor(a)}
+                        className="text-xs px-2.5 py-1 rounded-full border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors disabled:opacity-50"
+                      >
+                        {a}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
               <div className="w-32">
                 <label className="block text-sm font-medium mb-1">Nombre max</label>
