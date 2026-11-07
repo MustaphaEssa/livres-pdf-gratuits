@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Download, Loader2, Search } from "lucide-react";
+import { Download, Loader2, Search, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,9 +17,10 @@ interface Job {
   error?: string;
 }
 
-// Auteurs classiques du domaine public (morts depuis +70 ans), riches en
-// livres français sur Internet Archive → import fiable
+// Auteurs classiques du domaine public (morts depuis +70 ans). Pour les auteurs
+// étrangers, l'import récupère leurs œuvres traduites en français sur Internet Archive.
 const SUGGESTED_AUTHORS = [
+  // Français
   "Victor Hugo",
   "Émile Zola",
   "Honoré de Balzac",
@@ -40,13 +41,47 @@ const SUGGESTED_AUTHORS = [
   "Théophile Gautier",
   "Prosper Mérimée",
   "Chateaubriand",
+  "Denis Diderot",
+  "Montesquieu",
+  "Jean Racine",
+  "Pierre Corneille",
+  "Arthur Rimbaud",
+  "Paul Verlaine",
+  "Alfred de Musset",
+  "Beaumarchais",
+  "Michel de Montaigne",
+  "Alphonse de Lamartine",
+  // Anglais / Américains
+  "William Shakespeare",
+  "Charles Dickens",
+  "Edgar Allan Poe",
+  "Mark Twain",
+  "Oscar Wilde",
+  "Jack London",
+  "Daniel Defoe",
+  "Jonathan Swift",
+  "Walter Scott",
+  // Russes
+  "Léon Tolstoï",
+  "Fiodor Dostoïevski",
+  "Anton Tchekhov",
+  "Ivan Tourgueniev",
+  // Autres
+  "Johann Wolfgang von Goethe",
+  "Miguel de Cervantes",
+  "Dante Alighieri",
+  "Homère",
+  "Platon",
+  "Edmondo De Amicis",
 ];
 
 export default function AdminImportPage() {
   const [author, setAuthor] = useState("");
   const [max, setMax] = useState(20);
   const [job, setJob] = useState<Job | null>(null);
+  const [jobId, setJobId] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
+  const [stopping, setStopping] = useState(false);
   const [error, setError] = useState("");
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -62,8 +97,10 @@ export default function AdminImportPage() {
     e.preventDefault();
     if (!author.trim() || starting || running) return;
     setStarting(true);
+    setStopping(false);
     setError("");
     setJob(null);
+    setJobId(null);
     try {
       const res = await fetch("/api/admin/import", {
         method: "POST",
@@ -73,9 +110,10 @@ export default function AdminImportPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Échec du démarrage");
 
-      const jobId = data.jobId as string;
+      const id = data.jobId as string;
+      setJobId(id);
       pollRef.current = setInterval(async () => {
-        const r = await fetch(`/api/admin/import?jobId=${jobId}`);
+        const r = await fetch(`/api/admin/import?jobId=${id}`);
         if (!r.ok) return;
         const j: Job = await r.json();
         setJob(j);
@@ -88,6 +126,17 @@ export default function AdminImportPage() {
       setError(err instanceof Error ? err.message : "Erreur");
     } finally {
       setStarting(false);
+    }
+  };
+
+  // Demande l'arrêt de l'import en cours (les livres déjà importés sont gardés)
+  const handleStop = async () => {
+    if (!jobId || stopping) return;
+    setStopping(true);
+    try {
+      await fetch(`/api/admin/import?jobId=${jobId}`, { method: "DELETE" });
+    } catch {
+      /* ignore — la boucle s'arrêtera au prochain tour */
     }
   };
 
@@ -149,18 +198,36 @@ export default function AdminImportPage() {
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 La catégorie est détectée automatiquement d&apos;après les sujets du livre.
               </p>
-              <Button
-                type="submit"
-                disabled={starting || running || !author.trim()}
-                className="bg-amber-500 hover:bg-amber-600"
-              >
-                {starting || running ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Search className="h-4 w-4 mr-2" />
+              <div className="flex items-center gap-2">
+                <Button
+                  type="submit"
+                  disabled={starting || running || !author.trim()}
+                  className="bg-amber-500 hover:bg-amber-600"
+                >
+                  {starting || running ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Search className="h-4 w-4 mr-2" />
+                  )}
+                  {running ? "Import en cours…" : "Importer"}
+                </Button>
+                {running && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleStop}
+                    disabled={stopping}
+                    className="border-red-300 text-red-600 hover:bg-red-50 dark:border-red-900/50 dark:hover:bg-red-900/10"
+                  >
+                    {stopping ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Square className="h-4 w-4 mr-2" />
+                    )}
+                    {stopping ? "Arrêt…" : "Arrêter"}
+                  </Button>
                 )}
-                {running ? "Import en cours…" : "Importer"}
-              </Button>
+              </div>
               {error && <p className="text-sm text-red-500">{error}</p>}
             </form>
           </CardContent>

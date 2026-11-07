@@ -15,6 +15,7 @@ interface Job {
   skipped: number; // doublons déjà présents
   log: string[];
   error?: string;
+  cancelled?: boolean; // demande d'arrêt par l'utilisateur
 }
 
 // Jobs en mémoire (OK car une seule instance de l'app). Perdus au redémarrage.
@@ -37,6 +38,10 @@ async function run(job: Job, author: string, max: number, categoryMap: Record<st
     const authorsSeen = new Map<string, string>();
     for (const doc of docs) {
       if (job.imported >= max) break;
+      if (job.cancelled) {
+        job.log.push("⏹️ Import arrêté par l'utilisateur.");
+        break;
+      }
       try {
         const res = await importBook(doc.identifier, author, categoryMap);
         if (res.status === "ok") {
@@ -64,7 +69,7 @@ async function run(job: Job, author: string, max: number, categoryMap: Record<st
 
     job.status = "done";
     job.log.push(
-      `✅ Terminé : ${job.imported} importé(s), ${job.skipped} doublon(s) ignoré(s).`
+      `${job.cancelled ? "⏹️ Arrêté" : "✅ Terminé"} : ${job.imported} importé(s), ${job.skipped} doublon(s) ignoré(s).`
     );
   } catch (e) {
     job.status = "error";
@@ -116,4 +121,19 @@ export async function GET(request: Request) {
   const job = id ? jobs.get(id) : null;
   if (!job) return NextResponse.json({ error: "Job introuvable" }, { status: 404 });
   return NextResponse.json(job);
+}
+
+// Demande l'arrêt d'un import en cours (la boucle s'interrompt proprement
+// avant le prochain livre — les livres déjà importés sont conservés).
+export async function DELETE(request: Request) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get("jobId");
+  const job = id ? jobs.get(id) : null;
+  if (!job) return NextResponse.json({ error: "Job introuvable" }, { status: 404 });
+
+  if (job.status === "running") job.cancelled = true;
+  return NextResponse.json({ ok: true });
 }

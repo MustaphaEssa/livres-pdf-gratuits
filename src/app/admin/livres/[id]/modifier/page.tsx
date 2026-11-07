@@ -223,7 +223,6 @@ export default function EditBookPage() {
                       className="w-full h-10 px-3 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm"
                     >
                       <option value="fr">Français</option>
-                      <option value="ar">العربية</option>
                       <option value="en">English</option>
                     </select>
                   </div>

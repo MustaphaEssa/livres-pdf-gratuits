@@ -14,7 +14,6 @@ import {
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { PdfReader } from "@/components/books/pdf-reader";
 import { FavoriteButton } from "@/components/books/favorite-button";
 import { Reviews } from "@/components/books/reviews";
@@ -192,7 +191,7 @@ export default async function BookPage({ params }: BookPageProps) {
             <div className="lg:col-span-1">
               <div className="sticky top-24">
                 {/* Cover Image */}
-                <div className="relative aspect-[2/3] bg-white rounded-lg overflow-hidden shadow-lg mb-6">
+                <div className="relative aspect-[2/3] bg-white rounded-2xl overflow-hidden shadow-xl ring-1 ring-slate-200/70 dark:ring-slate-700/60 mb-6">
                   {book.coverImage ? (
                     <Image
                       src={book.coverImage}
@@ -208,6 +207,9 @@ export default async function BookPage({ params }: BookPageProps) {
                       </span>
                     </div>
                   )}
+                  <span className="absolute left-3 top-3 rounded-full bg-amber-500 px-2.5 py-1 text-xs font-semibold text-white shadow-sm">
+                    Gratuit
+                  </span>
                 </div>
 
                 {/* Action Buttons */}
@@ -303,43 +305,40 @@ export default async function BookPage({ params }: BookPageProps) {
               </div>
 
               {/* Stats */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                <Card>
-                  <CardContent className="p-4 text-center">
-                    <FileText className="h-6 w-6 mx-auto mb-2 text-amber-500" />
-                    <div className="text-lg font-semibold text-slate-900 dark:text-white">
-                      {book.pdfSize ? formatFileSize(book.pdfSize) : "—"}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+                {[
+                  {
+                    icon: FileText,
+                    value: book.pdfSize ? formatFileSize(book.pdfSize) : "—",
+                    label: t.bookPage.size,
+                  },
+                  {
+                    icon: FileText,
+                    value: book.pageCount ?? "—",
+                    label: t.bookPage.pages,
+                  },
+                  {
+                    icon: Globe,
+                    value: languageNames[book.language] ?? book.language,
+                    label: t.bookPage.language,
+                  },
+                  {
+                    icon: Calendar,
+                    value: book.publishedYear ?? "—",
+                    label: t.bookPage.year,
+                  },
+                ].map(({ icon: Icon, value, label }) => (
+                  <div
+                    key={label}
+                    className="flex flex-col items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-4 text-center dark:border-slate-700 dark:bg-slate-800/50"
+                  >
+                    <Icon className="h-5 w-5 text-amber-500" />
+                    <div className="text-base font-semibold text-slate-900 dark:text-white">
+                      {value}
                     </div>
-                    <div className="text-xs text-slate-500">{t.bookPage.size}</div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-4 text-center">
-                    <FileText className="h-6 w-6 mx-auto mb-2 text-amber-500" />
-                    <div className="text-lg font-semibold text-slate-900 dark:text-white">
-                      {book.pageCount ?? "—"}
-                    </div>
-                    <div className="text-xs text-slate-500">{t.bookPage.pages}</div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-4 text-center">
-                    <Globe className="h-6 w-6 mx-auto mb-2 text-amber-500" />
-                    <div className="text-lg font-semibold text-slate-900 dark:text-white">
-                      {languageNames[book.language] ?? book.language}
-                    </div>
-                    <div className="text-xs text-slate-500">{t.bookPage.language}</div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-4 text-center">
-                    <Calendar className="h-6 w-6 mx-auto mb-2 text-amber-500" />
-                    <div className="text-lg font-semibold text-slate-900 dark:text-white">
-                      {book.publishedYear ?? "—"}
-                    </div>
-                    <div className="text-xs text-slate-500">{t.bookPage.year}</div>
-                  </CardContent>
-                </Card>
+                    <div className="text-xs text-slate-500">{label}</div>
+                  </div>
+                ))}
               </div>
 
               {/* Description */}

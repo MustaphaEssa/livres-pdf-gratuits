@@ -9,11 +9,9 @@ import {
   ZoomOut,
   Loader2,
   TextCursor,
-  Maximize2,
-  Minimize2,
+  X,
+  BookOpen,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 
 // Worker servi localement depuis /public (copié depuis pdfjs-dist)
 pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
@@ -27,8 +25,7 @@ const PDF_OPTIONS = {
   disableAutoFetch: false,
 };
 
-const MAX_WIDTH = 1100; // largeur de rendu maximale en mode normal
-const MAX_WIDTH_FULLSCREEN = 1600; // plafond plus large en plein écran
+const MAX_WIDTH = 960; // largeur de rendu maximale (lecture confortable)
 
 interface PdfViewerProps {
   pdfUrl: string;
@@ -36,17 +33,17 @@ interface PdfViewerProps {
   onClose: () => void;
 }
 
-// Visionneuse PDF optimisée : rendu ajusté à la largeur, résolution plafonnée,
-// couche de texte optionnelle, préchargement de la page suivante, nav clavier.
+// Lecteur immersif plein écran : fond sombre, page centrée, barre de progression,
+// saut de page, zoom, couche de texte optionnelle, navigation clavier/boutons.
 export function PdfViewer({ pdfUrl, title, onClose }: PdfViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [numPages, setNumPages] = useState<number>(0);
   const [pageNumber, setPageNumber] = useState(1);
+  const [pageInput, setPageInput] = useState("1");
   const [zoom, setZoom] = useState(1); // 1 = ajusté à la largeur
   const [containerWidth, setContainerWidth] = useState(0);
   const [dpr, setDpr] = useState(1);
-  const [showText, setShowText] = useState(false); // couche de texte (sélection) off par défaut
-  const [fullscreen, setFullscreen] = useState(false);
+  const [showText, setShowText] = useState(false); // sélection de texte off par défaut
   const [error, setError] = useState<string | null>(null);
 
   // Mesure la largeur disponible (rendu net, adapté à l'écran)
@@ -57,159 +54,195 @@ export function PdfViewer({ pdfUrl, title, onClose }: PdfViewerProps) {
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
-    // Plafonne la densité de pixels à 2 (canvas plus légers sur écrans Retina)
     setDpr(Math.min(2, window.devicePixelRatio || 1));
     return () => ro.disconnect();
   }, []);
 
-  const pageWidth = useMemo(() => {
-    const cap = fullscreen ? MAX_WIDTH_FULLSCREEN : MAX_WIDTH;
-    const base = Math.min(containerWidth || cap, cap);
-    return Math.max(200, Math.floor(base * zoom));
-  }, [containerWidth, zoom, fullscreen]);
-
-  const goPrev = useCallback(
-    () => setPageNumber((p) => Math.max(1, p - 1)),
-    []
-  );
-  const goNext = useCallback(
-    () => setPageNumber((p) => Math.min(numPages || p, p + 1)),
-    [numPages]
-  );
-
-  // Navigation au clavier (flèches) + Échap pour quitter le plein écran
+  // Verrouille le défilement de la page en arrière-plan pendant la lecture
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "ArrowLeft") goPrev();
-      else if (e.key === "ArrowRight") goNext();
-      else if (e.key === "Escape" && fullscreen) setFullscreen(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [goPrev, goNext, fullscreen]);
-
-  // Bloque le défilement de la page en arrière-plan quand on est en plein écran
-  useEffect(() => {
-    if (!fullscreen) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = prev;
     };
-  }, [fullscreen]);
+  }, []);
+
+  const pageWidth = useMemo(() => {
+    // marge horizontale (padding du conteneur) réservée
+    const base = Math.min((containerWidth || MAX_WIDTH) - 32, MAX_WIDTH);
+    return Math.max(200, Math.floor(base * zoom));
+  }, [containerWidth, zoom]);
+
+  const goTo = useCallback(
+    (n: number) => {
+      const clamped = Math.max(1, Math.min(numPages || n, n));
+      setPageNumber(clamped);
+      setPageInput(String(clamped));
+      containerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    },
+    [numPages]
+  );
+
+  const goPrev = useCallback(() => goTo(pageNumber - 1), [goTo, pageNumber]);
+  const goNext = useCallback(() => goTo(pageNumber + 1), [goTo, pageNumber]);
+
+  // Navigation clavier : flèches / espace pour tourner les pages, Échap pour fermer
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement;
+      if (el?.tagName === "INPUT") return; // ne pas intercepter la saisie
+      if (e.key === "ArrowLeft") goPrev();
+      else if (e.key === "ArrowRight" || e.key === " ") {
+        e.preventDefault();
+        goNext();
+      } else if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [goPrev, goNext, onClose]);
+
+  const progress = numPages > 0 ? (pageNumber / numPages) * 100 : 0;
 
   const pageLoader = (
-    <div className="flex items-center gap-2 text-slate-500 py-16">
+    <div className="flex items-center gap-2 text-slate-300 py-24">
       <Loader2 className="h-5 w-5 animate-spin" />
       Chargement…
     </div>
   );
 
+  const iconBtn =
+    "inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-200 transition-colors hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent";
+
   return (
-    <Card className={fullscreen ? "fixed inset-0 z-[100] rounded-none border-0 overflow-auto" : undefined}>
-      <CardContent className="p-4">
-        {/* Barre d'outils */}
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={goPrev} disabled={pageNumber <= 1}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="text-sm text-slate-600 dark:text-slate-300 min-w-[90px] text-center">
-              Page {pageNumber} / {numPages || "…"}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={goNext}
-              disabled={numPages > 0 && pageNumber >= numPages}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant={showText ? "default" : "outline"}
-              size="sm"
-              onClick={() => setShowText((v) => !v)}
-              title="Activer la sélection de texte (plus lent)"
-            >
-              <TextCursor className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setZoom((s) => Math.max(0.5, +(s - 0.2).toFixed(2)))}
-            >
-              <ZoomOut className="h-4 w-4" />
-            </Button>
-            <span className="text-sm text-slate-500 w-12 text-center">
-              {Math.round(zoom * 100)}%
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setZoom((s) => Math.min(3, +(s + 0.2).toFixed(2)))}
-            >
-              <ZoomIn className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setFullscreen((v) => !v)}
-              title={fullscreen ? "Quitter le plein écran (Échap)" : "Plein écran"}
-            >
-              {fullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-            </Button>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              Fermer
-            </Button>
-          </div>
-        </div>
-
-        {/* Zone de lecture */}
+    <div className="fixed inset-0 z-[100] flex flex-col bg-slate-950/95 backdrop-blur-sm">
+      {/* Barre de progression */}
+      <div className="h-1 w-full bg-white/10">
         <div
-          ref={containerRef}
-          className={`bg-slate-200 dark:bg-slate-900 rounded-lg overflow-auto flex justify-center p-4 ${
-            fullscreen ? "h-[calc(100vh-7rem)]" : "max-h-[80vh]"
-          }`}
+          className="h-full bg-amber-500 transition-all duration-300 ease-out"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+
+      {/* Barre supérieure */}
+      <header className="flex items-center justify-between gap-3 px-4 py-3">
+        <div className="flex min-w-0 items-center gap-2 text-slate-200">
+          <BookOpen className="h-5 w-5 shrink-0 text-amber-500" />
+          <span className="truncate text-sm font-medium">{title}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setShowText((v) => !v)}
+            title="Sélection de texte (plus lent)"
+            className={`${iconBtn} ${showText ? "bg-amber-500/20 text-amber-400" : ""}`}
+          >
+            <TextCursor className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setZoom((s) => Math.max(0.5, +(s - 0.2).toFixed(2)))}
+            title="Dézoomer"
+            className={iconBtn}
+          >
+            <ZoomOut className="h-4 w-4" />
+          </button>
+          <span className="w-11 text-center text-xs text-slate-400">
+            {Math.round(zoom * 100)}%
+          </span>
+          <button
+            type="button"
+            onClick={() => setZoom((s) => Math.min(3, +(s + 0.2).toFixed(2)))}
+            title="Zoomer"
+            className={iconBtn}
+          >
+            <ZoomIn className="h-4 w-4" />
+          </button>
+          <div className="mx-1 h-5 w-px bg-white/10" />
+          <button type="button" onClick={onClose} title="Fermer (Échap)" className={iconBtn}>
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+      </header>
+
+      {/* Zone de lecture */}
+      <div
+        ref={containerRef}
+        className="flex flex-1 justify-center overflow-auto px-4 py-6"
+      >
+        {error ? (
+          <div className="py-24 text-center text-slate-400">
+            <p className="mb-2">Impossible d&apos;afficher ce PDF.</p>
+            <p className="text-sm">{error}</p>
+          </div>
+        ) : (
+          <Document
+            file={pdfUrl}
+            options={PDF_OPTIONS}
+            onLoadSuccess={({ numPages }) => {
+              setNumPages(numPages);
+              setError(null);
+            }}
+            onLoadError={(e) => setError(e.message)}
+            loading={pageLoader}
+            className="h-max"
+          >
+            {containerWidth > 0 && (
+              <Page
+                key={`${pageNumber}-${pageWidth}-${showText}`}
+                pageNumber={pageNumber}
+                width={pageWidth}
+                devicePixelRatio={dpr}
+                renderTextLayer={showText}
+                renderAnnotationLayer={showText}
+                loading={pageLoader}
+                className="overflow-hidden rounded-lg shadow-2xl shadow-black/50"
+              />
+            )}
+          </Document>
+        )}
+      </div>
+
+      {/* Barre inférieure : navigation */}
+      <footer className="flex items-center justify-center gap-3 px-4 py-3">
+        <button
+          type="button"
+          onClick={goPrev}
+          disabled={pageNumber <= 1}
+          className={iconBtn}
+          title="Page précédente (←)"
         >
-          {error ? (
-            <div className="text-center py-16 text-slate-500">
-              <p className="mb-2">Impossible d&apos;afficher ce PDF.</p>
-              <p className="text-sm">{error}</p>
-            </div>
-          ) : (
-            <Document
-              file={pdfUrl}
-              options={PDF_OPTIONS}
-              onLoadSuccess={({ numPages }) => {
-                setNumPages(numPages);
-                setError(null);
-              }}
-              onLoadError={(e) => setError(e.message)}
-              loading={pageLoader}
-            >
-              {containerWidth > 0 && (
-                <Page
-                  key={`${pageNumber}-${pageWidth}-${showText}`}
-                  pageNumber={pageNumber}
-                  width={pageWidth}
-                  devicePixelRatio={dpr}
-                  renderTextLayer={showText}
-                  renderAnnotationLayer={showText}
-                  loading={pageLoader}
-                  className="shadow-lg"
-                />
-              )}
-            </Document>
-          )}
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+
+        <div className="flex items-center gap-1.5 text-sm text-slate-300">
+          <input
+            type="text"
+            inputMode="numeric"
+            value={pageInput}
+            onChange={(e) => setPageInput(e.target.value.replace(/[^\d]/g, ""))}
+            onBlur={() => goTo(Number(pageInput) || pageNumber)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                goTo(Number(pageInput) || pageNumber);
+                (e.target as HTMLInputElement).blur();
+              }
+            }}
+            className="h-9 w-14 rounded-lg border border-white/15 bg-white/5 text-center text-slate-100 outline-none focus:border-amber-500"
+            aria-label="Numéro de page"
+          />
+          <span className="text-slate-500">/ {numPages || "…"}</span>
         </div>
 
-        <p className="text-xs text-slate-400 text-center mt-3">
-          {title} · Utilisez ← → pour naviguer
-        </p>
-      </CardContent>
-    </Card>
+        <button
+          type="button"
+          onClick={goNext}
+          disabled={numPages > 0 && pageNumber >= numPages}
+          className={iconBtn}
+          title="Page suivante (→)"
+        >
+          <ChevronRight className="h-5 w-5" />
+        </button>
+      </footer>
+    </div>
   );
 }

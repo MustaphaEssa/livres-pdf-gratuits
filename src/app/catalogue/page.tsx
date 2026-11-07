@@ -167,7 +167,6 @@ export default async function CataloguePage({
                     {[
                       { code: "", label: t.catalogue.allLanguages },
                       { code: "fr", label: "Français" },
-                      { code: "ar", label: "العربية" },
                       { code: "en", label: "English" },
                     ].map((lang) => (
                       <Link

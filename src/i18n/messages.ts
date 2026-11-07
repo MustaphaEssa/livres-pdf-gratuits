@@ -424,7 +424,8 @@ const en: Messages = {
   },
 };
 
-export const messages: Record<Locale, Messages> = { fr, ar, en };
+export const messages: Record<Locale, Messages> = { fr, en };
+void ar; // dictionnaire arabe conservé mais désactivé
 
 export function getMessages(locale: Locale): Messages {
   return messages[locale];

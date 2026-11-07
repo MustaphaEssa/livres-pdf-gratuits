@@ -10,7 +10,6 @@ import { cn } from "@/lib/utils";
 // Drapeau + nom natif pour chaque langue
 const LOCALE_INFO: Record<Locale, { flag: string; label: string }> = {
   fr: { flag: "🇫🇷", label: "Français" },
-  ar: { flag: "🇲🇦", label: "العربية" },
   en: { flag: "🇬🇧", label: "English" },
 };
 
