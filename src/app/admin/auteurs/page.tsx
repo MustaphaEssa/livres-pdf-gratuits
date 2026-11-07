@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { Loader2, Search, Users, Merge } from "lucide-react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { Loader2, Search, Users, Merge, ImageDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,9 @@ export default function AdminAuthorsPage() {
   const [target, setTarget] = useState("");
   const [merging, setMerging] = useState(false);
   const [message, setMessage] = useState("");
+  const [photoStatus, setPhotoStatus] = useState("");
+  const [photoRunning, setPhotoRunning] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchAuthors = async () => {
     setLoading(true);
@@ -35,7 +38,30 @@ export default function AdminAuthorsPage() {
 
   useEffect(() => {
     fetchAuthors();
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
   }, []);
+
+  const fetchMissingPhotos = async () => {
+    setPhotoRunning(true);
+    setPhotoStatus("Démarrage…");
+    const res = await fetch("/api/admin/auteurs/photos", { method: "POST" });
+    const { jobId } = await res.json();
+    pollRef.current = setInterval(async () => {
+      const r = await fetch(`/api/admin/auteurs/photos?jobId=${jobId}`);
+      if (!r.ok) return;
+      const j = await r.json();
+      setPhotoStatus(`${j.done}/${j.total} traités — ${j.withPhoto} photo(s) trouvée(s)`);
+      if (j.status !== "running" && pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+        setPhotoRunning(false);
+        setPhotoStatus(`✅ Terminé — ${j.withPhoto} photo(s) ajoutée(s).`);
+        fetchAuthors();
+      }
+    }, 2000);
+  };
 
   const filtered = useMemo(
     () => authors.filter((a) => a.name.toLowerCase().includes(query.toLowerCase())),
@@ -82,7 +108,12 @@ export default function AdminAuthorsPage() {
             {authors.length} auteur(s) — coche plusieurs entrées du même auteur pour les fusionner.
           </p>
         </div>
+        <Button onClick={fetchMissingPhotos} disabled={photoRunning} variant="outline">
+          {photoRunning ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ImageDown className="h-4 w-4 mr-2" />}
+          Récupérer les photos manquantes
+        </Button>
       </div>
+      {photoStatus && <p className="mb-4 text-sm text-slate-600 dark:text-slate-400">{photoStatus}</p>}
 
       <Card className="mb-6">
         <CardContent className="p-4">

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth-server";
 import prisma from "@/lib/db";
 import { formatAuthorName, slugify } from "@/lib/utils";
+import { upsertAuthorProfile } from "@/lib/import-archive";
 
 export const runtime = "nodejs";
 
@@ -96,6 +97,9 @@ export async function POST(request: Request) {
   } else if (existing) {
     await prisma.author.update({ where: { slug: targetSlug }, data: { name: targetName } });
   }
+
+  // Récupère/rafraîchit automatiquement la photo + bio de l'auteur final
+  await upsertAuthorProfile(canonicalSlug, targetName).catch(() => {});
 
   return NextResponse.json({ ok: true, merged: slugs.length, booksMoved: updated.count, targetSlug: canonicalSlug });
 }
