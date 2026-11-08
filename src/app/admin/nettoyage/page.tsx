@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import { Loader2, Trash2, Search, AlertTriangle, ShieldCheck, RefreshCw } from "lucide-react";
+import { Loader2, Trash2, Search, AlertTriangle, ShieldCheck, RefreshCw, Copy, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,12 +16,18 @@ interface BookRow {
   sizeBytes: number;
   isProtected: boolean;
   reason: string | null;
+  siteNote: string | null;
+  dupKey: string | null;
+  dupIsKeeper: boolean;
 }
 
 interface Analysis {
   books: BookRow[];
   total: number;
   deletable: number;
+  dupGroups: number;
+  dupDeletable: number;
+  dupDeletableBytes: number;
   cachedAt: number | null;
 }
 
@@ -82,6 +88,19 @@ export default function AdminNettoyagePage() {
     );
   };
 
+  // Sélectionne les doublons supprimables (garde la copie la plus populaire)
+  const selectDuplicates = () => {
+    if (!analysis) return;
+    setConfirm(false);
+    setSelected(
+      new Set(
+        analysis.books
+          .filter((b) => !b.isProtected && b.dupKey && !b.dupIsKeeper)
+          .map((b) => b.id)
+      )
+    );
+  };
+
   const toggle = (id: string) => {
     setConfirm(false);
     setSelected((prev) => {
@@ -131,9 +150,10 @@ export default function AdminNettoyagePage() {
         </h1>
         <p className="text-slate-600 dark:text-slate-400 mb-6">
           Libère de l&apos;espace disque en supprimant les livres les{" "}
-          <strong>moins populaires sur Internet Archive</strong>. Les livres en
-          vedette, consultés, téléchargés ou mis en favori sont{" "}
-          <strong>protégés</strong> et ne peuvent pas être supprimés ici.
+          <strong>moins populaires sur Internet Archive</strong>, et les{" "}
+          <strong>doublons</strong> (même titre/auteur importé plusieurs fois).
+          Le classement est basé uniquement sur l&apos;importance internet ;
+          l&apos;activité de ton site est affichée à titre indicatif.
         </p>
 
         {/* Lancement de l'analyse */}
@@ -206,6 +226,17 @@ export default function AdminNettoyagePage() {
                   <Button type="button" variant="outline" onClick={applyThreshold}>
                     Appliquer le seuil
                   </Button>
+                  {analysis.dupDeletable > 0 && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={selectDuplicates}
+                      className="border-purple-300 text-purple-700 hover:bg-purple-50 dark:border-purple-900/50 dark:text-purple-400 dark:hover:bg-purple-900/10"
+                    >
+                      <Copy className="h-4 w-4 mr-2" />
+                      Sélectionner les doublons ({analysis.dupDeletable} · {fmtSize(analysis.dupDeletableBytes)})
+                    </Button>
+                  )}
                 </div>
                 <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-600 dark:text-slate-400">
                   <span>
@@ -214,6 +245,11 @@ export default function AdminNettoyagePage() {
                   <span>
                     <strong>{analysis.deletable}</strong> supprimables (non protégés)
                   </span>
+                  {analysis.dupGroups > 0 && (
+                    <span className="text-purple-700 dark:text-purple-400">
+                      <strong>{analysis.dupGroups}</strong> groupe(s) de doublons
+                    </span>
+                  )}
                   <span className="text-amber-700 dark:text-amber-400">
                     <strong>{selected.size}</strong> sélectionné(s) · {fmtSize(selectedSizeBytes)}
                   </span>
@@ -298,11 +334,28 @@ export default function AdminNettoyagePage() {
                             <div className="font-medium text-slate-800 dark:text-slate-200 line-clamp-1">
                               {b.title}
                             </div>
-                            <div className="text-xs text-slate-500 flex items-center gap-1.5">
+                            <div className="text-xs text-slate-500 flex flex-wrap items-center gap-1.5">
                               <span className="truncate">{b.author}</span>
                               {b.isProtected && (
                                 <span className="inline-flex items-center gap-0.5 rounded-full bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 text-[11px] font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">
                                   <ShieldCheck className="h-3 w-3" /> {b.reason}
+                                </span>
+                              )}
+                              {b.dupKey && (
+                                <span
+                                  className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-medium whitespace-nowrap ${
+                                    b.dupIsKeeper
+                                      ? "bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-400"
+                                      : "bg-purple-100 text-purple-700 dark:bg-purple-500/15 dark:text-purple-400"
+                                  }`}
+                                >
+                                  <Copy className="h-3 w-3" />
+                                  {b.dupIsKeeper ? "Doublon (gardé)" : "Doublon"}
+                                </span>
+                              )}
+                              {b.siteNote && (
+                                <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400 px-1.5 py-0.5 text-[11px] font-medium whitespace-nowrap">
+                                  <Info className="h-3 w-3" /> {b.siteNote}
                                 </span>
                               )}
                             </div>
