@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth-server";
 import prisma from "@/lib/db";
-import { searchAuthor, importBook, upsertAuthorProfile } from "@/lib/import-archive";
+import { searchAuthor, importBook, upsertAuthorProfile, freeDiskMb } from "@/lib/import-archive";
 import { slugify, formatAuthorName } from "@/lib/utils";
 
 export const runtime = "nodejs";
+
+// Garde-fous (configurables par variables d'environnement)
+const MAX_BOOKS_PER_AUTHOR = Number(process.env.MAX_BOOKS_PER_AUTHOR) || 400;
+const MIN_FREE_DISK_MB = Number(process.env.MIN_FREE_DISK_MB) || 2000;
 
 interface Job {
   id: string;
@@ -37,9 +41,9 @@ async function run(
   importAll: boolean
 ) {
   try {
-    // En mode « tout importer » on récupère l'intégralité du corpus de l'auteur ;
-    // sinon on prend une marge (max*4) pour compenser doublons et écarts.
-    const rows = importAll ? 5000 : max * 4;
+    // Marge (×4) pour compenser doublons et écarts de créateur ; en mode complet
+    // on vise le plafond par auteur avec une marge suffisante.
+    const rows = importAll ? Math.max(1000, max * 3) : max * 4;
     const docs = await searchAuthor(author, rows);
     job.found = docs.length;
     job.log.push(`${docs.length} résultat(s) trouvé(s) sur Internet Archive`);
@@ -50,6 +54,17 @@ async function run(
       if (job.cancelled) {
         job.log.push("⏹️ Import arrêté par l'utilisateur.");
         break;
+      }
+      // Stoppe avant de saturer le disque du serveur
+      if (MIN_FREE_DISK_MB > 0) {
+        const free = await freeDiskMb();
+        if (free !== null && free < MIN_FREE_DISK_MB) {
+          job.cancelled = true;
+          job.log.push(
+            `⚠️ Espace disque faible (${free} Mo restants) — import interrompu pour préserver le serveur.`
+          );
+          break;
+        }
       }
       try {
         const res = await importBook(doc.identifier, author, categoryMap);
@@ -111,8 +126,11 @@ export async function POST(request: Request) {
 
   const author = String(body.author || "").trim();
   const importAll = body.all === true;
-  // Mode « tout importer » : plafond haut (corpus complet) ; sinon valeur demandée
-  const max = importAll ? 5000 : Math.min(300, Math.max(1, Number(body.max) || 20));
+  // Mode « tout importer » : plafond par auteur (évite de saturer le VPS avec un
+  // auteur à plusieurs centaines d'œuvres) ; sinon la valeur demandée.
+  const max = importAll
+    ? MAX_BOOKS_PER_AUTHOR
+    : Math.min(300, Math.max(1, Number(body.max) || 20));
   if (!author) return NextResponse.json({ error: "Nom d'auteur requis" }, { status: 400 });
 
   // Carte slug -> id des catégories de livres (pour la détection automatique)

@@ -1,8 +1,19 @@
 import "server-only";
-import { writeFile, mkdir } from "fs/promises";
+import { writeFile, mkdir, statfs } from "fs/promises";
 import path from "path";
 import prisma from "@/lib/db";
 import { slugify } from "@/lib/utils";
+
+// Espace disque libre (en Mo) du volume contenant `dir`. null si indisponible.
+// Sert à stopper un gros import avant de saturer le VPS.
+export async function freeDiskMb(dir = process.cwd()): Promise<number | null> {
+  try {
+    const s = await statfs(dir);
+    return Math.floor((s.bavail * s.bsize) / (1024 * 1024));
+  } catch {
+    return null;
+  }
+}
 
 const BOOKS_DIR = path.join(process.cwd(), "public", "uploads", "books");
 const COVERS_DIR = path.join(process.cwd(), "public", "uploads", "covers");
