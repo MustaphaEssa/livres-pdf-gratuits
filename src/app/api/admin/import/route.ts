@@ -9,6 +9,10 @@ export const runtime = "nodejs";
 // Garde-fous (configurables par variables d'environnement)
 const MAX_BOOKS_PER_AUTHOR = Number(process.env.MAX_BOOKS_PER_AUTHOR) || 400;
 const MIN_FREE_DISK_MB = Number(process.env.MIN_FREE_DISK_MB) || 2000;
+// Popularité minimale par défaut (nb de téléchargements IA) sous laquelle un
+// livre n'est pas importé. 0 = pas de filtre. Surclassé par la valeur envoyée
+// depuis l'interface.
+const MIN_IMPORT_DOWNLOADS = Number(process.env.MIN_IMPORT_DOWNLOADS) || 0;
 
 interface Job {
   id: string;
@@ -38,7 +42,8 @@ async function run(
   author: string,
   max: number,
   categoryMap: Record<string, string>,
-  importAll: boolean
+  importAll: boolean,
+  minDownloads: number
 ) {
   try {
     // Marge (×4) pour compenser doublons et écarts de créateur ; en mode complet
@@ -46,13 +51,24 @@ async function run(
     const rows = importAll ? Math.max(1000, max * 3) : max * 4;
     const docs = await searchAuthor(author, rows);
     job.found = docs.length;
-    job.log.push(`${docs.length} résultat(s) trouvé(s) sur Internet Archive`);
+    job.log.push(
+      `${docs.length} résultat(s) trouvé(s) sur Internet Archive` +
+        (minDownloads > 0 ? ` · popularité min. ${minDownloads} téléch.` : "")
+    );
 
     const authorsSeen = new Map<string, string>();
     for (const doc of docs) {
       if (job.imported >= max) break;
       if (job.cancelled) {
         job.log.push("⏹️ Import arrêté par l'utilisateur.");
+        break;
+      }
+      // Seuil de popularité : les résultats sont triés par téléchargements
+      // décroissants → dès qu'on passe sous le seuil, tout le reste l'est aussi.
+      if (minDownloads > 0 && typeof doc.downloads === "number" && doc.downloads < minDownloads) {
+        job.log.push(
+          `⏹️ Popularité minimale atteinte (${doc.downloads} < ${minDownloads} téléch.) — fin de l'import.`
+        );
         break;
       }
       // Stoppe avant de saturer le disque du serveur
@@ -131,6 +147,11 @@ export async function POST(request: Request) {
   const max = importAll
     ? MAX_BOOKS_PER_AUTHOR
     : Math.min(300, Math.max(1, Number(body.max) || 20));
+  // Popularité minimale : valeur de l'interface si fournie, sinon défaut serveur
+  const minDownloads =
+    body.minDownloads !== undefined
+      ? Math.max(0, Number(body.minDownloads) || 0)
+      : MIN_IMPORT_DOWNLOADS;
   if (!author) return NextResponse.json({ error: "Nom d'auteur requis" }, { status: 400 });
 
   // Carte slug -> id des catégories de livres (pour la détection automatique)
@@ -146,7 +167,7 @@ export async function POST(request: Request) {
   jobs.set(id, job);
   prune();
   // Lance en arrière-plan (pas de await) — le serveur Node persistant poursuit la tâche
-  void run(job, author, max, categoryMap, importAll);
+  void run(job, author, max, categoryMap, importAll, minDownloads);
 
   return NextResponse.json({ jobId: id });
 }

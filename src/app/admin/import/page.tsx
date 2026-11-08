@@ -28,6 +28,7 @@ interface AuthorStatus {
 export default function AdminImportPage() {
   const [author, setAuthor] = useState("");
   const [max, setMax] = useState(20);
+  const [minDownloads, setMinDownloads] = useState(100);
   const [job, setJob] = useState<Job | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
   const [runningAuthor, setRunningAuthor] = useState<string | null>(null);
@@ -71,7 +72,7 @@ export default function AdminImportPage() {
       const res = await fetch("/api/admin/import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ author: opts.author, all: opts.all, max: opts.max }),
+        body: JSON.stringify({ author: opts.author, all: opts.all, max: opts.max, minDownloads }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Échec du démarrage");
@@ -143,19 +144,36 @@ export default function AdminImportPage() {
                   disabled={running}
                 />
               </div>
-              <div className="w-32">
-                <label className="block text-sm font-medium mb-1">Nombre max</label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={300}
-                  value={max}
-                  onChange={(e) => setMax(Number(e.target.value))}
-                  disabled={running}
-                />
+              <div className="flex flex-wrap gap-4">
+                <div className="w-32">
+                  <label className="block text-sm font-medium mb-1">Nombre max</label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={300}
+                    value={max}
+                    onChange={(e) => setMax(Number(e.target.value))}
+                    disabled={running}
+                  />
+                </div>
+                <div className="w-44">
+                  <label className="block text-sm font-medium mb-1">
+                    Popularité min.
+                  </label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={minDownloads}
+                    onChange={(e) => setMinDownloads(Math.max(0, Number(e.target.value)))}
+                    disabled={running}
+                  />
+                </div>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 La catégorie est détectée automatiquement d&apos;après les sujets du livre.
+                N&apos;importe que les livres ayant au moins ce nombre de
+                téléchargements sur Internet Archive (0 = tout importer). S&apos;applique
+                aussi à « Tout importer ».
               </p>
               <div className="flex items-center gap-2">
                 <Button

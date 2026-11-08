@@ -9,6 +9,7 @@
  *   AUTHOR   (requis) nom de l'auteur (ex: "Victor Hugo")
  *   CATEGORY (option) slug d'une catégorie existante à associer (ex: romans)
  *   MAX      (option) nombre max de livres à importer (def. 100)
+ *   MIN_DOWNLOADS (option) popularité min. sur Internet Archive (def. 0 = tout)
  *   MAX_PDF_MB (option) taille max d'un PDF (def. 45)
  *
  * Légal : filtre année <= 1929 (domaine public) + mediatype texts + PDF.
@@ -22,6 +23,7 @@ const prisma = new PrismaClient();
 const AUTHOR = (process.env.AUTHOR || process.argv[2] || "").trim();
 const CATEGORY = (process.env.CATEGORY || process.argv[3] || "").trim();
 const MAX = Number(process.env.MAX) || 100;
+const MIN_DOWNLOADS = Number(process.env.MIN_DOWNLOADS) || 0; // popularité min. (0 = tout)
 const MAX_PDF_BYTES = (Number(process.env.MAX_PDF_MB) || 45) * 1024 * 1024;
 const BOOKS_DIR = path.join(process.cwd(), "public", "uploads", "books");
 const COVERS_DIR = path.join(process.cwd(), "public", "uploads", "covers");
@@ -107,6 +109,7 @@ async function pdfPageCount(data: Uint8Array): Promise<number | null> {
 interface SearchDoc {
   identifier: string;
   title?: string | string[];
+  downloads?: number;
 }
 
 async function searchAuthor(author: string, rows: number): Promise<SearchDoc[]> {
@@ -114,7 +117,7 @@ async function searchAuthor(author: string, rows: number): Promise<SearchDoc[]> 
   const url =
     "https://archive.org/advancedsearch.php?q=" +
     encodeURIComponent(q) +
-    "&fl[]=identifier&fl[]=title&sort[]=downloads+desc&rows=" +
+    "&fl[]=identifier&fl[]=title&fl[]=downloads&sort[]=downloads+desc&rows=" +
     rows +
     "&page=1&output=json";
   const data = await fetchJson(url);
@@ -233,6 +236,11 @@ async function main() {
   let imported = 0;
   for (const doc of docs) {
     if (imported >= MAX) break;
+    // Résultats triés par popularité décroissante → on s'arrête au 1er sous le seuil
+    if (MIN_DOWNLOADS > 0 && typeof doc.downloads === "number" && doc.downloads < MIN_DOWNLOADS) {
+      console.log(`  ⏹️ Popularité < ${MIN_DOWNLOADS} (${doc.downloads}) — arrêt.`);
+      break;
+    }
     const res = await importOne(doc.identifier, catId).catch(() => "fail" as const);
     if (res === "ok") {
       imported++;

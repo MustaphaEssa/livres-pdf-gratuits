@@ -8,7 +8,8 @@
  * Légal : filtre sur année <= 1929 (domaine public) + mediatype texts + FR.
  *
  * Lancer : npx tsx scripts/import-books.ts
- *   Variables : PER_CATEGORY (def. 25), MAX_PDF_MB (def. 45)
+ *   Variables : PER_CATEGORY (def. 25), MAX_PDF_MB (def. 45),
+ *               MIN_DOWNLOADS (popularité min. IA, def. 0 = tout)
  */
 import { PrismaClient } from "@prisma/client";
 import { writeFile, mkdir } from "fs/promises";
@@ -17,6 +18,7 @@ import path from "path";
 const prisma = new PrismaClient();
 
 const PER_CATEGORY = Number(process.env.PER_CATEGORY) || 25;
+const MIN_DOWNLOADS = Number(process.env.MIN_DOWNLOADS) || 0; // popularité min. (0 = tout)
 const MAX_PDF_BYTES = (Number(process.env.MAX_PDF_MB) || 45) * 1024 * 1024;
 const BOOKS_DIR = path.join(process.cwd(), "public", "uploads", "books");
 const COVERS_DIR = path.join(process.cwd(), "public", "uploads", "covers");
@@ -120,6 +122,7 @@ async function pdfPageCount(data: Uint8Array): Promise<number | null> {
 interface SearchDoc {
   identifier: string;
   title?: string | string[];
+  downloads?: number;
 }
 
 async function searchCategory(query: string, rows: number): Promise<SearchDoc[]> {
@@ -127,7 +130,7 @@ async function searchCategory(query: string, rows: number): Promise<SearchDoc[]>
   const url =
     "https://archive.org/advancedsearch.php?q=" +
     encodeURIComponent(q) +
-    "&fl[]=identifier&fl[]=title" +
+    "&fl[]=identifier&fl[]=title&fl[]=downloads" +
     "&sort[]=downloads+desc&rows=" +
     rows +
     "&page=1&output=json";
@@ -264,6 +267,11 @@ async function main() {
 
     for (const doc of docs) {
       if (imported >= PER_CATEGORY) break;
+      // Triés par popularité décroissante → stop au 1er sous le seuil
+      if (MIN_DOWNLOADS > 0 && typeof doc.downloads === "number" && doc.downloads < MIN_DOWNLOADS) {
+        console.log(`  ⏹️ Popularité < ${MIN_DOWNLOADS} (${doc.downloads}) — catégorie suivante.`);
+        break;
+      }
       const res = await importOne(doc.identifier, slug, catId).catch(
         () => "fail" as const
       );

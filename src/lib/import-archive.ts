@@ -155,6 +155,7 @@ async function pdfPageCount(data: Uint8Array): Promise<number | null> {
 export interface SearchDoc {
   identifier: string;
   title?: string | string[];
+  downloads?: number; // nb de téléchargements Internet Archive (popularité)
 }
 
 // Normalise (minuscules, sans accents/ponctuation)
@@ -190,7 +191,7 @@ export async function searchAuthor(author: string, rows: number): Promise<Search
   const url =
     "https://archive.org/advancedsearch.php?q=" +
     encodeURIComponent(q) +
-    "&fl[]=identifier&fl[]=title&sort[]=downloads+desc&rows=" +
+    "&fl[]=identifier&fl[]=title&fl[]=downloads&sort[]=downloads+desc&rows=" +
     rows +
     "&page=1&output=json";
   const data = (await fetchJson(url)) as { response?: { docs?: SearchDoc[] } };
