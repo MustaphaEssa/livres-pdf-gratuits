@@ -1,60 +1,82 @@
 import Link from "next/link";
-import Image from "next/image";
-import { User } from "lucide-react";
-import { Header } from "@/components/layout/header";
-import { Footer } from "@/components/layout/footer";
-import { getAuthorsWithCounts } from "@/lib/books";
+import DesignHeader from "@/components/design/header";
+import DesignFooter from "@/components/design/footer";
+import MobileTabbar from "@/components/design/mobile-tabbar";
+import Icon, { I } from "@/components/design/icon";
+import { getAuthorsWithCounts, getCategoriesWithCounts } from "@/lib/books";
 
 export const metadata = {
   title: "Auteurs",
-  description: "Parcourez tous les auteurs et découvrez leurs livres gratuits en PDF.",
+  description: "Parcourez les auteurs du domaine public et découvrez tous leurs livres gratuits.",
+  alternates: { canonical: "/auteurs" },
 };
 
 export default async function AuthorsPage() {
-  const authors = await getAuthorsWithCounts();
+  const [authors, categories] = await Promise.all([
+    getAuthorsWithCounts(),
+    getCategoriesWithCounts(),
+  ]);
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-1 bg-slate-50 dark:bg-slate-900/50">
-        <div className="container mx-auto px-4 py-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Auteurs</h1>
-            <p className="text-slate-600 dark:text-slate-400">
-              {authors.length} auteur{authors.length > 1 ? "s" : ""} dans la bibliothèque
-            </p>
+    <div className="ma">
+      <DesignHeader />
+      <main className="page-main">
+        <div className="wrap">
+          <nav className="breadcrumb" aria-label="Fil d'Ariane" style={{ paddingTop: 16 }}>
+            <Link href="/">Accueil</Link>
+            <span aria-hidden="true">/</span>
+            <span aria-current="page">Auteurs</span>
+          </nav>
+          <div className="page-head">
+            <div>
+              <h1>Auteurs</h1>
+              <p>
+                {authors.length} auteur{authors.length > 1 ? "s" : ""} dans la bibliothèque.
+              </p>
+            </div>
           </div>
 
           {authors.length === 0 ? (
-            <p className="text-slate-500">Aucun auteur pour le moment.</p>
+            <div className="empty">
+              <h3>Aucun auteur pour le moment</h3>
+            </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="mini-grid">
               {authors.map((a) => (
-                <Link
-                  key={a.slug}
-                  href={`/auteur/${a.slug}`}
-                  className="flex items-center gap-3 p-4 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-amber-500 dark:hover:border-amber-500 transition-colors"
-                >
-                  <div className="w-12 h-12 rounded-full overflow-hidden bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center shrink-0">
-                    {a.image ? (
-                      <Image src={a.image} alt={a.name} width={48} height={48} className="w-full h-full object-cover" />
-                    ) : (
-                      <User className="h-5 w-5 text-amber-500" />
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="font-medium text-slate-900 dark:text-white truncate">{a.name}</div>
-                    <div className="text-sm text-slate-500">
+                <Link key={a.slug} href={`/auteur/${a.slug}`} className="mini-row">
+                  {a.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={a.image}
+                      alt={a.name}
+                      style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover", flex: "none" }}
+                    />
+                  ) : (
+                    <span
+                      className="avatar"
+                      aria-hidden="true"
+                      style={{ width: 48, height: 48, fontSize: 20, flex: "none" }}
+                    >
+                      {[...a.name][0]}
+                    </span>
+                  )}
+                  <span className="list-row-text" style={{ minWidth: 0 }}>
+                    <span className="t" dir="auto">
+                      {a.name}
+                    </span>
+                    <span className="book-author">
                       {a.count} livre{a.count > 1 ? "s" : ""}
-                    </div>
-                  </div>
+                    </span>
+                  </span>
+                  <Icon d={I.arrow} />
                 </Link>
               ))}
             </div>
           )}
         </div>
       </main>
-      <Footer />
+      <DesignFooter categories={categories} />
+      <MobileTabbar />
     </div>
   );
 }

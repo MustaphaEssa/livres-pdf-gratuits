@@ -1,11 +1,12 @@
 import Link from "next/link";
-import Image from "next/image";
 import { notFound } from "next/navigation";
-import { ChevronLeft, Library } from "lucide-react";
-import { Header } from "@/components/layout/header";
-import { Footer } from "@/components/layout/footer";
-import { BookCard } from "@/components/books/book-card";
+import DesignHeader from "@/components/design/header";
+import DesignFooter from "@/components/design/footer";
+import MobileTabbar from "@/components/design/mobile-tabbar";
+import BookCard from "@/components/design/book-card";
+import Icon, { I } from "@/components/design/icon";
 import { getPublishedCollectionBySlug } from "@/lib/collections";
+import { getCategoriesWithCounts } from "@/lib/books";
 import { SITE_URL } from "@/lib/site";
 
 interface Props {
@@ -32,64 +33,59 @@ export async function generateMetadata({ params }: Props) {
 
 export default async function CollectionDetailPage({ params }: Props) {
   const { slug } = await params;
-  const col = await getPublishedCollectionBySlug(slug);
+  const [col, categories] = await Promise.all([
+    getPublishedCollectionBySlug(slug),
+    getCategoriesWithCounts(),
+  ]);
   if (!col) notFound();
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-1 bg-slate-50 dark:bg-slate-900/50">
-        <div className="container mx-auto px-4 py-8">
-          <Link
-            href="/collections"
-            className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-amber-500 mb-6"
-          >
-            <ChevronLeft className="h-4 w-4" /> Toutes les collections
-          </Link>
-
-          <div className="mb-10">
-            <div className="inline-flex items-center gap-2 text-amber-500 font-medium mb-2">
-              <Library className="h-5 w-5" /> Collection
-            </div>
-            <h1 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-white mb-3">
-              {col.title}
-            </h1>
-            {col.description && (
-              <p className="text-slate-600 dark:text-slate-400 max-w-2xl leading-relaxed">
-                {col.description}
+    <div className="ma">
+      <DesignHeader />
+      <main className="page-main">
+        <div className="wrap">
+          <nav className="breadcrumb" aria-label="Fil d'Ariane" style={{ paddingTop: 16 }}>
+            <Link href="/">Accueil</Link>
+            <span aria-hidden="true">/</span>
+            <Link href="/collections">Collections</Link>
+            <span aria-hidden="true">/</span>
+            <span aria-current="page">{col.title}</span>
+          </nav>
+          <div className="page-head">
+            <div>
+              <div className="eyebrow">
+                <Icon d={I.library} size={16} /> Collection
+              </div>
+              <h1>{col.title}</h1>
+              {col.description && <p>{col.description}</p>}
+              <p style={{ color: "var(--muted)", marginTop: 6 }}>
+                {col.books.length} livre{col.books.length > 1 ? "s" : ""}
               </p>
-            )}
-            <p className="text-sm text-slate-400 mt-2">{col.books.length} livre(s)</p>
+            </div>
           </div>
 
-          {col.coverImage && (
-            <div className="relative aspect-[21/9] rounded-xl overflow-hidden mb-10 bg-slate-100 dark:bg-slate-800">
-              <Image src={col.coverImage} alt={col.title} fill className="object-cover" />
-            </div>
-          )}
-
-          <div className="space-y-10">
+          <div style={{ display: "flex", flexDirection: "column", gap: 40 }}>
             {col.books.map((entry) => (
               <div
                 key={entry.bookId}
-                className="grid sm:grid-cols-[180px_1fr] gap-5 items-start"
+                style={{ display: "grid", gridTemplateColumns: "150px 1fr", gap: 24, alignItems: "start" }}
               >
-                <div className="max-w-[180px]">
-                  <BookCard book={entry.book} />
-                </div>
+                <BookCard book={entry.book} />
                 {entry.note && (
-                  <div className="sm:pt-2">
-                    <p className="text-slate-600 dark:text-slate-300 leading-relaxed border-l-2 border-amber-400 pl-4">
-                      {entry.note}
-                    </p>
-                  </div>
+                  <p
+                    className="prose"
+                    style={{ borderLeft: "3px solid var(--accent)", paddingLeft: 18, fontSize: 17 }}
+                  >
+                    {entry.note}
+                  </p>
                 )}
               </div>
             ))}
           </div>
         </div>
       </main>
-      <Footer />
+      <DesignFooter categories={categories} />
+      <MobileTabbar />
     </div>
   );
 }
