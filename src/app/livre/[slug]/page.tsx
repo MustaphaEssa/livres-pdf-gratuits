@@ -1,30 +1,27 @@
 import Link from "next/link";
-import Image from "next/image";
 import { notFound } from "next/navigation";
-import {
-  Download,
-  Star,
-  Calendar,
-  FileText,
-  User,
-  Globe,
-  Eye,
-  Headphones,
-  Clock,
-  BookOpen,
-  Send,
-} from "lucide-react";
-import { Header } from "@/components/layout/header";
-import { Footer } from "@/components/layout/footer";
-import { Button } from "@/components/ui/button";
-import { PdfReader } from "@/components/books/pdf-reader";
+import DesignHeader from "@/components/design/header";
+import DesignFooter from "@/components/design/footer";
+import MobileTabbar from "@/components/design/mobile-tabbar";
+import BookCover from "@/components/design/book-cover";
+import BookMini from "@/components/design/book-mini";
+import BookCard from "@/components/design/book-card";
+import FavButton from "@/components/design/fav-button";
+import Icon, { I } from "@/components/design/icon";
+import { ZelligePattern } from "@/components/design/patterns";
 import { AudioPlayer } from "@/components/books/audio-player";
-import { FavoriteButton } from "@/components/books/favorite-button";
 import { ShareButtons } from "@/components/books/share-buttons";
 import { Reviews } from "@/components/books/reviews";
-import { BookCard } from "@/components/books/book-card";
 import { formatFileSize, formatAuthorName } from "@/lib/utils";
-import { getBookBySlug, getRelatedBooks, getSameAuthorBooks, getBooksByGenre, getAuthorProfile, incrementViewCount, parseAudioTracks } from "@/lib/books";
+import {
+  getBookBySlug,
+  getRelatedBooks,
+  getSameAuthorBooks,
+  getBooksByGenre,
+  getAuthorProfile,
+  incrementViewCount,
+  parseAudioTracks,
+} from "@/lib/books";
 import { getUserSession } from "@/lib/user-server";
 import { getSiteSettings } from "@/lib/settings";
 import prisma from "@/lib/db";
@@ -40,20 +37,16 @@ interface BookPageProps {
 export async function generateMetadata({ params }: BookPageProps) {
   const { slug } = await params;
   const book = await getBookBySlug(slug);
-
-  if (!book) {
-    return { title: "Livre non trouvé" };
-  }
-
+  if (!book) return { title: "Livre non trouvé" };
   const image = book.coverImage
     ? book.coverImage.startsWith("http")
       ? book.coverImage
       : `${SITE_URL}${book.coverImage}`
     : `${SITE_URL}/og-image.png`;
-
   return {
     title: book.title,
     description: book.description ?? undefined,
+    alternates: { canonical: `/livre/${slug}` },
     openGraph: {
       title: book.title,
       description: book.description ?? undefined,
@@ -71,18 +64,16 @@ export async function generateMetadata({ params }: BookPageProps) {
   };
 }
 
+const LANG_LABELS: Record<string, string> = { fr: "Français", en: "English", ar: "العربية" };
+
 export default async function BookPage({ params }: BookPageProps) {
   const { slug } = await params;
   const book = await getBookBySlug(slug);
+  if (!book) notFound();
 
-  if (!book) {
-    notFound();
-  }
-
-  // Requêtes indépendantes lancées en parallèle (en-têtes, i18n, similaires, session)
   const bookMediaType = book.mediaType === "AUDIO" ? "AUDIO" : "PDF";
   const genreSlug = book.categories[0]?.category.slug;
-  const [hdrs, { t }, relatedBooks, sameAuthorBooks, genreBooks, authorProfile, settings, session] =
+  const [hdrs, , relatedBooks, sameAuthorBooks, genreBooks, authorProfile, settings, session] =
     await Promise.all([
       headers(),
       getServerI18n(),
@@ -94,16 +85,10 @@ export default async function BookPage({ params }: BookPageProps) {
       getUserSession(),
     ]);
 
-  // Comptabilise une vue, en évitant les rechargements répétés d'une même IP
   const viewerIp =
-    hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    hdrs.get("x-real-ip") ||
-    "unknown";
-  if (shouldCountView(book.id, viewerIp)) {
-    incrementViewCount(book.id).catch(() => {});
-  }
+    hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() || hdrs.get("x-real-ip") || "unknown";
+  if (shouldCountView(book.id, viewerIp)) incrementViewCount(book.id).catch(() => {});
 
-  // État connecté / favori (pour les boutons)
   const isLoggedIn = !!session;
   let isFavorited = false;
   if (session) {
@@ -112,20 +97,13 @@ export default async function BookPage({ params }: BookPageProps) {
     }));
   }
 
-  const languageNames: Record<string, string> = {
-    fr: t.langNames.fr,
-    ar: t.langNames.ar,
-    en: t.langNames.en,
-  };
-
   const primaryCategory = book.categories[0]?.category;
   const downloadHref = `/livre/${book.slug}/telecharger`;
-
+  const readerHref = `/livre/${book.slug}/lire`;
   const audioTracks = parseAudioTracks(book.audioTracks);
   const hasAudio = audioTracks.length > 0;
   const hasPdf = !!book.pdfUrl;
-  // « Livre audio » au sens fiche : audio uniquement (pas de PDF).
-  const isAudio = !hasPdf && (book.mediaType === "AUDIO" || hasAudio);
+  const langLabel = LANG_LABELS[book.language] ?? book.language;
   const reportEmail = settings.email || "contact@livrespdfgratuits.com";
   const reportHref = `mailto:${reportEmail}?subject=${encodeURIComponent(
     `Signalement : ${book.title}`
@@ -139,7 +117,6 @@ export default async function BookPage({ params }: BookPageProps) {
     return h ? `${h} h ${String(m).padStart(2, "0")}` : `${m} min`;
   };
 
-  // Données structurées pour les moteurs de recherche (rich results)
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Book",
@@ -151,38 +128,16 @@ export default async function BookPage({ params }: BookPageProps) {
     ...(book.pageCount ? { numberOfPages: book.pageCount } : {}),
     ...(book.publishedYear ? { datePublished: String(book.publishedYear) } : {}),
     ...(book.isbn ? { isbn: book.isbn } : {}),
-    ...(book.publisher
-      ? { publisher: { "@type": "Organization", name: book.publisher } }
-      : {}),
+    ...(book.publisher ? { publisher: { "@type": "Organization", name: book.publisher } } : {}),
     ...(book.coverImage
-      ? {
-          image: book.coverImage.startsWith("http")
-            ? book.coverImage
-            : `${SITE_URL}${book.coverImage}`,
-        }
+      ? { image: book.coverImage.startsWith("http") ? book.coverImage : `${SITE_URL}${book.coverImage}` }
       : {}),
     ...(book.ratingCount > 0
-      ? {
-          aggregateRating: {
-            "@type": "AggregateRating",
-            ratingValue: book.rating,
-            reviewCount: book.ratingCount,
-          },
-        }
+      ? { aggregateRating: { "@type": "AggregateRating", ratingValue: book.rating, reviewCount: book.ratingCount } }
       : {}),
-    workExample: {
-      "@type": "Book",
-      bookFormat: "https://schema.org/EBook",
-      potentialAction: {
-        "@type": "ReadAction",
-        target: `${SITE_URL}${downloadHref}`,
-      },
-    },
     isAccessibleForFree: true,
     provider: { "@type": "Organization", name: SITE_NAME },
   };
-
-  // Fil d'Ariane pour les moteurs de recherche (BreadcrumbList)
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -190,498 +145,325 @@ export default async function BookPage({ params }: BookPageProps) {
       { "@type": "ListItem", position: 1, name: "Accueil", item: SITE_URL },
       { "@type": "ListItem", position: 2, name: "Catalogue", item: `${SITE_URL}/catalogue` },
       ...(primaryCategory
-        ? [
-            {
-              "@type": "ListItem",
-              position: 3,
-              name: primaryCategory.name,
-              item: `${SITE_URL}/catalogue?category=${primaryCategory.slug}`,
-            },
-          ]
+        ? [{ "@type": "ListItem", position: 3, name: primaryCategory.name, item: `${SITE_URL}/catalogue?category=${primaryCategory.slug}` }]
         : []),
-      {
-        "@type": "ListItem",
-        position: primaryCategory ? 4 : 3,
-        name: book.title,
-        item: `${SITE_URL}/livre/${book.slug}`,
-      },
+      { "@type": "ListItem", position: primaryCategory ? 4 : 3, name: book.title, item: `${SITE_URL}/livre/${book.slug}` },
     ],
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
-      />
-      <Header />
+    <div className="ma">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+      <DesignHeader />
 
-      <main className="flex-1 bg-slate-50 dark:bg-slate-900/50">
-        <div className="container mx-auto px-4 py-8">
-          {/* Breadcrumb */}
-          <nav className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mb-6">
-            <Link href="/" className="hover:text-amber-500">
-              Accueil
-            </Link>
-            <span>/</span>
-            <Link href="/catalogue" className="hover:text-amber-500">
-              Catalogue
-            </Link>
+      <main className="page-main">
+        <div className="wrap book-page">
+          <nav className="breadcrumb" aria-label="Fil d'Ariane">
+            <Link href="/">Accueil</Link>
+            <span aria-hidden="true">/</span>
+            <Link href="/catalogue">Catalogue</Link>
             {primaryCategory && (
               <>
-                <span>/</span>
-                <Link
-                  href={`/catalogue?category=${primaryCategory.slug}`}
-                  className="hover:text-amber-500"
-                >
-                  {primaryCategory.name}
-                </Link>
+                <span aria-hidden="true">/</span>
+                <Link href={`/catalogue?category=${primaryCategory.slug}`}>{primaryCategory.name}</Link>
               </>
             )}
-            <span>/</span>
-            <span className="text-slate-900 dark:text-white">{book.title}</span>
+            <span aria-hidden="true">/</span>
+            <span aria-current="page" dir="auto">
+              {book.title}
+            </span>
           </nav>
 
-          <div className="grid lg:grid-cols-3 gap-8">
-            {/* Left Column - Cover & Actions */}
-            <div className="lg:col-span-1">
-              <div className="sticky top-24">
-                {/* Cover Image */}
-                <div className="relative aspect-[2/3] bg-white rounded-2xl overflow-hidden shadow-xl ring-1 ring-slate-200/70 dark:ring-slate-700/60 mb-6">
-                  {book.coverImage ? (
-                    <Image
-                      src={book.coverImage}
-                      alt={book.title}
-                      fill
-                      sizes="(max-width: 1024px) 100vw, 400px"
-                      className="object-cover"
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-full bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700">
-                      <span className="text-6xl font-bold text-slate-300 dark:text-slate-600">
-                        {book.title.charAt(0)}
-                      </span>
-                    </div>
-                  )}
-                  <span className="absolute left-3 top-3 rounded-full bg-amber-500 px-2.5 py-1 text-xs font-semibold text-white shadow-sm">
-                    Gratuit
-                  </span>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="space-y-3">
-                  {isAudio ? (
-                    <a href="#lecture" className="block">
-                      <Button className="w-full bg-amber-500 hover:bg-amber-600 h-12 text-lg">
-                        <Headphones className="mr-2 h-5 w-5" />
-                        Écouter le livre audio
-                      </Button>
-                    </a>
-                  ) : (
-                    <>
-                      <a href={downloadHref} className="block">
-                        <Button className="w-full bg-amber-500 hover:bg-amber-600 h-12 text-lg">
-                          <Download className="mr-2 h-5 w-5" />
-                          {t.bookPage.downloadPdf}
-                        </Button>
-                      </a>
-                      <Link href={`/livre/${book.slug}/lire`} className="block">
-                        <Button variant="outline" className="w-full h-12">
-                          <Eye className="mr-2 h-5 w-5" />
-                          {t.bookPage.readOnline}
-                        </Button>
-                      </Link>
-                      {hasAudio && (
-                        <a href="#ecouter" className="block">
-                          <Button variant="outline" className="w-full h-12">
-                            <Headphones className="mr-2 h-5 w-5" />
-                            Écouter l&apos;audio
-                          </Button>
-                        </a>
-                      )}
-                      {book.epubUrl && (
-                        <>
-                          <a
-                            href={book.epubUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="block"
-                          >
-                            <Button variant="outline" className="w-full h-12">
-                              <BookOpen className="mr-2 h-5 w-5" />
-                              Télécharger l&apos;EPUB
-                            </Button>
-                          </a>
-                          <a
-                            href="https://www.amazon.com/sendtokindle"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="block"
-                            title="Envoyez le fichier EPUB vers votre Kindle"
-                          >
-                            <Button variant="outline" className="w-full h-12">
-                              <Send className="mr-2 h-5 w-5" />
-                              Envoyer vers Kindle
-                            </Button>
-                          </a>
-                        </>
-                      )}
-                    </>
-                  )}
-                  <div className="flex gap-2">
-                    <FavoriteButton
-                      bookId={book.id}
-                      initialFavorited={isFavorited}
-                      isLoggedIn={isLoggedIn}
-                      addLabel={t.bookPage.addFavorite}
-                      removeLabel={t.bookPage.removeFavorite}
-                    />
-                    <ShareButtons
-                      url={`${SITE_URL}/livre/${book.slug}`}
-                      title={book.title}
-                      className="flex-1"
-                    />
-                  </div>
-                </div>
-              </div>
+          <section className="book-hero">
+            <ZelligePattern id="z-book" />
+            <div className="book-hero-cover">
+              <div className="arch-door" />
+              <BookCover book={book} />
             </div>
-
-            {/* Right Column - Book Details */}
-            <div className="lg:col-span-2">
-              {/* Category */}
-              {primaryCategory && (
-                <Link
-                  href={`/catalogue?category=${primaryCategory.slug}`}
-                  className="inline-block px-3 py-1 text-sm bg-slate-800 text-white rounded mb-4 hover:bg-amber-500 transition-colors"
-                >
-                  {primaryCategory.name}
-                </Link>
-              )}
-
-              {/* Title */}
-              <h1 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-white mb-3">
-                {book.title}
-              </h1>
-
-              {/* Formats disponibles */}
-              <div className="flex flex-wrap items-center gap-2 mb-4">
-                {hasPdf && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2.5 py-1 text-xs font-medium">
-                    <FileText className="h-3.5 w-3.5" /> PDF
-                  </span>
-                )}
-                {book.epubUrl && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2.5 py-1 text-xs font-medium">
-                    <BookOpen className="h-3.5 w-3.5" /> EPUB
-                  </span>
-                )}
-                {hasAudio && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400 px-2.5 py-1 text-xs font-medium">
-                    <Headphones className="h-3.5 w-3.5" /> Audio
-                  </span>
-                )}
-              </div>
-
-              {/* Author */}
-              <div className="flex items-center gap-2 text-lg text-slate-600 dark:text-slate-400 mb-6">
-                <User className="h-5 w-5" />
-                <span>
-                  par{" "}
-                  {book.authorSlug ? (
-                    <Link
-                      href={`/auteur/${book.authorSlug}`}
-                      className="font-bold text-slate-900 dark:text-white hover:text-amber-500 hover:underline"
-                    >
-                      {formatAuthorName(book.author)}
-                    </Link>
-                  ) : (
-                    <strong className="text-slate-900 dark:text-white">{formatAuthorName(book.author)}</strong>
-                  )}
-                </span>
-              </div>
-
-              {/* Rating */}
-              <div className="flex flex-wrap items-center gap-4 mb-6">
-                <div className="flex items-center gap-1">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Star
-                      key={star}
-                      className={`h-5 w-5 ${
-                        star <= Math.round(book.rating)
-                          ? "fill-amber-500 text-amber-500"
-                          : "text-slate-300 dark:text-slate-600"
-                      }`}
-                    />
-                  ))}
-                  <span className="ml-2 font-semibold text-slate-900 dark:text-white">
-                    {book.rating.toFixed(1)}
-                  </span>
-                </div>
-                <span className="text-slate-500">
-                  ({book.ratingCount} {t.bookPage.reviewsCount})
-                </span>
-                <span className="text-slate-300">|</span>
-                <span className="text-slate-500 flex items-center gap-1">
-                  <Download className="h-4 w-4" />
-                  {book.downloadCount} {t.bookPage.downloadsCount}
-                </span>
-              </div>
-
-              {/* Stats */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
-                {[
-                  isAudio
-                    ? { icon: Headphones, value: "Audio", label: "Format" }
-                    : {
-                        icon: FileText,
-                        value: book.pdfSize ? formatFileSize(book.pdfSize) : "—",
-                        label: t.bookPage.size,
-                      },
-                  isAudio
-                    ? { icon: Clock, value: fmtDuration(book.audioDuration), label: "Durée" }
-                    : {
-                        icon: FileText,
-                        value: book.pageCount ?? "—",
-                        label: t.bookPage.pages,
-                      },
-                  {
-                    icon: Globe,
-                    value: languageNames[book.language] ?? book.language,
-                    label: t.bookPage.language,
-                  },
-                  {
-                    icon: Calendar,
-                    value: book.publishedYear ?? "—",
-                    label: t.bookPage.year,
-                  },
-                ].map(({ icon: Icon, value, label }) => (
-                  <div
-                    key={label}
-                    className="flex flex-col items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-4 text-center dark:border-slate-700 dark:bg-slate-800/50"
-                  >
-                    <Icon className="h-5 w-5 text-amber-500" />
-                    <div className="text-base font-semibold text-slate-900 dark:text-white">
-                      {value}
-                    </div>
-                    <div className="text-xs text-slate-500">{label}</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Description */}
-              {book.description && (
-                <div className="mb-8">
-                  <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-4">
-                    {t.bookPage.description}
-                  </h2>
-                  <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                    {book.description}
-                  </p>
-                </div>
-              )}
-
-              {/* Book Info */}
-              <div className="mb-8">
-                <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-4">
-                  {t.bookPage.information}
-                </h2>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-slate-500">{t.bookPage.publisher}:</span>
-                    <span className="ml-2 text-slate-900 dark:text-white">
-                      {book.publisher ?? "—"}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">{t.bookPage.isbn}:</span>
-                    <span className="ml-2 text-slate-900 dark:text-white">
-                      {book.isbn ?? "—"}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">{t.bookPage.pubYear}:</span>
-                    <span className="ml-2 text-slate-900 dark:text-white">
-                      {book.publishedYear ?? "—"}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">{t.bookPage.language}:</span>
-                    <span className="ml-2 text-slate-900 dark:text-white">
-                      {languageNames[book.language] ?? book.language}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Domaine public */}
-              <div className="mb-8 flex items-start gap-3 rounded-lg border border-green-200 bg-green-50 dark:border-green-900/40 dark:bg-green-900/10 p-4">
-                <svg className="h-5 w-5 text-green-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <p className="text-sm text-green-800 dark:text-green-300">
-                  <strong>Œuvre du domaine public</strong> — ce livre est libre de droits et peut
-                  être lu, téléchargé et partagé gratuitement. Source : Internet Archive.{" "}
-                  <a href={reportHref} className="underline hover:text-green-900 dark:hover:text-green-200">
-                    Signaler ce livre
-                  </a>{" "}
-                  (<Link href="/dmca" className="underline hover:text-green-900 dark:hover:text-green-200">politique DMCA</Link>).
-                </p>
-              </div>
-
-              {/* Lecture en ligne (PDF) */}
-              {hasPdf && (
-                <div id="lecture" className="scroll-mt-24">
-                  <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-4">
-                    {t.bookPage.readOnline}
-                  </h2>
-                  <PdfReader
-                    pdfUrl={book.pdfUrl as string}
-                    title={book.title}
-                    ctaLabel={t.bookPage.readerCta}
-                    buttonLabel={t.bookPage.readerButton}
-                    href={`/livre/${book.slug}/lire`}
-                  />
-                </div>
-              )}
-
-              {/* Écoute en ligne (audio) */}
-              {hasAudio && (
-                <div id="ecouter" className={`scroll-mt-24 ${hasPdf ? "mt-10" : ""}`}>
-                  <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-4">
-                    Écouter en ligne
-                  </h2>
-                  <AudioPlayer
-                    tracks={audioTracks}
-                    totalDuration={book.audioDuration ?? undefined}
-                  />
-                </div>
-              )}
-
-              {!hasPdf && !hasAudio && (
-                <p className="text-slate-500">{t.bookPage.noPdf}</p>
-              )}
-
-              {/* Avis & notes */}
-              <div className="mt-10">
-                <Reviews bookId={book.id} isLoggedIn={isLoggedIn} />
-              </div>
-            </div>
-          </div>
-
-          {/* À propos de l'auteur */}
-          {authorProfile && (authorProfile.bio || authorProfile.image) && (
-            <section className="mt-16">
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">
-                À propos de l&apos;auteur
-              </h2>
-              <div className="flex flex-col sm:flex-row gap-6 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-6">
-                {authorProfile.image && (
-                  <div className="relative h-28 w-28 flex-shrink-0 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700 mx-auto sm:mx-0">
-                    <Image
-                      src={authorProfile.image}
-                      alt={authorProfile.name}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                )}
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-baseline gap-2 mb-2">
-                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                      {authorProfile.name}
-                    </h3>
-                    {(authorProfile.birthYear || authorProfile.deathYear) && (
-                      <span className="text-sm text-slate-400">
-                        ({authorProfile.birthYear ?? "?"}
-                        {authorProfile.deathYear ? ` – ${authorProfile.deathYear}` : ""})
-                      </span>
-                    )}
-                  </div>
-                  {authorProfile.bio && (
-                    <p className="text-slate-600 dark:text-slate-300 leading-relaxed line-clamp-5">
-                      {authorProfile.bio}
-                    </p>
-                  )}
-                  {book.authorSlug && (
-                    <Link
-                      href={`/auteur/${book.authorSlug}`}
-                      className="inline-block mt-3 text-sm text-amber-600 hover:underline"
-                    >
-                      Voir tous ses livres →
-                    </Link>
-                  )}
-                </div>
-              </div>
-            </section>
-          )}
-
-          {/* Du même auteur */}
-          {sameAuthorBooks.length > 0 && (
-            <section className="mt-16">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
-                  {isAudio ? "Autres livres audio du même auteur" : "Du même auteur"}
-                </h2>
-                {book.authorSlug && (
-                  <Link
-                    href={`/auteur/${book.authorSlug}`}
-                    className="text-sm text-amber-600 hover:underline"
-                  >
-                    Voir tout
+            <div className="book-hero-info">
+              <div className="badges">
+                {primaryCategory && (
+                  <Link className="badge badge-genre" href={`/catalogue?category=${primaryCategory.slug}`}>
+                    {primaryCategory.name}
                   </Link>
                 )}
+                {hasPdf && <span className="badge badge-pdf">PDF</span>}
+                {book.epubUrl && <span className="badge badge-pdf">EPUB</span>}
+                {hasPdf && <span className="badge badge-read">Lire en ligne</span>}
+                {hasAudio && <span className="badge badge-audio-tag">Audio</span>}
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                {sameAuthorBooks.map((b) => (
-                  <BookCard key={b.id} book={b} />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Plus de ce genre */}
-          {genreBooks.length > 0 && primaryCategory && (
-            <section className="mt-16">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
-                  Plus de {primaryCategory.name.toLowerCase()}
-                </h2>
+              <h1 dir="auto">{book.title}</h1>
+              <div className="byline">
+                <span>de</span>
                 <Link
-                  href={`/catalogue?category=${primaryCategory.slug}`}
-                  className="text-sm text-amber-600 hover:underline"
+                  className="author"
+                  href={book.authorSlug ? `/auteur/${book.authorSlug}` : `/catalogue?q=${encodeURIComponent(book.author)}`}
+                  dir="auto"
                 >
-                  Voir tout
+                  {formatAuthorName(book.author)}
+                </Link>
+                {book.publishedYear && <span>· {book.publishedYear}</span>}
+              </div>
+              <dl className="tile-list">
+                <div className="tile">
+                  <dt>Langue</dt>
+                  <dd>{langLabel}</dd>
+                </div>
+                {hasAudio ? (
+                  <div className="tile">
+                    <dt>Durée</dt>
+                    <dd>{fmtDuration(book.audioDuration)}</dd>
+                  </div>
+                ) : (
+                  <div className="tile">
+                    <dt>Pages</dt>
+                    <dd>{book.pageCount ?? "—"}</dd>
+                  </div>
+                )}
+                <div className="tile">
+                  <dt>Téléchargements</dt>
+                  <dd>{book.downloadCount}</dd>
+                </div>
+              </dl>
+              <div className="actions">
+                {hasPdf && (
+                  <a className="btn btn-primary btn-lg" href={downloadHref}>
+                    <Icon d={I.download} /> Télécharger le PDF
+                  </a>
+                )}
+                {hasPdf && (
+                  <Link className="btn btn-outline btn-lg" href={readerHref}>
+                    <Icon d={I.book} /> Lire en ligne
+                  </Link>
+                )}
+                {hasAudio && (
+                  <a className="btn btn-outline btn-lg" href="#ecouter">
+                    <Icon d={I.headphones} /> Écouter
+                  </a>
+                )}
+                <FavButton bookId={book.id} slug={book.slug} initialFavorited={isFavorited} isLoggedIn={isLoggedIn} />
+                <ShareButtons url={`${SITE_URL}/livre/${book.slug}`} title={book.title} />
+              </div>
+            </div>
+          </section>
+
+          <div className="detail-layout">
+            <div className="detail-main">
+              {book.description && (
+                <section aria-labelledby="about">
+                  <h2 id="about">À propos</h2>
+                  <p className="prose" dir="auto">
+                    {book.description}
+                  </p>
+                </section>
+              )}
+
+              {hasAudio && (
+                <section id="ecouter" aria-labelledby="listen" style={{ scrollMarginTop: 90 }}>
+                  <h2 id="listen">Écouter en ligne</h2>
+                  <AudioPlayer tracks={audioTracks} totalDuration={book.audioDuration ?? undefined} />
+                </section>
+              )}
+
+              {authorProfile && (authorProfile.bio || authorProfile.image) && (
+                <section aria-labelledby="author">
+                  <h2 id="author">L&apos;auteur</h2>
+                  <div className="author-card">
+                    {authorProfile.image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        className="avatar"
+                        src={authorProfile.image}
+                        alt={authorProfile.name}
+                        style={{ objectFit: "cover" }}
+                      />
+                    ) : (
+                      <span className="avatar" aria-hidden="true">
+                        {[...authorProfile.name][0]}
+                      </span>
+                    )}
+                    <div>
+                      <h3 dir="auto">{authorProfile.name}</h3>
+                      {authorProfile.bio && <p>{authorProfile.bio}</p>}
+                      {book.authorSlug && (
+                        <Link href={`/auteur/${book.authorSlug}`} className="link-arrow" style={{ marginTop: 8 }}>
+                          Voir tous ses livres <Icon d={I.arrow} />
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {sameAuthorBooks.length > 0 && (
+                <section aria-labelledby="same-author">
+                  <h2 id="same-author">Du même auteur</h2>
+                  <div className="mini-grid">
+                    {sameAuthorBooks.map((b) => (
+                      <BookMini key={b.slug} book={b} />
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {genreBooks.length > 0 && primaryCategory && (
+                <section aria-labelledby="genre">
+                  <h2 id="genre">Plus de {primaryCategory.name.toLowerCase()}</h2>
+                  <div className="mini-grid">
+                    {genreBooks.map((b) => (
+                      <BookMini key={b.slug} book={b} />
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              <section aria-labelledby="reviews">
+                <h2 id="reviews">Avis & notes</h2>
+                <Reviews bookId={book.id} isLoggedIn={isLoggedIn} />
+              </section>
+            </div>
+
+            <aside className="detail-aside" aria-label="Lire ou télécharger">
+              <div className="download-card">
+                <h2>Lire ou télécharger</h2>
+                <div className="notice">
+                  <Icon d={I.shield} size={22} />
+                  <span>
+                    Ce livre est dans le domaine public : vous pouvez le lire, le télécharger et
+                    le partager librement.
+                  </span>
+                </div>
+
+                {hasPdf && (
+                  <Link className="btn btn-ink btn-xl" href={readerHref}>
+                    <Icon d={I.book} /> Ouvrir le lecteur
+                  </Link>
+                )}
+                {hasAudio && (
+                  <a className="btn btn-ink btn-xl" href="#ecouter">
+                    <Icon d={I.headphones} /> Écouter en ligne
+                  </a>
+                )}
+
+                {hasPdf && (
+                  <>
+                    <div className="divider" />
+                    <div className="dl-block">
+                      <div className="row">
+                        <strong>PDF</strong>
+                        <span>{book.pdfSize ? formatFileSize(book.pdfSize) : ""}</span>
+                      </div>
+                      <p>Lisible hors ligne sur tous vos appareils.</p>
+                      <a className="btn btn-primary btn-xl" href={downloadHref}>
+                        <Icon d={I.download} /> Télécharger le PDF
+                      </a>
+                    </div>
+                  </>
+                )}
+
+                {book.epubUrl && (
+                  <>
+                    <div className="divider" />
+                    <div className="dl-block">
+                      <div className="row">
+                        <strong>EPUB</strong>
+                        <span>liseuse / mobile</span>
+                      </div>
+                      <p>Idéal pour liseuses, Kindle et téléphones.</p>
+                      <a className="btn btn-outline btn-xl" href={book.epubUrl} target="_blank" rel="noopener noreferrer">
+                        <Icon d={I.download} /> Télécharger l&apos;EPUB
+                      </a>
+                      <a
+                        className="btn btn-outline btn-xl"
+                        href="https://www.amazon.com/sendtokindle"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Icon d={I.external} /> Envoyer vers Kindle
+                      </a>
+                    </div>
+                  </>
+                )}
+
+                <p className="small-note">
+                  Un souci pour ouvrir le fichier ? <Link href="/contact">Contactez-nous</Link>.
+                </p>
+                <a className="report" href={reportHref}>
+                  <Icon d={I.flag} size={16} /> Signaler ce livre
+                </a>{" "}
+                <Link className="small-note" href="/dmca">
+                  (politique DMCA)
                 </Link>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                {genreBooks.map((b) => (
-                  <BookCard key={b.id} book={b} />
-                ))}
-              </div>
-            </section>
-          )}
 
-          {/* Livres similaires */}
-          {relatedBooks.length > 0 && (
-            <section className="mt-16">
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">
-                {t.bookPage.relatedTitle}
-              </h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                {relatedBooks.map((related) => (
-                  <BookCard key={related.id} book={related} />
-                ))}
+              <div className="facts-card">
+                <h2>Fiche du livre</h2>
+                <dl className="facts">
+                  <div>
+                    <dt>Titre</dt>
+                    <dd dir="auto">{book.title}</dd>
+                  </div>
+                  <div>
+                    <dt>Auteur</dt>
+                    <dd dir="auto">{formatAuthorName(book.author)}</dd>
+                  </div>
+                  {primaryCategory && (
+                    <div>
+                      <dt>Genre</dt>
+                      <dd>{primaryCategory.name}</dd>
+                    </div>
+                  )}
+                  <div>
+                    <dt>Langue</dt>
+                    <dd>{langLabel}</dd>
+                  </div>
+                  {book.pageCount && (
+                    <div>
+                      <dt>Pages</dt>
+                      <dd>{book.pageCount}</dd>
+                    </div>
+                  )}
+                  {book.publishedYear && (
+                    <div>
+                      <dt>Publication</dt>
+                      <dd>{book.publishedYear}</dd>
+                    </div>
+                  )}
+                  <div>
+                    <dt>Formats</dt>
+                    <dd>
+                      {[hasPdf && "PDF", book.epubUrl && "EPUB", hasAudio && "Audio"].filter(Boolean).join(" · ") || "—"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Licence</dt>
+                    <dd>Domaine public</dd>
+                  </div>
+                </dl>
               </div>
-            </section>
+            </aside>
+          </div>
+
+          {relatedBooks.length > 0 && (
+            <div className="like-band" style={{ marginInline: "calc(50% - 50vw)" }}>
+              <div className="like-inner">
+                <div className="section-head">
+                  <h2>Des livres comme celui-ci</h2>
+                </div>
+                <div className="like-grid">
+                  {relatedBooks.map((b) => (
+                    <BookCard key={b.slug} book={b} />
+                  ))}
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </main>
 
-      <Footer />
+      <DesignFooter categories={book.categories.map((c) => c.category)} />
+      <MobileTabbar />
     </div>
   );
 }
