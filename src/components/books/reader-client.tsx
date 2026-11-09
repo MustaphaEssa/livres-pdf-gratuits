@@ -10,7 +10,7 @@ const PdfViewer = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center gap-2 bg-slate-950/95 text-slate-300 backdrop-blur-sm">
+      <div className="fixed inset-0 z-[100] flex items-center justify-center gap-2 bg-[#faf6ef] text-[#5d584f]">
         <Loader2 className="h-5 w-5 animate-spin" />
         Ouverture du lecteur…
       </div>
@@ -81,7 +81,7 @@ export function ReaderClient({
 
   if (initialPage === null) {
     return (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center gap-2 bg-slate-950/95 text-slate-300">
+      <div className="fixed inset-0 z-[100] flex items-center justify-center gap-2 bg-[#faf6ef] text-[#5d584f]">
         <Loader2 className="h-5 w-5 animate-spin" /> Ouverture du lecteur…
       </div>
     );

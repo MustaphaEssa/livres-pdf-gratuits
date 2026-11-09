@@ -107,37 +107,39 @@ export function PdfViewer({ pdfUrl, title, onClose, initialPage = 1, onPageChang
   const progress = numPages > 0 ? (pageNumber / numPages) * 100 : 0;
 
   const pageLoader = (
-    <div className="flex items-center gap-2 text-slate-300 py-24">
+    <div className="flex items-center gap-2 text-[#5d584f] py-24">
       <Loader2 className="h-5 w-5 animate-spin" />
       Chargement…
     </div>
   );
 
   const iconBtn =
-    "inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-200 transition-colors hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent";
+    "inline-flex h-9 w-9 items-center justify-center rounded-lg text-[#1c1b19] transition-colors hover:bg-[#f1e9da] disabled:opacity-30 disabled:hover:bg-transparent";
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col bg-slate-950/95 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[100] flex flex-col bg-[#faf6ef]">
       {/* Barre de progression */}
-      <div className="h-1 w-full bg-white/10">
+      <div className="h-1 w-full bg-[#e6dfd2]">
         <div
-          className="h-full bg-amber-500 transition-all duration-300 ease-out"
+          className="h-full bg-[#2d3fa6] transition-all duration-300 ease-out"
           style={{ width: `${progress}%` }}
         />
       </div>
 
       {/* Barre supérieure */}
-      <header className="flex items-center justify-between gap-3 px-4 py-3">
-        <div className="flex min-w-0 items-center gap-2 text-slate-200">
-          <BookOpen className="h-5 w-5 shrink-0 text-amber-500" />
-          <span className="truncate text-sm font-medium">{title}</span>
+      <header className="flex items-center justify-between gap-3 border-b border-[#e6dfd2] bg-white px-4 py-3">
+        <div className="flex min-w-0 items-center gap-2 text-[#1c1b19]">
+          <BookOpen className="h-5 w-5 shrink-0 text-[#2d3fa6]" />
+          <span className="truncate text-sm font-semibold" style={{ fontFamily: "var(--ma-serif)" }}>
+            {title}
+          </span>
         </div>
         <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={() => setShowText((v) => !v)}
             title="Sélection de texte (plus lent)"
-            className={`${iconBtn} ${showText ? "bg-amber-500/20 text-amber-400" : ""}`}
+            className={`${iconBtn} ${showText ? "bg-[#e8ebf8] text-[#2d3fa6]" : ""}`}
           >
             <TextCursor className="h-4 w-4" />
           </button>
@@ -149,7 +151,7 @@ export function PdfViewer({ pdfUrl, title, onClose, initialPage = 1, onPageChang
           >
             <ZoomOut className="h-4 w-4" />
           </button>
-          <span className="w-11 text-center text-xs text-slate-400">
+          <span className="w-11 text-center text-xs text-[#5d584f]">
             {Math.round(zoom * 100)}%
           </span>
           <button
@@ -160,7 +162,7 @@ export function PdfViewer({ pdfUrl, title, onClose, initialPage = 1, onPageChang
           >
             <ZoomIn className="h-4 w-4" />
           </button>
-          <div className="mx-1 h-5 w-px bg-white/10" />
+          <div className="mx-1 h-5 w-px bg-[#e6dfd2]" />
           <button type="button" onClick={onClose} title="Fermer (Échap)" className={iconBtn}>
             <X className="h-5 w-5" />
           </button>
@@ -173,7 +175,7 @@ export function PdfViewer({ pdfUrl, title, onClose, initialPage = 1, onPageChang
         className="flex flex-1 justify-center overflow-auto px-4 py-6"
       >
         {error ? (
-          <div className="py-24 text-center text-slate-400">
+          <div className="py-24 text-center text-[#5d584f]">
             <p className="mb-2">Impossible d&apos;afficher ce PDF.</p>
             <p className="text-sm">{error}</p>
           </div>
@@ -206,7 +208,7 @@ export function PdfViewer({ pdfUrl, title, onClose, initialPage = 1, onPageChang
       </div>
 
       {/* Barre inférieure : navigation */}
-      <footer className="flex items-center justify-center gap-3 px-4 py-3">
+      <footer className="flex items-center justify-center gap-3 border-t border-[#e6dfd2] bg-white px-4 py-3">
         <button
           type="button"
           onClick={goPrev}
@@ -217,7 +219,7 @@ export function PdfViewer({ pdfUrl, title, onClose, initialPage = 1, onPageChang
           <ChevronLeft className="h-5 w-5" />
         </button>
 
-        <div className="flex items-center gap-1.5 text-sm text-slate-300">
+        <div className="flex items-center gap-1.5 text-sm text-[#1c1b19]">
           <input
             type="text"
             inputMode="numeric"
@@ -230,10 +232,10 @@ export function PdfViewer({ pdfUrl, title, onClose, initialPage = 1, onPageChang
                 (e.target as HTMLInputElement).blur();
               }
             }}
-            className="h-9 w-14 rounded-lg border border-white/15 bg-white/5 text-center text-slate-100 outline-none focus:border-amber-500"
+            className="h-9 w-14 rounded-lg border border-[#e6dfd2] bg-white text-center text-[#1c1b19] outline-none focus:border-[#2d3fa6]"
             aria-label="Numéro de page"
           />
-          <span className="text-slate-500">/ {numPages || "…"}</span>
+          <span className="text-[#5d584f]">/ {numPages || "…"}</span>
         </div>
 
         <button
