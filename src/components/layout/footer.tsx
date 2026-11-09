@@ -35,6 +35,7 @@ export function Footer() {
   const legalLinks = [
     { name: t.footer.terms, href: "/conditions" },
     { name: t.footer.privacy, href: "/confidentialite" },
+    { name: "DMCA", href: "/dmca" },
     { name: t.footer.sitemap, href: "/sitemap.xml" },
   ];
   return (

@@ -8,7 +8,6 @@ import {
   FileText,
   User,
   Globe,
-  Share2,
   Eye,
   Headphones,
   Clock,
@@ -19,11 +18,13 @@ import { Button } from "@/components/ui/button";
 import { PdfReader } from "@/components/books/pdf-reader";
 import { AudioPlayer } from "@/components/books/audio-player";
 import { FavoriteButton } from "@/components/books/favorite-button";
+import { ShareButtons } from "@/components/books/share-buttons";
 import { Reviews } from "@/components/books/reviews";
 import { BookCard } from "@/components/books/book-card";
 import { formatFileSize, formatAuthorName } from "@/lib/utils";
-import { getBookBySlug, getRelatedBooks, getSameAuthorBooks, incrementViewCount, parseAudioTracks } from "@/lib/books";
+import { getBookBySlug, getRelatedBooks, getSameAuthorBooks, getBooksByGenre, getAuthorProfile, incrementViewCount, parseAudioTracks } from "@/lib/books";
 import { getUserSession } from "@/lib/user-server";
+import { getSiteSettings } from "@/lib/settings";
 import prisma from "@/lib/db";
 import { SITE_URL, SITE_NAME } from "@/lib/site";
 import { headers } from "next/headers";
@@ -77,13 +78,19 @@ export default async function BookPage({ params }: BookPageProps) {
   }
 
   // Requêtes indépendantes lancées en parallèle (en-têtes, i18n, similaires, session)
-  const [hdrs, { t }, relatedBooks, sameAuthorBooks, session] = await Promise.all([
-    headers(),
-    getServerI18n(),
-    getRelatedBooks(book.id, book.categories.map((c) => c.categoryId), 4),
-    getSameAuthorBooks(book.id, book.authorSlug, 4, book.mediaType === "AUDIO" ? "AUDIO" : "PDF"),
-    getUserSession(),
-  ]);
+  const bookMediaType = book.mediaType === "AUDIO" ? "AUDIO" : "PDF";
+  const genreSlug = book.categories[0]?.category.slug;
+  const [hdrs, { t }, relatedBooks, sameAuthorBooks, genreBooks, authorProfile, settings, session] =
+    await Promise.all([
+      headers(),
+      getServerI18n(),
+      getRelatedBooks(book.id, book.categories.map((c) => c.categoryId), 4),
+      getSameAuthorBooks(book.id, book.authorSlug, 4, bookMediaType),
+      getBooksByGenre(genreSlug, book.id, 4, bookMediaType),
+      getAuthorProfile(book.authorSlug),
+      getSiteSettings(),
+      getUserSession(),
+    ]);
 
   // Comptabilise une vue, en évitant les rechargements répétés d'une même IP
   const viewerIp =
@@ -114,6 +121,12 @@ export default async function BookPage({ params }: BookPageProps) {
 
   const isAudio = book.mediaType === "AUDIO";
   const audioTracks = isAudio ? parseAudioTracks(book.audioTracks) : [];
+  const reportEmail = settings.email || "contact@livrespdfgratuits.com";
+  const reportHref = `mailto:${reportEmail}?subject=${encodeURIComponent(
+    `Signalement : ${book.title}`
+  )}&body=${encodeURIComponent(
+    `Bonjour,\n\nJe souhaite signaler ce livre :\n${book.title}\n${SITE_URL}/livre/${book.slug}\n\nMotif du signalement :\n`
+  )}`;
   const fmtDuration = (sec?: number | null) => {
     if (!sec || sec <= 0) return "—";
     const h = Math.floor(sec / 3600);
@@ -164,11 +177,41 @@ export default async function BookPage({ params }: BookPageProps) {
     provider: { "@type": "Organization", name: SITE_NAME },
   };
 
+  // Fil d'Ariane pour les moteurs de recherche (BreadcrumbList)
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Accueil", item: SITE_URL },
+      { "@type": "ListItem", position: 2, name: "Catalogue", item: `${SITE_URL}/catalogue` },
+      ...(primaryCategory
+        ? [
+            {
+              "@type": "ListItem",
+              position: 3,
+              name: primaryCategory.name,
+              item: `${SITE_URL}/catalogue?category=${primaryCategory.slug}`,
+            },
+          ]
+        : []),
+      {
+        "@type": "ListItem",
+        position: primaryCategory ? 4 : 3,
+        name: book.title,
+        item: `${SITE_URL}/livre/${book.slug}`,
+      },
+    ],
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
       <Header />
 
@@ -257,9 +300,11 @@ export default async function BookPage({ params }: BookPageProps) {
                       addLabel={t.bookPage.addFavorite}
                       removeLabel={t.bookPage.removeFavorite}
                     />
-                    <Button variant="outline" size="icon" className="flex-1">
-                      <Share2 className="h-5 w-5" />
-                    </Button>
+                    <ShareButtons
+                      url={`${SITE_URL}/livre/${book.slug}`}
+                      title={book.title}
+                      className="flex-1"
+                    />
                   </div>
                 </div>
               </div>
@@ -420,7 +465,11 @@ export default async function BookPage({ params }: BookPageProps) {
                 </svg>
                 <p className="text-sm text-green-800 dark:text-green-300">
                   <strong>Œuvre du domaine public</strong> — ce livre est libre de droits et peut
-                  être lu, téléchargé et partagé gratuitement. Source : Internet Archive.
+                  être lu, téléchargé et partagé gratuitement. Source : Internet Archive.{" "}
+                  <a href={reportHref} className="underline hover:text-green-900 dark:hover:text-green-200">
+                    Signaler ce livre
+                  </a>{" "}
+                  (<Link href="/dmca" className="underline hover:text-green-900 dark:hover:text-green-200">politique DMCA</Link>).
                 </p>
               </div>
 
@@ -450,12 +499,59 @@ export default async function BookPage({ params }: BookPageProps) {
             </div>
           </div>
 
+          {/* À propos de l'auteur */}
+          {authorProfile && (authorProfile.bio || authorProfile.image) && (
+            <section className="mt-16">
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">
+                À propos de l&apos;auteur
+              </h2>
+              <div className="flex flex-col sm:flex-row gap-6 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-6">
+                {authorProfile.image && (
+                  <div className="relative h-28 w-28 flex-shrink-0 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700 mx-auto sm:mx-0">
+                    <Image
+                      src={authorProfile.image}
+                      alt={authorProfile.name}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-baseline gap-2 mb-2">
+                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                      {authorProfile.name}
+                    </h3>
+                    {(authorProfile.birthYear || authorProfile.deathYear) && (
+                      <span className="text-sm text-slate-400">
+                        ({authorProfile.birthYear ?? "?"}
+                        {authorProfile.deathYear ? ` – ${authorProfile.deathYear}` : ""})
+                      </span>
+                    )}
+                  </div>
+                  {authorProfile.bio && (
+                    <p className="text-slate-600 dark:text-slate-300 leading-relaxed line-clamp-5">
+                      {authorProfile.bio}
+                    </p>
+                  )}
+                  {book.authorSlug && (
+                    <Link
+                      href={`/auteur/${book.authorSlug}`}
+                      className="inline-block mt-3 text-sm text-amber-600 hover:underline"
+                    >
+                      Voir tous ses livres →
+                    </Link>
+                  )}
+                </div>
+              </div>
+            </section>
+          )}
+
           {/* Du même auteur */}
           {sameAuthorBooks.length > 0 && (
             <section className="mt-16">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
-                  Du même auteur
+                  {isAudio ? "Autres livres audio du même auteur" : "Du même auteur"}
                 </h2>
                 {book.authorSlug && (
                   <Link
@@ -468,6 +564,28 @@ export default async function BookPage({ params }: BookPageProps) {
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                 {sameAuthorBooks.map((b) => (
+                  <BookCard key={b.id} book={b} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Plus de ce genre */}
+          {genreBooks.length > 0 && primaryCategory && (
+            <section className="mt-16">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+                  Plus de {primaryCategory.name.toLowerCase()}
+                </h2>
+                <Link
+                  href={`/catalogue?category=${primaryCategory.slug}`}
+                  className="text-sm text-amber-600 hover:underline"
+                >
+                  Voir tout
+                </Link>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                {genreBooks.map((b) => (
                   <BookCard key={b.id} book={b} />
                 ))}
               </div>

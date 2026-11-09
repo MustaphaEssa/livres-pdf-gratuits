@@ -173,6 +173,36 @@ export async function getSameAuthorBooks(
   });
 }
 
+// Fiche auteur (bio, photo, dates) depuis la table Author
+export async function getAuthorProfile(authorSlug: string | null) {
+  if (!authorSlug) return null;
+  return prisma.author.findUnique({
+    where: { slug: authorSlug },
+    select: { slug: true, name: true, image: true, bio: true, birthYear: true, deathYear: true },
+  });
+}
+
+// Autres livres du même genre/catégorie (hors livre courant)
+export async function getBooksByGenre(
+  categorySlug: string | undefined,
+  excludeBookId: string,
+  limit = 6,
+  mediaType: "PDF" | "AUDIO" = "PDF"
+): Promise<BookWithCategories[]> {
+  if (!categorySlug) return [];
+  return prisma.book.findMany({
+    where: {
+      isPublished: true,
+      mediaType,
+      id: { not: excludeBookId },
+      categories: { some: { category: { slug: categorySlug } } },
+    },
+    include: bookWithCategories.include,
+    orderBy: { downloadCount: "desc" },
+    take: limit,
+  });
+}
+
 // Livres d'un auteur (paginés) + nom affiché de l'auteur
 export async function getBooksByAuthorSlug(
   authorSlug: string,
