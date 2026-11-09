@@ -18,10 +18,16 @@ cd "$(dirname "$0")"
 APP_NAME="livrespdfgratuits"   # nom du process PM2 (voir ecosystem.config.js)
 BRANCH="main"
 
-echo "==> 1/5  Récupération du code (git pull origin $BRANCH)"
+# Toujours utiliser le Prisma installé localement (le projet est épinglé sur
+# Prisma 6). `npx prisma` tout court peut récupérer Prisma 7 depuis le réseau,
+# qui casse sous Node 20 — d'où l'échec possible du `db push`.
+PRISMA="./node_modules/.bin/prisma"
+[ -x "$PRISMA" ] || PRISMA="npx --no-install prisma"
+
+echo "==> 1/6  Récupération du code (git pull origin $BRANCH)"
 git pull origin "$BRANCH"
 
-echo "==> 2/5  Installation des dépendances"
+echo "==> 2/6  Installation des dépendances"
 # npm ci si package-lock.json présent (reproductible), sinon npm install.
 if [ -f package-lock.json ]; then
   npm ci
@@ -30,7 +36,7 @@ else
 fi
 
 echo "==> 3/6  Synchronisation du schéma de base (prisma db push)"
-npx prisma db push
+$PRISMA db push
 
 echo "==> 4/6  Insertion des articles de blog (ignore ceux déjà présents)"
 node scripts/add-blog-articles.mjs
