@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Save } from "lucide-react";
+import { Save, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,6 +51,8 @@ export function ArticleForm({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch("/api/admin/categories")
@@ -61,6 +64,25 @@ export function ArticleForm({
   }, []);
 
   const up = (patch: Partial<typeof form>) => setForm((f) => ({ ...f, ...patch }));
+
+  const uploadImage = async (file: File) => {
+    setError("");
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("image", file);
+      fd.append("name", form.slug || form.title || "couverture");
+      const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Échec de l'upload");
+      up({ coverImage: data.url });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur d'upload");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -149,12 +171,61 @@ export function ArticleForm({
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">
-              Image de couverture (URL, optionnel)
+              Image de couverture (optionnel)
             </label>
+
+            {form.coverImage ? (
+              <div className="relative inline-block mb-3">
+                <div className="relative w-56 aspect-video rounded-md overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800">
+                  <Image
+                    src={form.coverImage}
+                    alt="Aperçu de la couverture"
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => up({ coverImage: "" })}
+                  className="absolute -top-2 -right-2 rounded-full bg-red-500 text-white p-1 shadow hover:bg-red-600"
+                  title="Retirer l'image"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ) : null}
+
+            <div className="flex items-center gap-3">
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) uploadImage(f);
+                }}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                disabled={uploading}
+                onClick={() => fileRef.current?.click()}
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                {uploading ? "Envoi…" : "Choisir une image"}
+              </Button>
+              <span className="text-xs text-slate-400">
+                JPG, PNG ou WebP — 5 Mo max, idéal 1200×675
+              </span>
+            </div>
+
             <Input
               value={form.coverImage}
               onChange={(e) => up({ coverImage: e.target.value })}
-              placeholder="https://…"
+              placeholder="…ou collez une URL https://…"
+              className="mt-2"
             />
           </div>
           <div className="flex items-center gap-6">
