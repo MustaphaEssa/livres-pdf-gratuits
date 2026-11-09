@@ -81,6 +81,7 @@ model Book {
   downloads     Download[]
   reviews       Review[]
   favorites     Favorite[]
+  collections   CollectionBook[]
 
   fbPostedAt    DateTime? // date de partage automatique sur Facebook
 
@@ -320,4 +321,39 @@ model SiteSettings {
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// ==================== COLLECTIONS THÉMATIQUES ====================
+// Listes éditoriales de livres regroupés autour d'une idée (ex. « À lire en un
+// week-end »), avec une note explicative possible par livre.
+model Collection {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  description String?
+  coverImage  String?
+  isPublished Boolean  @default(true)
+
+  books       CollectionBook[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([slug])
+  @@index([isPublished])
+}
+
+// Lien Collection <-> Book (ordonné, avec note optionnelle)
+model CollectionBook {
+  collectionId String
+  bookId       String
+  note         String? // pourquoi ce livre est dans la collection
+  order        Int     @default(0)
+
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  book         Book       @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@id([collectionId, bookId])
+  @@index([collectionId])
+  @@index([bookId])
 }

@@ -23,11 +23,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }),
   ]);
 
+  const collections = await prisma.collection.findMany({
+    where: { isPublished: true },
+    select: { slug: true, updatedAt: true },
+  });
+
   // Pages principales
   const mainRoutes: MetadataRoute.Sitemap = [
     { p: "", priority: 1, freq: "daily" as const },
     { p: "/catalogue", priority: 0.9, freq: "daily" as const },
     { p: "/livres-audio", priority: 0.8, freq: "daily" as const },
+    { p: "/collections", priority: 0.7, freq: "weekly" as const },
     { p: "/auteurs", priority: 0.8, freq: "weekly" as const },
     { p: "/blog", priority: 0.7, freq: "weekly" as const },
     { p: "/a-propos", priority: 0.5, freq: "monthly" as const },
@@ -79,6 +85,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
+  const collectionRoutes: MetadataRoute.Sitemap = collections.map((c) => ({
+    url: `${SITE_URL}/collections/${c.slug}`,
+    lastModified: c.updatedAt,
+    changeFrequency: "weekly",
+    priority: 0.6,
+  }));
+
   return [
     ...mainRoutes,
     ...legalRoutes,
@@ -86,5 +99,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...authorRoutes,
     ...bookRoutes,
     ...postRoutes,
+    ...collectionRoutes,
   ];
 }

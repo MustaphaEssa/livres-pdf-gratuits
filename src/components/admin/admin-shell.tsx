@@ -15,6 +15,7 @@ import {
   Settings,
   Download,
   Trash2,
+  Library,
   LogOut,
   Menu,
   X,
@@ -29,6 +30,7 @@ export type AdminNavKey =
   | "nettoyage"
   | "auteurs"
   | "categories"
+  | "collections"
   | "blog"
   | "utilisateurs"
   | "avis"
@@ -60,6 +62,7 @@ export function AdminShell({ active, children }: AdminShellProps) {
     { key: "nettoyage", href: "/admin/nettoyage", label: "Nettoyage", Icon: Trash2 },
     { key: "auteurs", href: "/admin/auteurs", label: "Auteurs", Icon: Users },
     { key: "categories", href: "/admin/categories", label: t.admin.categories, Icon: Filter },
+    { key: "collections", href: "/admin/collections", label: "Collections", Icon: Library },
     { key: "blog", href: "/admin/blog", label: t.admin.blog, Icon: MessageSquare },
     { key: "utilisateurs", href: "/admin/utilisateurs", label: "Utilisateurs", Icon: Users },
     { key: "avis", href: "/admin/avis", label: "Avis", Icon: Star },
