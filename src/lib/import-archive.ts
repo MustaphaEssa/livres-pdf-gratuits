@@ -260,13 +260,18 @@ export async function importBook(
   const sn = surname(fallbackAuthor);
   if (sn && !norm(creatorStr).includes(sn)) return { status: "skip" };
 
+  // On choisit le PDF le PLUS LÉGER (Internet Archive propose souvent plusieurs
+  // versions du même livre : un gros scan haute résolution et une version texte
+  // bien plus légère). Un plancher évite de prendre un fragment (couverture,
+  // extrait) à la place du livre complet.
+  const PDF_MIN_BYTES = 300 * 1024;
   const pdfs = files
     .filter((f) => /\.pdf$/i.test(f.name) && f.size)
     .map((f) => ({ name: f.name, size: Number(f.size) }))
     .filter((f) => f.size > 0 && f.size <= MAX_PDF_BYTES)
-    .sort((a, b) => b.size - a.size);
+    .sort((a, b) => a.size - b.size); // croissant
   if (!pdfs.length) return { status: "skip" };
-  const pdf = pdfs[0];
+  const pdf = pdfs.find((f) => f.size >= PDF_MIN_BYTES) ?? pdfs[pdfs.length - 1];
 
   // EPUB éventuel (lien direct Internet Archive, non téléchargé)
   const epubFile = files.find((f) => /\.epub$/i.test(f.name));
@@ -275,6 +280,23 @@ export async function importBook(
     : null;
 
   const title = fixEncoding(one(md.title)) || identifier;
+
+  // Déduplication par titre + auteur : Internet Archive contient de nombreux
+  // scans/éditions du même ouvrage (identifiants différents). On évite d'ajouter
+  // deux fois la même œuvre pour le même auteur (comparaison sur le titre
+  // normalisé, accents et ponctuation ignorés). Fait AVANT le téléchargement.
+  const dedupAuthorSlug = slugify(formatAuthorName(fallbackAuthor));
+  const normTitle = norm(title);
+  if (dedupAuthorSlug && normTitle) {
+    const sameAuthor = await prisma.book.findMany({
+      where: { authorSlug: dedupAuthorSlug },
+      select: { title: true },
+    });
+    if (sameAuthor.some((e) => norm(e.title) === normTitle)) {
+      return { status: "duplicate", title };
+    }
+  }
+
   let slug = slugify(title) || slugify(identifier);
   if (await prisma.book.count({ where: { slug } })) {
     slug = `${slug}-${identifier.slice(-6).toLowerCase()}`;
