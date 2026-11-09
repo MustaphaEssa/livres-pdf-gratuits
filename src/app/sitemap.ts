@@ -3,30 +3,42 @@ import prisma from "@/lib/db";
 import { SITE_URL } from "@/lib/site";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [books, categories, posts, authors] = await Promise.all([
-    prisma.book.findMany({
-      where: { isPublished: true },
-      select: { slug: true, updatedAt: true },
-    }),
-    prisma.category.findMany({
-      where: { type: "BOOK" },
-      select: { slug: true },
-    }),
-    prisma.post.findMany({
-      where: { isPublished: true },
-      select: { slug: true, updatedAt: true },
-    }),
-    prisma.book.findMany({
-      where: { isPublished: true, authorSlug: { not: null } },
-      select: { authorSlug: true },
-      distinct: ["authorSlug"],
-    }),
-  ]);
+  // Données dynamiques : en cas d'erreur (base indisponible ou schéma pas
+  // encore synchronisé au moment du build), on se rabat sur les routes
+  // statiques plutôt que de faire échouer tout le build.
+  let books: { slug: string; updatedAt: Date }[] = [];
+  let categories: { slug: string }[] = [];
+  let posts: { slug: string; updatedAt: Date }[] = [];
+  let authors: { authorSlug: string | null }[] = [];
+  let collections: { slug: string; updatedAt: Date }[] = [];
 
-  const collections = await prisma.collection.findMany({
-    where: { isPublished: true },
-    select: { slug: true, updatedAt: true },
-  });
+  try {
+    [books, categories, posts, authors] = await Promise.all([
+      prisma.book.findMany({
+        where: { isPublished: true },
+        select: { slug: true, updatedAt: true },
+      }),
+      prisma.category.findMany({
+        where: { type: "BOOK" },
+        select: { slug: true },
+      }),
+      prisma.post.findMany({
+        where: { isPublished: true },
+        select: { slug: true, updatedAt: true },
+      }),
+      prisma.book.findMany({
+        where: { isPublished: true, authorSlug: { not: null } },
+        select: { authorSlug: true },
+        distinct: ["authorSlug"],
+      }),
+    ]);
+    collections = await prisma.collection.findMany({
+      where: { isPublished: true },
+      select: { slug: true, updatedAt: true },
+    });
+  } catch (e) {
+    console.error("sitemap: échec de récupération des données dynamiques", e);
+  }
 
   // Pages principales
   const mainRoutes: MetadataRoute.Sitemap = [
