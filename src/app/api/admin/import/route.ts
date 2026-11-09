@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth-server";
 import prisma from "@/lib/db";
-import { searchAuthor, importBook, upsertAuthorProfile, freeDiskMb } from "@/lib/import-archive";
+import {
+  searchAuthor,
+  importBook,
+  searchLibrivox,
+  importAudiobook,
+  upsertAuthorProfile,
+  freeDiskMb,
+} from "@/lib/import-archive";
 import { slugify, formatAuthorName } from "@/lib/utils";
 
 export const runtime = "nodejs";
@@ -43,13 +50,17 @@ async function run(
   max: number,
   categoryMap: Record<string, string>,
   importAll: boolean,
-  minDownloads: number
+  minDownloads: number,
+  mediaType: "PDF" | "AUDIO" = "PDF"
 ) {
+  const isAudio = mediaType === "AUDIO";
   try {
     // Marge (×4) pour compenser doublons et écarts de créateur ; en mode complet
     // on vise le plafond par auteur avec une marge suffisante.
     const rows = importAll ? Math.max(1000, max * 3) : max * 4;
-    const docs = await searchAuthor(author, rows);
+    const docs = isAudio
+      ? await searchLibrivox(author, rows)
+      : await searchAuthor(author, rows);
     job.found = docs.length;
     job.log.push(
       `${docs.length} résultat(s) trouvé(s) sur Internet Archive` +
@@ -71,8 +82,9 @@ async function run(
         );
         break;
       }
-      // Stoppe avant de saturer le disque du serveur
-      if (MIN_FREE_DISK_MB > 0) {
+      // Stoppe avant de saturer le disque du serveur (PDF seulement : l'audio
+      // est diffusé en streaming, rien n'est téléchargé).
+      if (!isAudio && MIN_FREE_DISK_MB > 0) {
         const free = await freeDiskMb();
         if (free !== null && free < MIN_FREE_DISK_MB) {
           job.cancelled = true;
@@ -83,7 +95,9 @@ async function run(
         }
       }
       try {
-        const res = await importBook(doc.identifier, author, categoryMap);
+        const res = isAudio
+          ? await importAudiobook(doc.identifier, author, categoryMap)
+          : await importBook(doc.identifier, author, categoryMap);
         if (res.status === "ok") {
           job.imported++;
           job.log.push(`✓ Importé : ${res.title}`);
@@ -98,24 +112,28 @@ async function run(
       if (job.log.length > 300) job.log.splice(0, job.log.length - 300);
     }
 
-    // Toujours (re)créer la fiche de l'auteur recherché — même si tous les
-    // livres existaient déjà (anti-doublon) → garantit la photo/bio.
-    const searchedName = formatAuthorName(author);
-    authorsSeen.set(slugify(searchedName), searchedName);
+    // Fiches auteur + statut « à jour » : pour les PDF uniquement (flux audio
+    // orienté catalogue LibriVox, la recherche peut porter sur un titre).
+    if (!isAudio) {
+      // Toujours (re)créer la fiche de l'auteur recherché — même si tous les
+      // livres existaient déjà (anti-doublon) → garantit la photo/bio.
+      const searchedName = formatAuthorName(author);
+      authorsSeen.set(slugify(searchedName), searchedName);
 
-    for (const [slug, raw] of authorsSeen) {
-      await upsertAuthorProfile(slug, raw).catch(() => {});
-    }
+      for (const [slug, raw] of authorsSeen) {
+        await upsertAuthorProfile(slug, raw).catch(() => {});
+      }
 
-    // Marque l'auteur « à jour » si un import COMPLET non interrompu n'a rien
-    // ramené de nouveau (tout son corpus disponible est déjà en base).
-    if (importAll && !job.cancelled) {
-      await prisma.author
-        .update({
-          where: { slug: slugify(searchedName) },
-          data: { fullyImported: job.imported === 0 },
-        })
-        .catch(() => {});
+      // Marque l'auteur « à jour » si un import COMPLET non interrompu n'a rien
+      // ramené de nouveau (tout son corpus disponible est déjà en base).
+      if (importAll && !job.cancelled) {
+        await prisma.author
+          .update({
+            where: { slug: slugify(searchedName) },
+            data: { fullyImported: job.imported === 0 },
+          })
+          .catch(() => {});
+      }
     }
 
     job.status = "done";
@@ -141,6 +159,8 @@ export async function POST(request: Request) {
   }
 
   const author = String(body.author || "").trim();
+  const mediaType: "PDF" | "AUDIO" =
+    body.mediaType === "audio" || body.mediaType === "AUDIO" ? "AUDIO" : "PDF";
   const importAll = body.all === true;
   // Mode « tout importer » : plafond par auteur (évite de saturer le VPS avec un
   // auteur à plusieurs centaines d'œuvres) ; sinon la valeur demandée.
@@ -152,7 +172,11 @@ export async function POST(request: Request) {
     body.minDownloads !== undefined
       ? Math.max(0, Number(body.minDownloads) || 0)
       : MIN_IMPORT_DOWNLOADS;
-  if (!author) return NextResponse.json({ error: "Nom d'auteur requis" }, { status: 400 });
+  if (!author)
+    return NextResponse.json(
+      { error: mediaType === "AUDIO" ? "Terme de recherche requis" : "Nom d'auteur requis" },
+      { status: 400 }
+    );
 
   // Carte slug -> id des catégories de livres (pour la détection automatique)
   const cats = await prisma.category.findMany({
@@ -167,7 +191,7 @@ export async function POST(request: Request) {
   jobs.set(id, job);
   prune();
   // Lance en arrière-plan (pas de await) — le serveur Node persistant poursuit la tâche
-  void run(job, author, max, categoryMap, importAll, minDownloads);
+  void run(job, author, max, categoryMap, importAll, minDownloads, mediaType);
 
   return NextResponse.json({ jobId: id });
 }

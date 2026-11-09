@@ -3,7 +3,13 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useI18n } from "@/components/i18n-provider";
 
-export function SortSelect({ value }: { value: string }) {
+export function SortSelect({
+  value,
+  basePath = "/catalogue",
+}: {
+  value: string;
+  basePath?: string;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useI18n();
@@ -23,7 +29,8 @@ export function SortSelect({ value }: { value: string }) {
     }
     // On revient à la première page quand on change le tri
     params.delete("page");
-    router.push(`/catalogue?${params.toString()}`);
+    const qs = params.toString();
+    router.push(qs ? `${basePath}?${qs}` : basePath);
   };
 
   return (

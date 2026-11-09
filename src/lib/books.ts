@@ -34,7 +34,7 @@ function orderByFor(sort: SortOption): Prisma.BookOrderByWithRelationInput {
 // Livres mis en avant pour la page d'accueil
 export async function getFeaturedBooks(limit = 6): Promise<BookWithCategories[]> {
   return prisma.book.findMany({
-    where: { isPublished: true, isFeatured: true },
+    where: { isPublished: true, isFeatured: true, mediaType: "PDF" },
     include: bookWithCategories.include,
     orderBy: { downloadCount: "desc" },
     take: limit,
@@ -44,7 +44,7 @@ export async function getFeaturedBooks(limit = 6): Promise<BookWithCategories[]>
 // Derniers livres ajoutés
 export async function getLatestBooks(limit = 6): Promise<BookWithCategories[]> {
   return prisma.book.findMany({
-    where: { isPublished: true },
+    where: { isPublished: true, mediaType: "PDF" },
     include: bookWithCategories.include,
     orderBy: { createdAt: "desc" },
     take: limit,
@@ -81,7 +81,7 @@ export async function searchBooks(
     pageSize = PAGE_SIZE,
   } = params;
 
-  const where: Prisma.BookWhereInput = { isPublished: true };
+  const where: Prisma.BookWhereInput = { isPublished: true, mediaType: "PDF" };
 
   if (query) {
     // PostgreSQL : `mode: "insensitive"` pour une recherche insensible à la casse
@@ -133,6 +133,7 @@ export async function getRelatedBooks(
     ? await prisma.book.findMany({
         where: {
           isPublished: true,
+          mediaType: "PDF",
           id: { not: bookId },
           categories: { some: { categoryId: { in: categoryIds } } },
         },
@@ -147,7 +148,7 @@ export async function getRelatedBooks(
   // Complète avec d'autres livres populaires (sans doublons)
   const excludeIds = [bookId, ...related.map((b) => b.id)];
   const fill = await prisma.book.findMany({
-    where: { isPublished: true, id: { notIn: excludeIds } },
+    where: { isPublished: true, mediaType: "PDF", id: { notIn: excludeIds } },
     include: bookWithCategories.include,
     orderBy: { downloadCount: "desc" },
     take: limit - related.length,
@@ -160,11 +161,12 @@ export async function getRelatedBooks(
 export async function getSameAuthorBooks(
   bookId: string,
   authorSlug: string | null,
-  limit = 6
+  limit = 6,
+  mediaType: "PDF" | "AUDIO" = "PDF"
 ): Promise<BookWithCategories[]> {
   if (!authorSlug) return [];
   return prisma.book.findMany({
-    where: { isPublished: true, authorSlug, id: { not: bookId } },
+    where: { isPublished: true, mediaType, authorSlug, id: { not: bookId } },
     include: bookWithCategories.include,
     orderBy: { downloadCount: "desc" },
     take: limit,
@@ -177,7 +179,7 @@ export async function getBooksByAuthorSlug(
   page = 1,
   pageSize = PAGE_SIZE
 ): Promise<SearchBooksResult & { authorName: string | null }> {
-  const where: Prisma.BookWhereInput = { isPublished: true, authorSlug };
+  const where: Prisma.BookWhereInput = { isPublished: true, authorSlug, mediaType: "PDF" };
   const currentPage = Math.max(1, page);
 
   const [total, books] = await Promise.all([
@@ -208,7 +210,7 @@ export async function getAuthorsWithCounts(): Promise<
 > {
   const rows = await prisma.book.groupBy({
     by: ["authorSlug", "author"],
-    where: { isPublished: true, authorSlug: { not: null } },
+    where: { isPublished: true, authorSlug: { not: null }, mediaType: "PDF" },
     _count: { _all: true },
   });
 
@@ -262,7 +264,7 @@ export async function getCategoriesWithCounts() {
     include: {
       _count: {
         select: {
-          books: { where: { book: { isPublished: true } } },
+          books: { where: { book: { isPublished: true, mediaType: "PDF" } } },
         },
       },
     },
@@ -273,6 +275,70 @@ export async function getCategoriesWithCounts() {
     slug: cat.slug,
     count: cat._count.books,
   }));
+}
+
+// ==================== LIVRES AUDIO ====================
+
+// Livres audio publiés (paginés) pour la page /livres-audio
+export async function getAudiobooks(
+  page = 1,
+  pageSize = PAGE_SIZE,
+  sort: SortOption = "newest"
+): Promise<SearchBooksResult> {
+  const where: Prisma.BookWhereInput = { isPublished: true, mediaType: "AUDIO" };
+  const currentPage = Math.max(1, page);
+
+  const [total, books] = await Promise.all([
+    prisma.book.count({ where }),
+    prisma.book.findMany({
+      where,
+      include: bookWithCategories.include,
+      orderBy: orderByFor(sort),
+      skip: (currentPage - 1) * pageSize,
+      take: pageSize,
+    }),
+  ]);
+
+  return {
+    books,
+    total,
+    page: currentPage,
+    pageSize,
+    totalPages: Math.max(1, Math.ceil(total / pageSize)),
+  };
+}
+
+// Quelques livres audio récents (accueil, encarts…)
+export async function getLatestAudiobooks(limit = 6): Promise<BookWithCategories[]> {
+  return prisma.book.findMany({
+    where: { isPublished: true, mediaType: "AUDIO" },
+    include: bookWithCategories.include,
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
+}
+
+// Parse la playlist JSON d'un livre audio en liste de pistes typées
+export interface AudioTrackItem {
+  title: string;
+  url: string;
+  duration: number;
+}
+export function parseAudioTracks(raw: string | null | undefined): AudioTrackItem[] {
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    return arr
+      .filter((t) => t && typeof t.url === "string")
+      .map((t, i) => ({
+        title: typeof t.title === "string" && t.title ? t.title : `Chapitre ${i + 1}`,
+        url: t.url,
+        duration: typeof t.duration === "number" ? t.duration : 0,
+      }));
+  } catch {
+    return [];
+  }
 }
 
 export interface CreateBookInput {

@@ -418,3 +418,173 @@ export async function upsertAuthorProfile(authorSlug: string, rawName: string): 
   });
   return !!image;
 }
+
+// ==================== LIVRES AUDIO (LibriVox / Internet Archive) ====================
+// Les livres audio ne sont PAS téléchargés : on enregistre les URL de streaming
+// des chapitres (archive.org) et le site les lit via un lecteur HTML5.
+
+// Associe la langue Internet Archive à un code court (fr/ar/en/…)
+function mapLanguage(md: Record<string, unknown>): string {
+  const raw = norm(
+    Array.isArray(md.language) ? md.language.map(String).join(" ") : one(md.language) ?? ""
+  );
+  if (/french|francais|^fr|fre|fra/.test(raw)) return "fr";
+  if (/arabic|arabe|^ar|ara/.test(raw)) return "ar";
+  if (/english|anglais|^en|eng/.test(raw)) return "en";
+  if (/spanish|espagnol|spa|^es/.test(raw)) return "es";
+  if (/german|allemand|deu|ger|^de/.test(raw)) return "de";
+  if (/italian|italien|ita|^it/.test(raw)) return "it";
+  const m = raw.match(/[a-z]{2}/);
+  return m ? m[0] : "en";
+}
+
+// Convertit une durée Internet Archive ("609.39" ou "10:09") en secondes entières
+function parseLength(raw: unknown): number {
+  const s = one(raw) ?? "";
+  if (!s) return 0;
+  if (s.includes(":")) {
+    const parts = s.split(":").map((p) => parseInt(p, 10) || 0);
+    return parts.reduce((acc, v) => acc * 60 + v, 0);
+  }
+  const n = parseFloat(s);
+  return Number.isFinite(n) ? Math.round(n) : 0;
+}
+
+export interface AudioTrack {
+  title: string;
+  url: string;
+  duration: number; // secondes
+}
+
+// Recherche des livres audio du domaine public sur LibriVox (toutes langues).
+export async function searchLibrivox(query: string, rows: number): Promise<SearchDoc[]> {
+  const tokens = norm(query).split(/\s+/).filter((t) => t.length > 1);
+  const kw = tokens.length ? `(${tokens.join(" AND ")})` : query;
+  const q = `${kw} AND collection:(librivoxaudio) AND mediatype:(audio)`;
+  const url =
+    "https://archive.org/advancedsearch.php?q=" +
+    encodeURIComponent(q) +
+    "&fl[]=identifier&fl[]=title&fl[]=downloads&sort[]=downloads+desc&rows=" +
+    rows +
+    "&page=1&output=json";
+  const data = (await fetchJson(url)) as { response?: { docs?: SearchDoc[] } };
+  return data?.response?.docs ?? [];
+}
+
+// Importe un livre audio : métadonnées + playlist de chapitres (streaming) + couverture.
+export async function importAudiobook(
+  identifier: string,
+  fallbackAuthor: string,
+  categoryMap: Record<string, string>
+): Promise<ImportResult> {
+  const dup = await prisma.book.findFirst({
+    where: { sourceId: identifier },
+    select: { title: true },
+  });
+  if (dup) return { status: "duplicate", title: dup.title };
+
+  let meta: {
+    metadata?: Record<string, unknown>;
+    files?: { name: string; format?: string; title?: string; track?: string; length?: string }[];
+  };
+  try {
+    meta = (await fetchJson(`https://archive.org/metadata/${identifier}`)) as typeof meta;
+  } catch {
+    return { status: "fail" };
+  }
+  const md = meta?.metadata ?? {};
+  const files = meta?.files ?? [];
+  if (md["access-restricted-item"] === "true") return { status: "skip" };
+
+  // Sélectionne UNE série de fichiers audio (un fichier par chapitre), en
+  // privilégiant un format léger pour le streaming.
+  const preferredFormats = ["128Kbps MP3", "VBR MP3", "64Kbps MP3"];
+  let chosen = files.filter((f) => f.format && preferredFormats.includes(f.format));
+  if (chosen.length) {
+    const byFormat = preferredFormats.find((fmt) => chosen.some((f) => f.format === fmt));
+    chosen = chosen.filter((f) => f.format === byFormat);
+  } else {
+    chosen = files.filter((f) => /\.mp3$/i.test(f.name));
+  }
+  if (!chosen.length) return { status: "skip" };
+
+  const trackNum = (f: { name: string; track?: string }): number => {
+    const t = parseInt(one(f.track) ?? "", 10);
+    if (Number.isFinite(t)) return t;
+    const m = f.name.match(/_(\d{1,4})[_.]/);
+    return m ? parseInt(m[1], 10) : 0;
+  };
+  chosen.sort((a, b) => trackNum(a) - trackNum(b) || a.name.localeCompare(b.name));
+
+  const tracks: AudioTrack[] = chosen.map((f, i) => ({
+    title:
+      fixEncoding(f.title) ||
+      f.name.replace(/\.[a-z0-9]+$/i, "").replace(/_/g, " ") ||
+      `Chapitre ${i + 1}`,
+    url: `https://archive.org/download/${identifier}/${encodeURIComponent(f.name)}`,
+    duration: parseLength(f.length),
+  }));
+  const totalDuration = tracks.reduce((acc, t) => acc + t.duration, 0);
+
+  const title = (fixEncoding(one(md.title)) || identifier).slice(0, 250);
+  let slug = slugify(title) || slugify(identifier);
+  if (await prisma.book.count({ where: { slug } })) {
+    slug = `${slug}-${identifier.slice(-6).toLowerCase()}`;
+    if (await prisma.book.count({ where: { slug } })) return { status: "skip" };
+  }
+
+  // Couverture (rejette le placeholder "notfound" d'Internet Archive)
+  let coverImage: string | null = null;
+  const img = await fetchImage(`https://archive.org/services/img/${identifier}`, 30000);
+  if (img && !/\/images\/notfound/.test(img.finalUrl)) {
+    const ext = imageExt(img.buf);
+    if (ext && img.buf.length > 1000) {
+      await mkdir(COVERS_DIR, { recursive: true });
+      await writeFile(path.join(COVERS_DIR, `${slug}.${ext}`), img.buf);
+      coverImage = `/uploads/covers/${slug}.${ext}`;
+    }
+  }
+
+  // Auteur : le créateur Internet Archive (vrai auteur de l'œuvre), sinon le terme recherché
+  const creatorStr = Array.isArray(md.creator)
+    ? one(md.creator)
+    : one(md.creator);
+  const authorName = formatAuthorName(creatorStr || fallbackAuthor).slice(0, 200);
+  const authorSlug = slugify(authorName);
+  const year = parseYear(md);
+  const language = mapLanguage(md);
+
+  const description =
+    cleanDescription(md.description) ??
+    composeDescription(title, authorName, year, null, null);
+
+  const catIds = detectCategorySlugs(md)
+    .map((s) => categoryMap[s])
+    .filter((id): id is string => Boolean(id));
+
+  await prisma.book.create({
+    data: {
+      slug,
+      sourceId: identifier,
+      mediaType: "AUDIO",
+      title,
+      author: authorName,
+      authorSlug,
+      description,
+      pdfUrl: null,
+      audioSourceId: identifier,
+      audioTracks: JSON.stringify(tracks),
+      audioDuration: totalDuration,
+      coverImage,
+      language,
+      publishedYear: year,
+      isPublished: true,
+      isFeatured: false,
+      categories: catIds.length
+        ? { create: catIds.map((categoryId) => ({ categoryId })) }
+        : undefined,
+    },
+  });
+
+  return { status: "ok", title, authorSlug, authorRaw: authorName };
+}

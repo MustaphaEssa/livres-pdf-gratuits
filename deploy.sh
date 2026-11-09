@@ -29,13 +29,16 @@ else
   npm install
 fi
 
-echo "==> 3/5  Insertion des articles de blog (ignore ceux déjà présents)"
+echo "==> 3/6  Synchronisation du schéma de base (prisma db push)"
+npx prisma db push
+
+echo "==> 4/6  Insertion des articles de blog (ignore ceux déjà présents)"
 node scripts/add-blog-articles.mjs
 
-echo "==> 4/5  Build de production (prisma generate + next build)"
+echo "==> 5/6  Build de production (prisma generate + next build)"
 npm run build
 
-echo "==> 5/5  Redémarrage de l'application ($APP_NAME)"
+echo "==> 6/6  Redémarrage de l'application ($APP_NAME)"
 if pm2 describe "$APP_NAME" > /dev/null 2>&1; then
   pm2 restart "$APP_NAME" --update-env
 else

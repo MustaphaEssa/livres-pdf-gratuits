@@ -27,6 +27,7 @@ interface AuthorStatus {
 
 export default function AdminImportPage() {
   const [author, setAuthor] = useState("");
+  const [mediaType, setMediaType] = useState<"PDF" | "AUDIO">("PDF");
   const [max, setMax] = useState(20);
   const [minDownloads, setMinDownloads] = useState(100);
   const [job, setJob] = useState<Job | null>(null);
@@ -60,7 +61,12 @@ export default function AdminImportPage() {
   }, [fetchStatuses]);
 
   // Démarre un import (manuel ou « tout importer ») et suit sa progression
-  const startJob = async (opts: { author: string; all?: boolean; max?: number }) => {
+  const startJob = async (opts: {
+    author: string;
+    all?: boolean;
+    max?: number;
+    mediaType?: "PDF" | "AUDIO";
+  }) => {
     if (starting || running) return;
     setStarting(true);
     setStopping(false);
@@ -72,7 +78,13 @@ export default function AdminImportPage() {
       const res = await fetch("/api/admin/import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ author: opts.author, all: opts.all, max: opts.max, minDownloads }),
+        body: JSON.stringify({
+          author: opts.author,
+          all: opts.all,
+          max: opts.max,
+          minDownloads,
+          mediaType: opts.mediaType ?? "PDF",
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Échec du démarrage");
@@ -102,7 +114,7 @@ export default function AdminImportPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!author.trim()) return;
-    startJob({ author: author.trim(), max });
+    startJob({ author: author.trim(), max, mediaType });
   };
 
   // Demande l'arrêt de l'import en cours (les livres déjà importés sont gardés)
@@ -135,12 +147,38 @@ export default function AdminImportPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Type de média */}
               <div>
-                <label className="block text-sm font-medium mb-1">Auteur *</label>
+                <label className="block text-sm font-medium mb-1">Type</label>
+                <div className="inline-flex rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+                  {([
+                    { v: "PDF", label: "Livres PDF" },
+                    { v: "AUDIO", label: "Livres audio" },
+                  ] as const).map((opt) => (
+                    <button
+                      key={opt.v}
+                      type="button"
+                      onClick={() => setMediaType(opt.v)}
+                      disabled={running}
+                      className={`px-4 py-1.5 text-sm font-medium transition-colors ${
+                        mediaType === opt.v
+                          ? "bg-amber-500 text-white"
+                          : "bg-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  {mediaType === "AUDIO" ? "Auteur ou titre *" : "Auteur *"}
+                </label>
                 <Input
                   value={author}
                   onChange={(e) => setAuthor(e.target.value)}
-                  placeholder="ex. Victor Hugo"
+                  placeholder={mediaType === "AUDIO" ? "ex. Jules Verne, ou un titre" : "ex. Victor Hugo"}
                   disabled={running}
                 />
               </div>

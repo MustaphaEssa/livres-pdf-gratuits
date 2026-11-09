@@ -10,16 +10,19 @@ import {
   Globe,
   Share2,
   Eye,
+  Headphones,
+  Clock,
 } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { Button } from "@/components/ui/button";
 import { PdfReader } from "@/components/books/pdf-reader";
+import { AudioPlayer } from "@/components/books/audio-player";
 import { FavoriteButton } from "@/components/books/favorite-button";
 import { Reviews } from "@/components/books/reviews";
 import { BookCard } from "@/components/books/book-card";
 import { formatFileSize, formatAuthorName } from "@/lib/utils";
-import { getBookBySlug, getRelatedBooks, getSameAuthorBooks, incrementViewCount } from "@/lib/books";
+import { getBookBySlug, getRelatedBooks, getSameAuthorBooks, incrementViewCount, parseAudioTracks } from "@/lib/books";
 import { getUserSession } from "@/lib/user-server";
 import prisma from "@/lib/db";
 import { SITE_URL, SITE_NAME } from "@/lib/site";
@@ -78,7 +81,7 @@ export default async function BookPage({ params }: BookPageProps) {
     headers(),
     getServerI18n(),
     getRelatedBooks(book.id, book.categories.map((c) => c.categoryId), 4),
-    getSameAuthorBooks(book.id, book.authorSlug, 4),
+    getSameAuthorBooks(book.id, book.authorSlug, 4, book.mediaType === "AUDIO" ? "AUDIO" : "PDF"),
     getUserSession(),
   ]);
 
@@ -108,6 +111,15 @@ export default async function BookPage({ params }: BookPageProps) {
 
   const primaryCategory = book.categories[0]?.category;
   const downloadHref = `/livre/${book.slug}/telecharger`;
+
+  const isAudio = book.mediaType === "AUDIO";
+  const audioTracks = isAudio ? parseAudioTracks(book.audioTracks) : [];
+  const fmtDuration = (sec?: number | null) => {
+    if (!sec || sec <= 0) return "—";
+    const h = Math.floor(sec / 3600);
+    const m = Math.round((sec % 3600) / 60);
+    return h ? `${h} h ${String(m).padStart(2, "0")}` : `${m} min`;
+  };
 
   // Données structurées pour les moteurs de recherche (rich results)
   const jsonLd = {
@@ -214,18 +226,29 @@ export default async function BookPage({ params }: BookPageProps) {
 
                 {/* Action Buttons */}
                 <div className="space-y-3">
-                  <a href={downloadHref} className="block">
-                    <Button className="w-full bg-amber-500 hover:bg-amber-600 h-12 text-lg">
-                      <Download className="mr-2 h-5 w-5" />
-                      {t.bookPage.downloadPdf}
-                    </Button>
-                  </a>
-                  <a href="#lecture" className="block">
-                    <Button variant="outline" className="w-full h-12">
-                      <Eye className="mr-2 h-5 w-5" />
-                      {t.bookPage.readOnline}
-                    </Button>
-                  </a>
+                  {isAudio ? (
+                    <a href="#lecture" className="block">
+                      <Button className="w-full bg-amber-500 hover:bg-amber-600 h-12 text-lg">
+                        <Headphones className="mr-2 h-5 w-5" />
+                        Écouter le livre audio
+                      </Button>
+                    </a>
+                  ) : (
+                    <>
+                      <a href={downloadHref} className="block">
+                        <Button className="w-full bg-amber-500 hover:bg-amber-600 h-12 text-lg">
+                          <Download className="mr-2 h-5 w-5" />
+                          {t.bookPage.downloadPdf}
+                        </Button>
+                      </a>
+                      <a href="#lecture" className="block">
+                        <Button variant="outline" className="w-full h-12">
+                          <Eye className="mr-2 h-5 w-5" />
+                          {t.bookPage.readOnline}
+                        </Button>
+                      </a>
+                    </>
+                  )}
                   <div className="flex gap-2">
                     <FavoriteButton
                       bookId={book.id}
@@ -307,16 +330,20 @@ export default async function BookPage({ params }: BookPageProps) {
               {/* Stats */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
                 {[
-                  {
-                    icon: FileText,
-                    value: book.pdfSize ? formatFileSize(book.pdfSize) : "—",
-                    label: t.bookPage.size,
-                  },
-                  {
-                    icon: FileText,
-                    value: book.pageCount ?? "—",
-                    label: t.bookPage.pages,
-                  },
+                  isAudio
+                    ? { icon: Headphones, value: "Audio", label: "Format" }
+                    : {
+                        icon: FileText,
+                        value: book.pdfSize ? formatFileSize(book.pdfSize) : "—",
+                        label: t.bookPage.size,
+                      },
+                  isAudio
+                    ? { icon: Clock, value: fmtDuration(book.audioDuration), label: "Durée" }
+                    : {
+                        icon: FileText,
+                        value: book.pageCount ?? "—",
+                        label: t.bookPage.pages,
+                      },
                   {
                     icon: Globe,
                     value: languageNames[book.language] ?? book.language,
@@ -397,12 +424,14 @@ export default async function BookPage({ params }: BookPageProps) {
                 </p>
               </div>
 
-              {/* Lecture en ligne */}
+              {/* Lecture / écoute en ligne */}
               <div id="lecture" className="scroll-mt-24">
                 <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-4">
-                  {t.bookPage.readOnline}
+                  {isAudio ? "Écouter en ligne" : t.bookPage.readOnline}
                 </h2>
-                {book.pdfUrl ? (
+                {isAudio ? (
+                  <AudioPlayer tracks={audioTracks} totalDuration={book.audioDuration ?? undefined} />
+                ) : book.pdfUrl ? (
                   <PdfReader
                     pdfUrl={book.pdfUrl}
                     title={book.title}

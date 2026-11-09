@@ -44,8 +44,18 @@ model Book {
   authorSlug    String?  // pour les pages/liens par auteur
   description   String?
   coverImage    String?
-  pdfUrl        String
+
+  // Type de média : PDF (livre à lire/télécharger) ou AUDIO (livre audio en streaming)
+  mediaType     String   @default("PDF") // PDF ou AUDIO
+
+  pdfUrl        String?  // null pour les livres audio
   pdfSize       Int?     // Taille en bytes
+
+  // Livre audio (streaming depuis Internet Archive, rien n'est stocké localement)
+  audioSourceId String?  // identifiant Internet Archive de l'enregistrement audio
+  audioTracks   String?  // JSON : [{ "title": string, "url": string, "duration": number }]
+  audioDuration Int?     // durée totale en secondes
+
   pageCount     Int?
   language      String   @default("fr") // fr, ar, en
   publishedYear Int?
@@ -82,6 +92,7 @@ model Book {
   @@index([downloadCount])
   @@index([createdAt])
   @@index([isPublished])
+  @@index([mediaType])
 }
 
 // Auteur (fiche : photo + bio). Relié aux livres via Book.authorSlug = Author.slug

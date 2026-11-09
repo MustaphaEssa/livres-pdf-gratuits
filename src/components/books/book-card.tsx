@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Download, Eye, Star } from "lucide-react";
+import { Download, Eye, Star, Headphones } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn, formatAuthorName } from "@/lib/utils";
@@ -14,6 +14,7 @@ interface BookCardProps {
     author: string;
     authorSlug?: string | null;
     coverImage?: string | null;
+    mediaType?: string | null;
     pdfSize?: number | null;
     downloadCount: number;
     viewCount: number;
@@ -30,6 +31,7 @@ interface BookCardProps {
 
 export async function BookCard({ book, className }: BookCardProps) {
   const { t } = await getServerI18n();
+  const isAudio = book.mediaType === "AUDIO";
   return (
     <Card className={cn("overflow-hidden group hover:shadow-lg transition-shadow", className)}>
       {/* Cover Image (cliquable) */}
@@ -58,6 +60,15 @@ export async function BookCard({ book, className }: BookCardProps) {
           <div className="absolute top-2 left-2">
             <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-slate-800/80 text-white rounded">
               {book.categories[0].category.name}
+            </span>
+          </div>
+        )}
+
+        {/* Badge Audio */}
+        {isAudio && (
+          <div className="absolute top-2 right-2">
+            <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-amber-500 text-white rounded shadow">
+              <Headphones className="h-3 w-3" /> Audio
             </span>
           </div>
         )}
@@ -109,12 +120,21 @@ export async function BookCard({ book, className }: BookCardProps) {
               {t.book.view}
             </Button>
           </Link>
-          <a href={`/livre/${book.slug}/telecharger`} className="flex-1">
-            <Button size="sm" className="w-full bg-amber-500 hover:bg-amber-600">
-              <Download className="h-3 w-3 mr-1" />
-              {t.book.download}
-            </Button>
-          </a>
+          {isAudio ? (
+            <Link href={`/livre/${book.slug}#lecture`} className="flex-1">
+              <Button size="sm" className="w-full bg-amber-500 hover:bg-amber-600">
+                <Headphones className="h-3 w-3 mr-1" />
+                Écouter
+              </Button>
+            </Link>
+          ) : (
+            <a href={`/livre/${book.slug}/telecharger`} className="flex-1">
+              <Button size="sm" className="w-full bg-amber-500 hover:bg-amber-600">
+                <Download className="h-3 w-3 mr-1" />
+                {t.book.download}
+              </Button>
+            </a>
+          )}
         </div>
       </CardContent>
     </Card>
