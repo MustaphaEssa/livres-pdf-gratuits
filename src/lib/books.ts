@@ -41,6 +41,19 @@ export async function getFeaturedBooks(limit = 6): Promise<BookWithCategories[]>
   });
 }
 
+// Livres par langue (étagères de l'accueil)
+export async function getBooksByLang(
+  language: string,
+  limit = 8
+): Promise<BookWithCategories[]> {
+  return prisma.book.findMany({
+    where: { isPublished: true, mediaType: "PDF", language },
+    include: bookWithCategories.include,
+    orderBy: { downloadCount: "desc" },
+    take: limit,
+  });
+}
+
 // Derniers livres ajoutés
 export async function getLatestBooks(limit = 6): Promise<BookWithCategories[]> {
   return prisma.book.findMany({

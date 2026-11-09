@@ -55,3 +55,6 @@ public/uploads/covers/*
 !public/uploads/covers/.gitkeep
 public/uploads/authors/*
 !public/uploads/authors/.gitkeep
+
+# Maquette de design (référence locale, pas une app déployée)
+/design/

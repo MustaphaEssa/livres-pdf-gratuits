@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import NextTopLoader from "nextjs-toploader";
-import { Inter, Noto_Sans_Arabic } from "next/font/google";
+import { Inter, Noto_Sans_Arabic, Fraunces, Amiri } from "next/font/google";
 import { I18nProvider } from "@/components/i18n-provider";
 import { SettingsProvider } from "@/components/settings-provider";
 import { Analytics } from "@/components/analytics";
@@ -9,6 +9,7 @@ import { getSiteSettings } from "@/lib/settings";
 import { isRtl } from "@/i18n/config";
 import { SITE_URL } from "@/lib/site";
 import "./globals.css";
+import "./design.css";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -18,6 +19,20 @@ const inter = Inter({
 const arabic = Noto_Sans_Arabic({
   subsets: ["arabic"],
   variable: "--font-arabic",
+});
+
+// Charte graphique : titres serif (Fraunces) + arabe serif (Amiri)
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  weight: ["400", "600"],
+  style: ["normal", "italic"],
+  variable: "--font-fraunces",
+});
+
+const amiri = Amiri({
+  subsets: ["arabic"],
+  weight: ["400", "700"],
+  variable: "--font-amiri",
 });
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -79,7 +94,7 @@ export default async function RootLayout({
   return (
     <html lang={locale} dir={rtl ? "rtl" : "ltr"} suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${arabic.variable} ${
+        className={`${inter.variable} ${arabic.variable} ${fraunces.variable} ${amiri.variable} ${
           rtl ? "font-arabic" : "font-sans"
         } antialiased`}
       >
