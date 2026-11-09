@@ -268,6 +268,12 @@ export async function importBook(
   if (!pdfs.length) return { status: "skip" };
   const pdf = pdfs[0];
 
+  // EPUB éventuel (lien direct Internet Archive, non téléchargé)
+  const epubFile = files.find((f) => /\.epub$/i.test(f.name));
+  const epubUrl = epubFile
+    ? `https://archive.org/download/${identifier}/${encodeURIComponent(epubFile.name)}`
+    : null;
+
   const title = fixEncoding(one(md.title)) || identifier;
   let slug = slugify(title) || slugify(identifier);
   if (await prisma.book.count({ where: { slug } })) {
@@ -334,6 +340,7 @@ export async function importBook(
       description,
       pdfUrl: `/uploads/books/${slug}.pdf`,
       pdfSize: pdf.size,
+      epubUrl,
       pageCount,
       coverImage,
       language: "fr",

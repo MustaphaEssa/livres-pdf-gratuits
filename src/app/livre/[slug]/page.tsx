@@ -11,6 +11,8 @@ import {
   Eye,
   Headphones,
   Clock,
+  BookOpen,
+  Send,
 } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
@@ -290,6 +292,33 @@ export default async function BookPage({ params }: BookPageProps) {
                           {t.bookPage.readOnline}
                         </Button>
                       </a>
+                      {book.epubUrl && (
+                        <>
+                          <a
+                            href={book.epubUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block"
+                          >
+                            <Button variant="outline" className="w-full h-12">
+                              <BookOpen className="mr-2 h-5 w-5" />
+                              Télécharger l&apos;EPUB
+                            </Button>
+                          </a>
+                          <a
+                            href="https://www.amazon.com/sendtokindle"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block"
+                            title="Envoyez le fichier EPUB vers votre Kindle"
+                          >
+                            <Button variant="outline" className="w-full h-12">
+                              <Send className="mr-2 h-5 w-5" />
+                              Envoyer vers Kindle
+                            </Button>
+                          </a>
+                        </>
+                      )}
                     </>
                   )}
                   <div className="flex gap-2">
@@ -323,9 +352,29 @@ export default async function BookPage({ params }: BookPageProps) {
               )}
 
               {/* Title */}
-              <h1 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-white mb-4">
+              <h1 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-white mb-3">
                 {book.title}
               </h1>
+
+              {/* Formats disponibles */}
+              <div className="flex flex-wrap items-center gap-2 mb-4">
+                {isAudio ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400 px-2.5 py-1 text-xs font-medium">
+                    <Headphones className="h-3.5 w-3.5" /> Audio
+                  </span>
+                ) : (
+                  <>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2.5 py-1 text-xs font-medium">
+                      <FileText className="h-3.5 w-3.5" /> PDF
+                    </span>
+                    {book.epubUrl && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2.5 py-1 text-xs font-medium">
+                        <BookOpen className="h-3.5 w-3.5" /> EPUB
+                      </span>
+                    )}
+                  </>
+                )}
+              </div>
 
               {/* Author */}
               <div className="flex items-center gap-2 text-lg text-slate-600 dark:text-slate-400 mb-6">

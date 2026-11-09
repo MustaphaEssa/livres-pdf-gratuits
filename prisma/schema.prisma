@@ -51,6 +51,9 @@ model Book {
   pdfUrl        String?  // null pour les livres audio
   pdfSize       Int?     // Taille en bytes
 
+  // EPUB (lien direct Internet Archive, idéal mobile/liseuse). null si indisponible.
+  epubUrl       String?
+
   // Livre audio (streaming depuis Internet Archive, rien n'est stocké localement)
   audioSourceId String?  // identifiant Internet Archive de l'enregistrement audio
   audioTracks   String?  // JSON : [{ "title": string, "url": string, "duration": number }]
