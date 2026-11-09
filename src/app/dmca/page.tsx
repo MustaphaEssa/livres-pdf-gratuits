@@ -1,5 +1,4 @@
-import { Header } from "@/components/layout/header";
-import { Footer } from "@/components/layout/footer";
+import DesignShell from "@/components/design/shell";
 import { getSiteSettings } from "@/lib/settings";
 
 export const metadata = {
@@ -14,10 +13,8 @@ export default async function DmcaPage() {
   const email = settings.email || "contact@livrespdfgratuits.com";
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-1 bg-slate-50 dark:bg-slate-900/50">
-        <div className="container mx-auto px-4 py-12 max-w-3xl">
+    <DesignShell>
+      <div className="wrap" style={{ maxWidth: 820, paddingTop: 16 }}>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-6">
             Politique relative aux droits d&apos;auteur (DMCA)
           </h1>
@@ -85,8 +82,6 @@ export default async function DmcaPage() {
             </p>
           </div>
         </div>
-      </main>
-      <Footer />
-    </div>
+    </DesignShell>
   );
 }

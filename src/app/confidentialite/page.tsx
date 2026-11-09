@@ -1,5 +1,4 @@
-import { Header } from "@/components/layout/header";
-import { Footer } from "@/components/layout/footer";
+import DesignShell from "@/components/design/shell";
 import { getSiteSettings } from "@/lib/settings";
 import { SITE_URL } from "@/lib/site";
 
@@ -15,9 +14,8 @@ export default async function PrivacyPage() {
   const host = new URL(SITE_URL).hostname;
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-1 bg-white dark:bg-slate-900">
+    <DesignShell>
+      <div className="wrap">
         <div className="container mx-auto px-4 py-12 max-w-3xl">
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
             Politique de confidentialité
@@ -109,8 +107,7 @@ export default async function PrivacyPage() {
             </section>
           </div>
         </div>
-      </main>
-      <Footer />
-    </div>
+      </div>
+    </DesignShell>
   );
 }

@@ -119,7 +119,7 @@ export default function ResetPasswordPage() {
 function ResetPasswordPageInner() {
   const { t } = useI18n();
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-slate-900 px-4 py-12">
+    <div className="min-h-screen flex items-center justify-center bg-[#faf6ef] px-4 py-12">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2">

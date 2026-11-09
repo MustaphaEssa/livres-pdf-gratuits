@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Header } from "@/components/layout/header";
-import { Footer } from "@/components/layout/footer";
+import DesignHeader from "@/components/design/header";
+import DesignFooter from "@/components/design/footer";
+import MobileTabbar from "@/components/design/mobile-tabbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -28,10 +29,10 @@ export default function ContactPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
+    <div className="ma">
+      <DesignHeader />
       
-      <main className="flex-1 bg-slate-50 dark:bg-slate-900/50">
+      <main className="page-main">
         <div className="container mx-auto px-4 py-16">
           {/* Page Header */}
           <div className="text-center mb-12">
@@ -202,7 +203,8 @@ export default function ContactPage() {
         </div>
       </main>
 
-      <Footer />
+      <DesignFooter />
+      <MobileTabbar />
     </div>
   );
 }
