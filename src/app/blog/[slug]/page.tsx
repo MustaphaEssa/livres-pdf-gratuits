@@ -5,6 +5,7 @@ import { Calendar, User, ChevronLeft } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { PostComments } from "@/components/blog/post-comments";
+import { FacebookComments } from "@/components/blog/facebook-comments";
 import { getPublishedPostBySlug } from "@/lib/posts";
 import { getUserSession } from "@/lib/user-server";
 import { getServerI18n } from "@/i18n/server";
@@ -126,8 +127,11 @@ export default async function PostPage({ params }: Props) {
             ))}
           </div>
 
-          {/* Commentaires */}
+          {/* Commentaires du site */}
           <PostComments postId={post.id} isLoggedIn={!!session} />
+
+          {/* Commentaires Facebook */}
+          <FacebookComments url={`${SITE_URL}/blog/${slug}`} />
         </article>
       </main>
 
