@@ -121,8 +121,11 @@ export default async function BookPage({ params }: BookPageProps) {
   const primaryCategory = book.categories[0]?.category;
   const downloadHref = `/livre/${book.slug}/telecharger`;
 
-  const isAudio = book.mediaType === "AUDIO";
-  const audioTracks = isAudio ? parseAudioTracks(book.audioTracks) : [];
+  const audioTracks = parseAudioTracks(book.audioTracks);
+  const hasAudio = audioTracks.length > 0;
+  const hasPdf = !!book.pdfUrl;
+  // « Livre audio » au sens fiche : audio uniquement (pas de PDF).
+  const isAudio = !hasPdf && (book.mediaType === "AUDIO" || hasAudio);
   const reportEmail = settings.email || "contact@livrespdfgratuits.com";
   const reportHref = `mailto:${reportEmail}?subject=${encodeURIComponent(
     `Signalement : ${book.title}`
@@ -292,6 +295,14 @@ export default async function BookPage({ params }: BookPageProps) {
                           {t.bookPage.readOnline}
                         </Button>
                       </a>
+                      {hasAudio && (
+                        <a href="#ecouter" className="block">
+                          <Button variant="outline" className="w-full h-12">
+                            <Headphones className="mr-2 h-5 w-5" />
+                            Écouter l&apos;audio
+                          </Button>
+                        </a>
+                      )}
                       {book.epubUrl && (
                         <>
                           <a
@@ -358,21 +369,20 @@ export default async function BookPage({ params }: BookPageProps) {
 
               {/* Formats disponibles */}
               <div className="flex flex-wrap items-center gap-2 mb-4">
-                {isAudio ? (
+                {hasPdf && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2.5 py-1 text-xs font-medium">
+                    <FileText className="h-3.5 w-3.5" /> PDF
+                  </span>
+                )}
+                {book.epubUrl && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2.5 py-1 text-xs font-medium">
+                    <BookOpen className="h-3.5 w-3.5" /> EPUB
+                  </span>
+                )}
+                {hasAudio && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400 px-2.5 py-1 text-xs font-medium">
                     <Headphones className="h-3.5 w-3.5" /> Audio
                   </span>
-                ) : (
-                  <>
-                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2.5 py-1 text-xs font-medium">
-                      <FileText className="h-3.5 w-3.5" /> PDF
-                    </span>
-                    {book.epubUrl && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2.5 py-1 text-xs font-medium">
-                        <BookOpen className="h-3.5 w-3.5" /> EPUB
-                      </span>
-                    )}
-                  </>
                 )}
               </div>
 
@@ -522,24 +532,37 @@ export default async function BookPage({ params }: BookPageProps) {
                 </p>
               </div>
 
-              {/* Lecture / écoute en ligne */}
-              <div id="lecture" className="scroll-mt-24">
-                <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-4">
-                  {isAudio ? "Écouter en ligne" : t.bookPage.readOnline}
-                </h2>
-                {isAudio ? (
-                  <AudioPlayer tracks={audioTracks} totalDuration={book.audioDuration ?? undefined} />
-                ) : book.pdfUrl ? (
+              {/* Lecture en ligne (PDF) */}
+              {hasPdf && (
+                <div id="lecture" className="scroll-mt-24">
+                  <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-4">
+                    {t.bookPage.readOnline}
+                  </h2>
                   <PdfReader
-                    pdfUrl={book.pdfUrl}
+                    pdfUrl={book.pdfUrl as string}
                     title={book.title}
                     ctaLabel={t.bookPage.readerCta}
                     buttonLabel={t.bookPage.readerButton}
                   />
-                ) : (
-                  <p className="text-slate-500">{t.bookPage.noPdf}</p>
-                )}
-              </div>
+                </div>
+              )}
+
+              {/* Écoute en ligne (audio) */}
+              {hasAudio && (
+                <div id="ecouter" className={`scroll-mt-24 ${hasPdf ? "mt-10" : ""}`}>
+                  <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-4">
+                    Écouter en ligne
+                  </h2>
+                  <AudioPlayer
+                    tracks={audioTracks}
+                    totalDuration={book.audioDuration ?? undefined}
+                  />
+                </div>
+              )}
+
+              {!hasPdf && !hasAudio && (
+                <p className="text-slate-500">{t.bookPage.noPdf}</p>
+              )}
 
               {/* Avis & notes */}
               <div className="mt-10">
