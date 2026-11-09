@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import Script from "next/script";
 import NextTopLoader from "nextjs-toploader";
 import { Inter, Noto_Sans_Arabic } from "next/font/google";
 import { I18nProvider } from "@/components/i18n-provider";
 import { SettingsProvider } from "@/components/settings-provider";
+import { Analytics } from "@/components/analytics";
 import { getLocale } from "@/i18n/server";
 import { getSiteSettings } from "@/lib/settings";
 import { isRtl } from "@/i18n/config";
@@ -88,23 +88,8 @@ export default async function RootLayout({
           <SettingsProvider settings={settings}>{children}</SettingsProvider>
         </I18nProvider>
 
-        {/* Google Analytics (si configuré dans les paramètres du site) */}
-        {settings.googleAnalyticsId && (
-          <>
-            <Script
-              src={`https://www.googletagmanager.com/gtag/js?id=${settings.googleAnalyticsId}`}
-              strategy="afterInteractive"
-            />
-            <Script id="google-analytics" strategy="afterInteractive">
-              {`
-                window.dataLayer = window.dataLayer || [];
-                function gtag(){dataLayer.push(arguments);}
-                gtag('js', new Date());
-                gtag('config', '${settings.googleAnalyticsId}');
-              `}
-            </Script>
-          </>
-        )}
+        {/* Google Analytics (si configuré) — exclu des pages /admin */}
+        <Analytics gaId={settings.googleAnalyticsId} />
       </body>
     </html>
   );
