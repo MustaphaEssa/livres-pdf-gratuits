@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import dynamic from "next/dynamic";
 import { BookOpen, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,9 @@ interface PdfReaderProps {
   title: string;
   ctaLabel?: string;
   buttonLabel?: string;
+  // Si fourni, le bouton ouvre cette page de lecture dédiée (URL partageable,
+  // reprise de lecture) au lieu de la fenêtre superposée.
+  href?: string;
 }
 
 export function PdfReader({
@@ -31,10 +35,11 @@ export function PdfReader({
   title,
   ctaLabel = "Lisez ce livre directement dans votre navigateur",
   buttonLabel = "Lire en ligne",
+  href,
 }: PdfReaderProps) {
   const [open, setOpen] = useState(false);
 
-  if (open) {
+  if (open && !href) {
     return <PdfViewer pdfUrl={pdfUrl} title={title} onClose={() => setOpen(false)} />;
   }
 
@@ -49,13 +54,22 @@ export function PdfReader({
       <p className="mx-auto mb-6 max-w-sm text-sm text-slate-500 dark:text-slate-400">
         {ctaLabel}
       </p>
-      <Button
-        onClick={() => setOpen(true)}
-        className="h-11 bg-amber-500 px-6 text-base hover:bg-amber-600"
-      >
-        <BookOpen className="mr-2 h-5 w-5" />
-        {buttonLabel}
-      </Button>
+      {href ? (
+        <Link href={href}>
+          <Button className="h-11 bg-amber-500 px-6 text-base hover:bg-amber-600">
+            <BookOpen className="mr-2 h-5 w-5" />
+            {buttonLabel}
+          </Button>
+        </Link>
+      ) : (
+        <Button
+          onClick={() => setOpen(true)}
+          className="h-11 bg-amber-500 px-6 text-base hover:bg-amber-600"
+        >
+          <BookOpen className="mr-2 h-5 w-5" />
+          {buttonLabel}
+        </Button>
+      )}
     </div>
   );
 }

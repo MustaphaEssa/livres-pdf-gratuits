@@ -289,12 +289,12 @@ export default async function BookPage({ params }: BookPageProps) {
                           {t.bookPage.downloadPdf}
                         </Button>
                       </a>
-                      <a href="#lecture" className="block">
+                      <Link href={`/livre/${book.slug}/lire`} className="block">
                         <Button variant="outline" className="w-full h-12">
                           <Eye className="mr-2 h-5 w-5" />
                           {t.bookPage.readOnline}
                         </Button>
-                      </a>
+                      </Link>
                       {hasAudio && (
                         <a href="#ecouter" className="block">
                           <Button variant="outline" className="w-full h-12">
@@ -543,6 +543,7 @@ export default async function BookPage({ params }: BookPageProps) {
                     title={book.title}
                     ctaLabel={t.bookPage.readerCta}
                     buttonLabel={t.bookPage.readerButton}
+                    href={`/livre/${book.slug}/lire`}
                   />
                 </div>
               )}

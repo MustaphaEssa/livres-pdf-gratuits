@@ -31,15 +31,17 @@ interface PdfViewerProps {
   pdfUrl: string;
   title: string;
   onClose: () => void;
+  initialPage?: number;
+  onPageChange?: (page: number) => void;
 }
 
 // Lecteur immersif plein écran : fond sombre, page centrée, barre de progression,
 // saut de page, zoom, couche de texte optionnelle, navigation clavier/boutons.
-export function PdfViewer({ pdfUrl, title, onClose }: PdfViewerProps) {
+export function PdfViewer({ pdfUrl, title, onClose, initialPage = 1, onPageChange }: PdfViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [numPages, setNumPages] = useState<number>(0);
-  const [pageNumber, setPageNumber] = useState(1);
-  const [pageInput, setPageInput] = useState("1");
+  const [pageNumber, setPageNumber] = useState(Math.max(1, initialPage));
+  const [pageInput, setPageInput] = useState(String(Math.max(1, initialPage)));
   const [zoom, setZoom] = useState(1); // 1 = ajusté à la largeur
   const [containerWidth, setContainerWidth] = useState(0);
   const [dpr, setDpr] = useState(1);
@@ -78,9 +80,10 @@ export function PdfViewer({ pdfUrl, title, onClose }: PdfViewerProps) {
       const clamped = Math.max(1, Math.min(numPages || n, n));
       setPageNumber(clamped);
       setPageInput(String(clamped));
+      onPageChange?.(clamped);
       containerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
     },
-    [numPages]
+    [numPages, onPageChange]
   );
 
   const goPrev = useCallback(() => goTo(pageNumber - 1), [goTo, pageNumber]);
