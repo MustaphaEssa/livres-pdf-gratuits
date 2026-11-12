@@ -2,6 +2,11 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Document, Page, Outline, Thumbnail, pdfjs } from "react-pdf";
+import HTMLFlipBook from "react-pageflip";
+
+// Le typage strict de react-pageflip exige toutes les props ; on l'assouplit.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const FlipBook = HTMLFlipBook as any;
 import {
   ChevronLeft,
   ChevronRight,
@@ -117,6 +122,12 @@ export function PdfViewer({ pdfUrl, title, onClose, initialPage = 1, onPageChang
   const [hasOutline, setHasOutline] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Mode « Flip Book » (pages qui se tournent)
+  const [flip, setFlip] = useState(false);
+  const [aspect, setAspect] = useState(1.414); // hauteur/largeur d'une page (A4 par défaut)
+  const [flipCur, setFlipCur] = useState(Math.max(0, initialPage - 1));
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const flipRef = useRef<any>(null);
 
   // Réglages au montage (indépendants du chargement du PDF)
   useEffect(() => {
@@ -167,19 +178,55 @@ export function PdfViewer({ pdfUrl, title, onClose, initialPage = 1, onPageChang
     return Math.max(180, Math.floor(base * zoom));
   }, [area, cols, fitMode, zoom]);
 
+  // Dimensions d'UNE page pour le mode Flip Book (deux pages = un livre ouvert)
+  const flipSize = useMemo(() => {
+    const maxH = (area.h || 800) - 40;
+    const maxWPer = ((area.w || 900) - 60) / 2;
+    const w = Math.max(160, Math.floor(Math.min(maxWPer, maxH / aspect)));
+    return { w, h: Math.floor(w * aspect) };
+  }, [area, aspect]);
+
   const goTo = useCallback(
     (n: number) => {
       const clamped = Math.max(1, Math.min(numPages || n, n));
+      if (flip && flipRef.current) {
+        try {
+          flipRef.current.pageFlip().turnToPage(clamped - 1);
+        } catch {
+          /* ignore */
+        }
+        return; // onFlip met à jour l'état
+      }
       setPageNumber(clamped);
       setPageInput(String(clamped));
       onPageChange?.(clamped);
       areaRef.current?.scrollTo({ top: 0, behavior: "smooth" });
     },
-    [numPages, onPageChange]
+    [numPages, onPageChange, flip]
   );
   const step = cols;
-  const goPrev = useCallback(() => goTo(pageNumber - step), [goTo, pageNumber, step]);
-  const goNext = useCallback(() => goTo(pageNumber + step), [goTo, pageNumber, step]);
+  const goPrev = useCallback(() => {
+    if (flip && flipRef.current) {
+      try {
+        flipRef.current.pageFlip().flipPrev();
+      } catch {
+        /* ignore */
+      }
+      return;
+    }
+    goTo(pageNumber - step);
+  }, [goTo, pageNumber, step, flip]);
+  const goNext = useCallback(() => {
+    if (flip && flipRef.current) {
+      try {
+        flipRef.current.pageFlip().flipNext();
+      } catch {
+        /* ignore */
+      }
+      return;
+    }
+    goTo(pageNumber + step);
+  }, [goTo, pageNumber, step, flip]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -290,12 +337,26 @@ export function PdfViewer({ pdfUrl, title, onClose, initialPage = 1, onPageChang
             <ZoomIn className="h-4 w-4" />
           </button>
 
+          <button
+            type="button"
+            onClick={() => setFlip((v) => !v)}
+            title="Mode livre animé (Flip Book)"
+            className={`ml-1 inline-flex h-9 items-center gap-1.5 rounded-lg border px-2.5 text-sm font-medium transition-colors ${
+              flip
+                ? "border-[#2d3fa6] bg-[#e8ebf8] text-[#2d3fa6]"
+                : "border-[#e6dfd2] text-[#1c1b19] hover:bg-[#f1e9da]"
+            }`}
+          >
+            <BookOpen className="h-4 w-4" />
+            <span className="hidden lg:inline">Flip&nbsp;Book</span>
+          </button>
           <div className="mx-1 hidden h-5 w-px bg-[#e6dfd2] md:block" />
           <button
             type="button"
             onClick={() => setSpread((v) => !v)}
             title={spread ? "Page simple" : "Double page"}
             className={`${iconBtn} hidden md:inline-flex ${spread ? activeBtn : ""}`}
+            disabled={flip}
           >
             {spread ? <Square className="h-4 w-4" /> : <Columns2 className="h-4 w-4" />}
           </button>
@@ -332,6 +393,13 @@ export function PdfViewer({ pdfUrl, title, onClose, initialPage = 1, onPageChang
           setNumPages(pdf.numPages);
           setError(null);
           pdf.getOutline?.().then((o) => setHasOutline(!!o && o.length > 0)).catch(() => {});
+          pdf
+            .getPage(1)
+            .then((p) => {
+              const vp = p.getViewport({ scale: 1 });
+              if (vp.width > 0) setAspect(vp.height / vp.width);
+            })
+            .catch(() => {});
         }}
         onLoadError={(e) => setError(e.message)}
         loading={<div className="flex flex-1 items-center justify-center">{pageLoader}</div>}
@@ -400,6 +468,65 @@ export function PdfViewer({ pdfUrl, title, onClose, initialPage = 1, onPageChang
             <div className="py-24 text-center text-[#5d584f]">
               <p className="mb-2">Impossible d&apos;afficher ce PDF.</p>
               <p className="text-sm">{error}</p>
+            </div>
+          ) : flip && area.w > 0 && numPages > 0 ? (
+            <div className="flex w-full items-center justify-center">
+              <FlipBook
+                key={`${flipSize.w}x${flipSize.h}`}
+                ref={flipRef}
+                width={flipSize.w}
+                height={flipSize.h}
+                size="fixed"
+                minWidth={160}
+                maxWidth={2000}
+                minHeight={200}
+                maxHeight={2400}
+                showCover
+                mobileScrollSupport
+                flippingTime={700}
+                drawShadow
+                maxShadowOpacity={0.3}
+                usePortrait={(area.w || 900) < flipSize.w * 2 + 60}
+                startPage={Math.max(0, Math.min(numPages - 1, pageNumber - 1))}
+                className="flip-book shadow-2xl shadow-black/30"
+                style={{}}
+                onFlip={(e: { data: number }) => {
+                  const p = e.data + 1;
+                  setFlipCur(e.data);
+                  setPageNumber(p);
+                  setPageInput(String(p));
+                  onPageChange?.(p);
+                }}
+              >
+                {Array.from({ length: numPages }, (_, i) => i + 1).map((n) => (
+                  <div key={n} className="bg-white" style={{ width: flipSize.w, height: flipSize.h }}>
+                    {Math.abs(n - 1 - flipCur) <= 3 ? (
+                      <Page
+                        pageNumber={n}
+                        width={flipSize.w}
+                        devicePixelRatio={dpr}
+                        renderTextLayer={false}
+                        renderAnnotationLayer={false}
+                        loading={
+                          <div
+                            className="flex items-center justify-center text-[#c9bfae]"
+                            style={{ height: flipSize.h }}
+                          >
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                          </div>
+                        }
+                      />
+                    ) : (
+                      <div
+                        className="flex items-center justify-center text-[#c9bfae]"
+                        style={{ height: flipSize.h }}
+                      >
+                        {n}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </FlipBook>
             </div>
           ) : area.w > 0 ? (
             <div className="flex items-start gap-6">
