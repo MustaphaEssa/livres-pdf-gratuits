@@ -9,7 +9,16 @@ import {
   upsertAuthorProfile,
   freeDiskMb,
 } from "@/lib/import-archive";
+import { searchGutenbergAuthor, importGutenbergBook } from "@/lib/gutenberg";
 import { slugify, formatAuthorName } from "@/lib/utils";
+
+type ImportLike = {
+  status: "ok" | "skip" | "duplicate" | "fail";
+  title?: string;
+  authorSlug?: string;
+  authorRaw?: string;
+};
+type Task = { run: () => Promise<ImportLike>; downloads?: number };
 
 export const runtime = "nodejs";
 
@@ -25,6 +34,7 @@ interface Job {
   id: string;
   status: "running" | "done" | "error";
   author: string;
+  source: "ia" | "gutenberg";
   found: number;
   imported: number;
   skipped: number; // doublons déjà présents
@@ -51,34 +61,56 @@ async function run(
   categoryMap: Record<string, string>,
   importAll: boolean,
   minDownloads: number,
-  mediaType: "PDF" | "AUDIO" = "PDF"
+  mediaType: "PDF" | "AUDIO" = "PDF",
+  source: "ia" | "gutenberg" = "ia"
 ) {
   const isAudio = mediaType === "AUDIO";
+  const isGut = source === "gutenberg" && !isAudio;
   try {
     // Marge (×4) pour compenser doublons et écarts de créateur ; en mode complet
     // on vise le plafond par auteur avec une marge suffisante.
     const rows = importAll ? Math.max(1000, max * 3) : max * 4;
-    const docs = isAudio
-      ? await searchLibrivox(author, rows)
-      : await searchAuthor(author, rows);
-    job.found = docs.length;
-    job.log.push(
-      `${docs.length} résultat(s) trouvé(s) sur Internet Archive` +
-        (minDownloads > 0 ? ` · popularité min. ${minDownloads} téléch.` : "")
-    );
+
+    // Construit la liste de tâches d'import selon la source choisie.
+    let tasks: Task[];
+    if (isAudio) {
+      const docs = await searchLibrivox(author, rows);
+      tasks = docs.map((d) => ({
+        downloads: d.downloads,
+        run: () => importAudiobook(d.identifier, author, categoryMap),
+      }));
+      job.log.push(`${docs.length} résultat(s) audio trouvé(s) sur Internet Archive`);
+    } else if (isGut) {
+      const grows = await searchGutenbergAuthor(author, rows);
+      tasks = grows.map((r) => ({ run: () => importGutenbergBook(r, author, categoryMap) }));
+      job.log.push(
+        `${grows.length} œuvre(s) trouvée(s) dans le catalogue Project Gutenberg (fichiers légers)`
+      );
+    } else {
+      const docs = await searchAuthor(author, rows);
+      tasks = docs.map((d) => ({
+        downloads: d.downloads,
+        run: () => importBook(d.identifier, author, categoryMap),
+      }));
+      job.log.push(
+        `${docs.length} résultat(s) trouvé(s) sur Internet Archive` +
+          (minDownloads > 0 ? ` · popularité min. ${minDownloads} téléch.` : "")
+      );
+    }
+    job.found = tasks.length;
 
     const authorsSeen = new Map<string, string>();
-    for (const doc of docs) {
+    for (const task of tasks) {
       if (job.imported >= max) break;
       if (job.cancelled) {
         job.log.push("⏹️ Import arrêté par l'utilisateur.");
         break;
       }
-      // Seuil de popularité : les résultats sont triés par téléchargements
-      // décroissants → dès qu'on passe sous le seuil, tout le reste l'est aussi.
-      if (minDownloads > 0 && typeof doc.downloads === "number" && doc.downloads < minDownloads) {
+      // Seuil de popularité (IA uniquement : les résultats sont triés par
+      // téléchargements décroissants → dès qu'on passe sous le seuil, fin).
+      if (minDownloads > 0 && typeof task.downloads === "number" && task.downloads < minDownloads) {
         job.log.push(
-          `⏹️ Popularité minimale atteinte (${doc.downloads} < ${minDownloads} téléch.) — fin de l'import.`
+          `⏹️ Popularité minimale atteinte (${task.downloads} < ${minDownloads} téléch.) — fin de l'import.`
         );
         break;
       }
@@ -95,9 +127,7 @@ async function run(
         }
       }
       try {
-        const res = isAudio
-          ? await importAudiobook(doc.identifier, author, categoryMap)
-          : await importBook(doc.identifier, author, categoryMap);
+        const res = await task.run();
         if (res.status === "ok") {
           job.imported++;
           job.log.push(`✓ Importé : ${res.title}`);
@@ -161,6 +191,10 @@ export async function POST(request: Request) {
   const author = String(body.author || "").trim();
   const mediaType: "PDF" | "AUDIO" =
     body.mediaType === "audio" || body.mediaType === "AUDIO" ? "AUDIO" : "PDF";
+  // Source d'import : Gutenberg (fichiers légers, PDF généré) ou Internet
+  // Archive (scans). L'audio provient toujours d'Internet Archive (LibriVox).
+  const source: "ia" | "gutenberg" =
+    body.source === "gutenberg" && mediaType !== "AUDIO" ? "gutenberg" : "ia";
   const importAll = body.all === true;
   // Mode « tout importer » : plafond par auteur (évite de saturer le VPS avec un
   // auteur à plusieurs centaines d'œuvres) ; sinon la valeur demandée.
@@ -187,11 +221,20 @@ export async function POST(request: Request) {
   for (const c of cats) categoryMap[c.slug] = c.id;
 
   const id = crypto.randomUUID();
-  const job: Job = { id, status: "running", author, found: 0, imported: 0, skipped: 0, log: [] };
+  const job: Job = {
+    id,
+    status: "running",
+    author,
+    source,
+    found: 0,
+    imported: 0,
+    skipped: 0,
+    log: [],
+  };
   jobs.set(id, job);
   prune();
   // Lance en arrière-plan (pas de await) — le serveur Node persistant poursuit la tâche
-  void run(job, author, max, categoryMap, importAll, minDownloads, mediaType);
+  void run(job, author, max, categoryMap, importAll, minDownloads, mediaType, source);
 
   return NextResponse.json({ jobId: id });
 }

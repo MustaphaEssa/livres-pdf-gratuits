@@ -28,6 +28,7 @@ interface AuthorStatus {
 export default function AdminImportPage() {
   const [author, setAuthor] = useState("");
   const [mediaType, setMediaType] = useState<"PDF" | "AUDIO">("PDF");
+  const [source, setSource] = useState<"gutenberg" | "ia">("gutenberg");
   const [max, setMax] = useState(20);
   const [minDownloads, setMinDownloads] = useState(100);
   const [job, setJob] = useState<Job | null>(null);
@@ -84,6 +85,7 @@ export default function AdminImportPage() {
           max: opts.max,
           minDownloads,
           mediaType: opts.mediaType ?? "PDF",
+          source,
         }),
       });
       const data = await res.json();
@@ -147,6 +149,37 @@ export default function AdminImportPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Source d'import */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Source</label>
+                <div className="inline-flex rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+                  {([
+                    { v: "gutenberg", label: "Gutenberg (léger)" },
+                    { v: "ia", label: "Internet Archive (scans)" },
+                  ] as const).map((opt) => (
+                    <button
+                      key={opt.v}
+                      type="button"
+                      onClick={() => setSource(opt.v)}
+                      disabled={running || mediaType === "AUDIO"}
+                      className={`px-4 py-1.5 text-sm font-medium transition-colors disabled:opacity-50 ${
+                        source === opt.v && mediaType !== "AUDIO"
+                          ? "bg-amber-500 text-white"
+                          : "bg-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  {mediaType === "AUDIO"
+                    ? "Les livres audio proviennent toujours d'Internet Archive (LibriVox)."
+                    : source === "gutenberg"
+                    ? "Fichiers texte propres : PDF généré + EPUB, légers (~1 Mo). Domaine public."
+                    : "Scans d'Internet Archive, souvent lourds (20–50 Mo)."}
+                </p>
+              </div>
               {/* Type de média */}
               <div>
                 <label className="block text-sm font-medium mb-1">Type</label>
