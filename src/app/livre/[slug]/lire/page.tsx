@@ -20,5 +20,7 @@ export default async function ReadPage({ params }: Props) {
   const book = await getBookBySlug(slug);
   if (!book || !book.isPublished || !book.pdfUrl) notFound();
 
-  return <ReaderClient pdfUrl={book.pdfUrl} title={book.title} slug={slug} />;
+  // Le lecteur charge toujours via le proxy même origine (/livre/[slug]/pdf) :
+  // indispensable pour les PDF hébergés sur archive.org (pas de CORS).
+  return <ReaderClient pdfUrl={`/livre/${slug}/pdf`} title={book.title} slug={slug} />;
 }
