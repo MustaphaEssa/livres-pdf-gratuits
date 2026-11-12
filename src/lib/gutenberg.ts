@@ -3,7 +3,12 @@ import { writeFile, mkdir, readFile, stat } from "fs/promises";
 import path from "path";
 import prisma from "@/lib/db";
 import { slugify } from "@/lib/utils";
-import { formatAuthorName, findAudioForWork } from "@/lib/import-archive";
+import {
+  formatAuthorName,
+  findAudioForWork,
+  lightestIaPdf,
+  searchIaLighterPdf,
+} from "@/lib/import-archive";
 
 /**
  * Import depuis Project Gutenberg (domaine public, fichiers TEXTE légers).
@@ -475,38 +480,71 @@ export interface ReimportResult {
 export async function reimportFromGutenberg(bookId: string): Promise<ReimportResult> {
   const book = await prisma.book.findUnique({
     where: { id: bookId },
-    select: { id: true, slug: true, title: true, author: true, mediaType: true, pdfSize: true },
+    select: {
+      id: true, slug: true, title: true, author: true, mediaType: true, pdfSize: true, sourceId: true,
+    },
   });
   if (!book) return { status: "notfound" };
   if (book.mediaType === "AUDIO") return { status: "skip" };
+  const oldSize = book.pdfSize ?? 0;
 
+  // 1) Gutenberg : texte → PDF léger (+ EPUB) si plus léger que l'actuel
   const rows = await searchGutenbergAuthor(book.author, 80);
   const nt = norm(book.title);
-  const match =
+  const gMatch =
     rows.find((r) => norm(r.title) === nt) ??
     rows.find((r) => {
       const t = norm(r.title);
       return t.length > 6 && (t.includes(nt) || nt.includes(t));
     });
-  if (!match) return { status: "nomatch", title: book.title };
+  if (gMatch) {
+    const authorName = formatAuthorName(book.author);
+    const files = await buildGutenbergFiles(gMatch.id, book.slug, book.title, authorName);
+    if (files && (oldSize === 0 || files.pdfSize < oldSize)) {
+      await prisma.book.update({
+        where: { id: book.id },
+        data: {
+          pdfUrl: `/uploads/books/${book.slug}.pdf`,
+          pdfSize: files.pdfSize,
+          pageCount: files.pages,
+          ...(files.epubUrl ? { epubUrl: files.epubUrl } : {}),
+          ...(files.coverImage ? { coverImage: files.coverImage } : {}),
+        },
+      });
+      return { status: "ok", title: book.title, oldSize, newSize: files.pdfSize };
+    }
+  }
 
-  const authorName = formatAuthorName(book.author);
-  const files = await buildGutenbergFiles(match.id, book.slug, book.title, authorName);
-  if (!files) return { status: "fail", title: book.title };
+  // 2) Repli Internet Archive : PDF le plus léger de la même œuvre
+  let lighter: { url: string; size: number } | null = null;
+  // a) le plus léger du MÊME identifiant IA (l'import d'origine avait pu prendre un gros scan)
+  if (book.sourceId && !book.sourceId.startsWith("gutenberg:")) {
+    const same = await lightestIaPdf(book.sourceId).catch(() => null);
+    if (same && (oldSize === 0 || same.size < oldSize)) lighter = same;
+  }
+  // b) sinon, une autre édition IA plus légère (recherche titre+auteur)
+  if (!lighter) {
+    const cap = oldSize > 0 ? oldSize : 45 * 1024 * 1024;
+    lighter = await searchIaLighterPdf(book.title, book.author, cap).catch(() => null);
+  }
+  if (lighter) {
+    try {
+      const buf = await fetchBuffer(lighter.url);
+      if (buf.subarray(0, 5).toString("latin1").startsWith("%PDF")) {
+        await mkdir(BOOKS_DIR, { recursive: true });
+        await writeFile(path.join(BOOKS_DIR, `${book.slug}.pdf`), buf);
+        await prisma.book.update({
+          where: { id: book.id },
+          data: { pdfUrl: `/uploads/books/${book.slug}.pdf`, pdfSize: buf.length },
+        });
+        return { status: "ok", title: book.title, oldSize, newSize: buf.length };
+      }
+    } catch {
+      /* échec téléchargement */
+    }
+  }
 
-  // On ne touche PAS au sourceId (unique) pour éviter tout conflit.
-  await prisma.book.update({
-    where: { id: book.id },
-    data: {
-      pdfUrl: `/uploads/books/${book.slug}.pdf`,
-      pdfSize: files.pdfSize,
-      pageCount: files.pages,
-      ...(files.epubUrl ? { epubUrl: files.epubUrl } : {}),
-      ...(files.coverImage ? { coverImage: files.coverImage } : {}),
-    },
-  });
-
-  return { status: "ok", title: book.title, oldSize: book.pdfSize, newSize: files.pdfSize };
+  return { status: "nomatch", title: book.title };
 }
 
 // Liste les livres PDF les plus lourds (candidats au réimport léger).

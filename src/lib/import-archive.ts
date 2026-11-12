@@ -611,6 +611,60 @@ export async function findAudioForWork(
   return null;
 }
 
+// Renvoie le PDF le PLUS LÉGER disponible pour un identifiant Internet Archive
+// (+ sa taille). Sert au réimport « version plus légère » quand l'import
+// d'origine avait pris un gros scan.
+export async function lightestIaPdf(
+  identifier: string
+): Promise<{ url: string; size: number } | null> {
+  let meta: { files?: { name: string; size?: string }[] };
+  try {
+    meta = (await fetchJson(`https://archive.org/metadata/${identifier}`)) as typeof meta;
+  } catch {
+    return null;
+  }
+  const files = meta?.files ?? [];
+  const PDF_MIN_BYTES = 300 * 1024;
+  const pdfs = files
+    .filter((f) => /\.pdf$/i.test(f.name) && f.size)
+    .map((f) => ({ name: f.name, size: Number(f.size) }))
+    .filter((f) => f.size >= PDF_MIN_BYTES && f.size <= MAX_PDF_BYTES)
+    .sort((a, b) => a.size - b.size);
+  if (!pdfs.length) return null;
+  const pdf = pdfs[0];
+  return {
+    url: `https://archive.org/download/${identifier}/${encodeURIComponent(pdf.name)}`,
+    size: pdf.size,
+  };
+}
+
+// Cherche sur Internet Archive une édition de la même œuvre (titre+auteur) dont
+// le PDF le plus léger est < maxSize. Correspondance stricte sur le titre.
+export async function searchIaLighterPdf(
+  title: string,
+  author: string,
+  maxSize: number
+): Promise<{ url: string; size: number } | null> {
+  let docs: SearchDoc[];
+  try {
+    docs = await searchAuthor(author, 40);
+  } catch {
+    return null;
+  }
+  const want = titleTokens(title);
+  if (!want.length) return null;
+  let best: { url: string; size: number } | null = null;
+  for (const d of docs) {
+    const dt = Array.isArray(d.title) ? d.title.join(" ") : d.title ?? "";
+    const got = titleTokens(dt);
+    const overlap = want.filter((t) => got.includes(t)).length;
+    if (overlap < Math.min(2, want.length) || overlap / want.length < 0.6) continue;
+    const pdf = await lightestIaPdf(d.identifier).catch(() => null);
+    if (pdf && pdf.size < maxSize && (!best || pdf.size < best.size)) best = pdf;
+  }
+  return best;
+}
+
 // Importe un livre audio : métadonnées + playlist de chapitres (streaming) + couverture.
 export async function importAudiobook(
   identifier: string,

@@ -195,7 +195,7 @@ export default function AdminImportPage() {
           if (gain > 0) saved += gain;
           setReimportLog((l) => [`✓ ${b.title.slice(0, 42)} : ${d.oldMb} → ${d.newMb} Mo`, ...l].slice(0, 200));
         } else {
-          const why = d.status === "nomatch" ? "pas sur Gutenberg" : d.status;
+          const why = d.status === "nomatch" ? "pas de version plus légère trouvée" : d.status;
           setReimportLog((l) => [`⏭️ ${b.title.slice(0, 42)} : ${why}`, ...l].slice(0, 200));
         }
       } catch {
@@ -517,9 +517,9 @@ export default function AdminImportPage() {
           </CardHeader>
           <CardContent>
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-              Repère les PDF lourds (≥ 5 Mo, souvent des scans) et, quand l&apos;œuvre existe sur
-              Gutenberg, remplace le fichier par une version texte légère (PDF généré + EPUB). La fiche
-              et ses liens sont conservés.
+              Repère les PDF lourds (≥ 5 Mo, souvent des scans) et remplace le fichier par une version
+              plus légère : d&apos;abord Gutenberg (texte → PDF généré + EPUB), sinon le PDF le plus léger
+              de la même œuvre sur Internet Archive. La fiche et ses liens sont conservés.
             </p>
             <div className="flex flex-wrap items-center gap-2 mb-3">
               <Button type="button" variant="outline" onClick={listHeavy} disabled={reimportBusy}>
