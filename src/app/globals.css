@@ -5,15 +5,15 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  /* Colors - Primary */
-  --color-primary: #1e3a5f;
-  --color-primary-light: #2d5a87;
-  --color-primary-dark: #152a45;
-  
-  /* Colors - Accent */
-  --color-accent: #d4a853;
-  --color-accent-light: #e5c27a;
-  --color-accent-dark: #b8923f;
+  /* Colors - Primary (navy de marque) */
+  --color-primary: #14213d;
+  --color-primary-light: #273655;
+  --color-primary-dark: #0d1526;
+
+  /* Colors - Accent (orange de marque) */
+  --color-accent: #fca311;
+  --color-accent-light: #ffb733;
+  --color-accent-dark: #d4860a;
   
   /* Colors - Neutral */
   --color-background: #ffffff;

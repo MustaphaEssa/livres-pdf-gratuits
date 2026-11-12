@@ -109,8 +109,8 @@ export default function AdminDashboard() {
         </Card>
         <Card>
           <CardContent className="p-6">
-            <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-lg w-fit mb-4">
-              <Download className="h-6 w-6 text-blue-500" />
+            <div className="p-3 bg-[#e8ebf3] dark:bg-[#14213d]/20 rounded-lg w-fit mb-4">
+              <Download className="h-6 w-6 text-[#14213d]" />
             </div>
             <div className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
               {stats ? stats.downloadsTotal.toLocaleString() : "..."}
