@@ -130,6 +130,81 @@ export default function AdminImportPage() {
     }
   };
 
+  // --- Fusion des doublons multi-format ---
+  interface MergeGroupUI {
+    key: string;
+    title: string;
+    books: { id: string; mediaType: string; hasPdf: boolean; hasEpub: boolean; hasAudio: boolean }[];
+  }
+  const [mergeInfo, setMergeInfo] = useState<{ total: number; duplicates: number; groups: MergeGroupUI[] } | null>(null);
+  const [mergeBusy, setMergeBusy] = useState(false);
+  const analyzeMerge = async () => {
+    setMergeBusy(true);
+    try {
+      const r = await fetch("/api/admin/merge");
+      if (r.ok) setMergeInfo(await r.json());
+    } finally {
+      setMergeBusy(false);
+    }
+  };
+  const applyMerge = async () => {
+    setMergeBusy(true);
+    try {
+      await fetch("/api/admin/merge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
+      await analyzeMerge();
+      fetchStatuses();
+    } finally {
+      setMergeBusy(false);
+    }
+  };
+
+  // --- Réimport léger (Gutenberg) des livres lourds ---
+  const [heavy, setHeavy] = useState<{ id: string; title: string; sizeMb: number }[] | null>(null);
+  const [reimportBusy, setReimportBusy] = useState(false);
+  const [reimportLog, setReimportLog] = useState<string[]>([]);
+  const listHeavy = async () => {
+    setReimportBusy(true);
+    try {
+      const r = await fetch("/api/admin/reimport?minMb=5");
+      if (r.ok) setHeavy((await r.json()).books);
+    } finally {
+      setReimportBusy(false);
+    }
+  };
+  const reimportAll = async () => {
+    if (!heavy || !heavy.length) return;
+    setReimportBusy(true);
+    setReimportLog([]);
+    let saved = 0;
+    for (const b of heavy) {
+      try {
+        const r = await fetch("/api/admin/reimport", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ bookId: b.id }),
+        });
+        const d = await r.json();
+        if (d.status === "ok") {
+          const gain = (d.oldMb ?? 0) - (d.newMb ?? 0);
+          if (gain > 0) saved += gain;
+          setReimportLog((l) => [`✓ ${b.title.slice(0, 42)} : ${d.oldMb} → ${d.newMb} Mo`, ...l].slice(0, 200));
+        } else {
+          const why = d.status === "nomatch" ? "pas sur Gutenberg" : d.status;
+          setReimportLog((l) => [`⏭️ ${b.title.slice(0, 42)} : ${why}`, ...l].slice(0, 200));
+        }
+      } catch {
+        setReimportLog((l) => [`✗ ${b.title.slice(0, 42)}`, ...l].slice(0, 200));
+      }
+    }
+    setReimportLog((l) => [`✅ Terminé — ~${Math.round(saved)} Mo libérés`, ...l]);
+    await listHeavy();
+    setReimportBusy(false);
+  };
+
   return (
     <AdminShell active="import">
       <div className="max-w-3xl">
@@ -353,6 +428,116 @@ export default function AdminImportPage() {
                 );
               })}
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Fusion des doublons multi-format */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="text-base">Fusionner les doublons (multi-format)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+              Regroupe en une seule fiche les exemplaires d&apos;une même œuvre (PDF + EPUB + Audio)
+              répartis sur plusieurs entrées. Garde le PDF le plus léger ; les fichiers inutiles sont
+              supprimés.
+            </p>
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <Button type="button" variant="outline" onClick={analyzeMerge} disabled={mergeBusy}>
+                {mergeBusy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Search className="h-4 w-4 mr-2" />}
+                Analyser les doublons
+              </Button>
+              {mergeInfo && mergeInfo.total > 0 && (
+                <Button
+                  type="button"
+                  className="bg-amber-500 hover:bg-amber-600"
+                  onClick={applyMerge}
+                  disabled={mergeBusy}
+                >
+                  Fusionner {mergeInfo.total} œuvre(s)
+                </Button>
+              )}
+            </div>
+            {mergeInfo &&
+              (mergeInfo.total === 0 ? (
+                <p className="text-sm text-green-600">Aucun doublon détecté. ✓</p>
+              ) : (
+                <>
+                  <p className="text-sm mb-2">
+                    {mergeInfo.total} œuvre(s) en double · {mergeInfo.duplicates} fiche(s) à supprimer.
+                  </p>
+                  <div className="max-h-64 overflow-y-auto space-y-1">
+                    {mergeInfo.groups.slice(0, 60).map((g) => (
+                      <div
+                        key={g.key}
+                        className="rounded-md border border-slate-200 dark:border-slate-700 px-2 py-1"
+                      >
+                        <div className="truncate text-sm font-medium text-slate-800 dark:text-slate-200">
+                          {g.title}
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          {g.books
+                            .map(
+                              (b) =>
+                                [b.hasPdf && "PDF", b.hasEpub && "EPUB", b.hasAudio && "Audio"]
+                                  .filter(Boolean)
+                                  .join("+") || b.mediaType
+                            )
+                            .join("  ·  ")}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ))}
+          </CardContent>
+        </Card>
+
+        {/* Réimport léger (Gutenberg) des livres lourds */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="text-base">Alléger les livres lourds (réimport Gutenberg)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+              Repère les PDF lourds (≥ 5 Mo, souvent des scans) et, quand l&apos;œuvre existe sur
+              Gutenberg, remplace le fichier par une version texte légère (PDF généré + EPUB). La fiche
+              et ses liens sont conservés.
+            </p>
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <Button type="button" variant="outline" onClick={listHeavy} disabled={reimportBusy}>
+                {reimportBusy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Search className="h-4 w-4 mr-2" />}
+                Lister les livres lourds
+              </Button>
+              {heavy && heavy.length > 0 && (
+                <Button
+                  type="button"
+                  className="bg-amber-500 hover:bg-amber-600"
+                  onClick={reimportAll}
+                  disabled={reimportBusy}
+                >
+                  Alléger {heavy.length} livre(s)
+                </Button>
+              )}
+            </div>
+            {heavy && (
+              <p className="text-sm mb-2">
+                {heavy.length === 0
+                  ? "Aucun livre lourd (≥ 5 Mo). ✓"
+                  : `${heavy.length} livre(s) lourd(s) · ${Math.round(
+                      heavy.reduce((s, b) => s + b.sizeMb, 0)
+                    )} Mo au total.`}
+              </p>
+            )}
+            {reimportLog.length > 0 && (
+              <div className="max-h-72 overflow-y-auto rounded-md bg-slate-50 dark:bg-slate-900 p-3 text-sm font-mono space-y-1">
+                {reimportLog.map((line, i) => (
+                  <div key={i} className="text-slate-700 dark:text-slate-300">
+                    {line}
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 

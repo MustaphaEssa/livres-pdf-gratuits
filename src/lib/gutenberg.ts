@@ -316,6 +316,68 @@ export interface ImportResult {
   authorRaw?: string;
 }
 
+// Télécharge le texte → PDF léger, l'EPUB et la couverture d'un livre Gutenberg,
+// et écrit les fichiers sous <slug>.{pdf,epub,ext}. Partagé entre import et
+// réimport. Renvoie null si le texte est indisponible/illisible.
+async function buildGutenbergFiles(
+  id: number,
+  slug: string,
+  title: string,
+  authorName: string
+): Promise<{ pdfSize: number; pages: number; epubUrl: string | null; coverImage: string | null } | null> {
+  // 1) Texte → PDF
+  let text: string;
+  try {
+    text = (await fetchBuffer(`https://www.gutenberg.org/cache/epub/${id}/pg${id}.txt`, 90000)).toString("utf8");
+  } catch {
+    try {
+      text = (await fetchBuffer(`https://www.gutenberg.org/ebooks/${id}.txt.utf-8`, 90000)).toString("utf8");
+    } catch {
+      return null;
+    }
+  }
+  const { paragraphs } = cleanGutenbergText(text);
+  if (paragraphs.length < 3) return null;
+
+  let pdfBuf: Buffer;
+  let pages: number;
+  try {
+    ({ buf: pdfBuf, pages } = await generatePdf(title, authorName, paragraphs));
+  } catch {
+    return null;
+  }
+  await mkdir(BOOKS_DIR, { recursive: true });
+  await writeFile(path.join(BOOKS_DIR, `${slug}.pdf`), pdfBuf);
+
+  // 2) EPUB (léger, direct Gutenberg) — auto-hébergé
+  let epubUrl: string | null = null;
+  try {
+    const epubBuf = await fetchBuffer(`https://www.gutenberg.org/ebooks/${id}.epub.images`, 90000);
+    if (epubBuf.length > 1000 && epubBuf.subarray(0, 2).toString("latin1") === "PK") {
+      await writeFile(path.join(BOOKS_DIR, `${slug}.epub`), epubBuf);
+      epubUrl = `/uploads/books/${slug}.epub`;
+    }
+  } catch {
+    /* EPUB optionnel */
+  }
+
+  // 3) Couverture générée par Gutenberg (rejette si minuscule/absente)
+  let coverImage: string | null = null;
+  try {
+    const imgBuf = await fetchBuffer(`https://www.gutenberg.org/cache/epub/${id}/pg${id}.cover.medium.jpg`, 30000);
+    const ext = imageExt(imgBuf);
+    if (ext && imgBuf.length > 2000) {
+      await mkdir(COVERS_DIR, { recursive: true });
+      await writeFile(path.join(COVERS_DIR, `${slug}.${ext}`), imgBuf);
+      coverImage = `/uploads/covers/${slug}.${ext}`;
+    }
+  } catch {
+    /* couverture optionnelle → repli initiale du titre */
+  }
+
+  return { pdfSize: pdfBuf.length, pages, epubUrl, coverImage };
+}
+
 function parseYear(row: GutenbergRow): number | null {
   // Les dates d'auteur "1802-1885" ne sont pas l'année de publication ; on
   // laisse null (Gutenberg ne fournit pas de façon fiable l'année de 1re édition).
@@ -352,58 +414,9 @@ export async function importGutenbergBook(
     if (await prisma.book.count({ where: { slug } })) return { status: "skip" };
   }
 
-  // 1) Texte → PDF
-  let text: string;
-  try {
-    const txtBuf = await fetchBuffer(`https://www.gutenberg.org/cache/epub/${row.id}/pg${row.id}.txt`, 90000);
-    text = txtBuf.toString("utf8");
-  } catch {
-    // repli : route /ebooks/<id>.txt.utf-8
-    try {
-      const txtBuf = await fetchBuffer(`https://www.gutenberg.org/ebooks/${row.id}.txt.utf-8`, 90000);
-      text = txtBuf.toString("utf8");
-    } catch {
-      return { status: "fail" };
-    }
-  }
-  const { paragraphs } = cleanGutenbergText(text);
-  if (paragraphs.length < 3) return { status: "skip" }; // texte vide/illisible
-
-  let pdfBuf: Buffer;
-  let pages: number;
-  try {
-    ({ buf: pdfBuf, pages } = await generatePdf(title, authorName, paragraphs));
-  } catch {
-    return { status: "fail" };
-  }
-  await mkdir(BOOKS_DIR, { recursive: true });
-  await writeFile(path.join(BOOKS_DIR, `${slug}.pdf`), pdfBuf);
-
-  // 2) EPUB (léger, direct Gutenberg) — auto-hébergé
-  let epubUrl: string | null = null;
-  try {
-    const epubBuf = await fetchBuffer(`https://www.gutenberg.org/ebooks/${row.id}.epub.images`, 90000);
-    if (epubBuf.length > 1000 && epubBuf.subarray(0, 2).toString("latin1") === "PK") {
-      await writeFile(path.join(BOOKS_DIR, `${slug}.epub`), epubBuf);
-      epubUrl = `/uploads/books/${slug}.epub`;
-    }
-  } catch {
-    /* EPUB optionnel */
-  }
-
-  // 3) Couverture générée par Gutenberg (rejette si minuscule/absente)
-  let coverImage: string | null = null;
-  try {
-    const imgBuf = await fetchBuffer(`https://www.gutenberg.org/cache/epub/${row.id}/pg${row.id}.cover.medium.jpg`, 30000);
-    const ext = imageExt(imgBuf);
-    if (ext && imgBuf.length > 2000) {
-      await mkdir(COVERS_DIR, { recursive: true });
-      await writeFile(path.join(COVERS_DIR, `${slug}.${ext}`), imgBuf);
-      coverImage = `/uploads/covers/${slug}.${ext}`;
-    }
-  } catch {
-    /* couverture optionnelle → repli initiale du titre */
-  }
+  // Télécharge/génère les fichiers (texte→PDF léger, EPUB, couverture)
+  const files = await buildGutenbergFiles(row.id, slug, title, authorName);
+  if (!files) return { status: "skip" };
 
   const year = parseYear(row);
   const catIds = detectCategorySlugs(row)
@@ -419,10 +432,10 @@ export async function importGutenbergBook(
       authorSlug,
       description: composeDescription(title, authorName, year),
       pdfUrl: `/uploads/books/${slug}.pdf`,
-      pdfSize: pdfBuf.length,
-      epubUrl,
-      pageCount: pages,
-      coverImage,
+      pdfSize: files.pdfSize,
+      epubUrl: files.epubUrl,
+      pageCount: files.pages,
+      coverImage: files.coverImage,
       language: "fr",
       publishedYear: year,
       isPublished: true,
@@ -432,4 +445,62 @@ export async function importGutenbergBook(
   });
 
   return { status: "ok", title, authorSlug, authorRaw: authorName };
+}
+
+export interface ReimportResult {
+  status: "ok" | "nomatch" | "notfound" | "fail" | "skip";
+  title?: string;
+  oldSize?: number | null;
+  newSize?: number;
+}
+
+// Remplace les fichiers d'un livre existant (souvent un scan IA lourd) par une
+// version LÉGÈRE issue de Gutenberg (PDF généré + EPUB), si une correspondance
+// titre+auteur sûre existe. Garde le même slug/fiche (relations préservées).
+export async function reimportFromGutenberg(bookId: string): Promise<ReimportResult> {
+  const book = await prisma.book.findUnique({
+    where: { id: bookId },
+    select: { id: true, slug: true, title: true, author: true, mediaType: true, pdfSize: true },
+  });
+  if (!book) return { status: "notfound" };
+  if (book.mediaType === "AUDIO") return { status: "skip" };
+
+  const rows = await searchGutenbergAuthor(book.author, 80);
+  const nt = norm(book.title);
+  const match =
+    rows.find((r) => norm(r.title) === nt) ??
+    rows.find((r) => {
+      const t = norm(r.title);
+      return t.length > 6 && (t.includes(nt) || nt.includes(t));
+    });
+  if (!match) return { status: "nomatch", title: book.title };
+
+  const authorName = formatAuthorName(book.author);
+  const files = await buildGutenbergFiles(match.id, book.slug, book.title, authorName);
+  if (!files) return { status: "fail", title: book.title };
+
+  // On ne touche PAS au sourceId (unique) pour éviter tout conflit.
+  await prisma.book.update({
+    where: { id: book.id },
+    data: {
+      pdfUrl: `/uploads/books/${book.slug}.pdf`,
+      pdfSize: files.pdfSize,
+      pageCount: files.pages,
+      ...(files.epubUrl ? { epubUrl: files.epubUrl } : {}),
+      ...(files.coverImage ? { coverImage: files.coverImage } : {}),
+    },
+  });
+
+  return { status: "ok", title: book.title, oldSize: book.pdfSize, newSize: files.pdfSize };
+}
+
+// Liste les livres PDF les plus lourds (candidats au réimport léger).
+export async function listHeavyBooks(minBytes = 5 * 1024 * 1024, limit = 200) {
+  const books = await prisma.book.findMany({
+    where: { mediaType: "PDF", pdfSize: { gte: minBytes } },
+    select: { id: true, slug: true, title: true, author: true, pdfSize: true },
+    orderBy: { pdfSize: "desc" },
+    take: limit,
+  });
+  return books;
 }
