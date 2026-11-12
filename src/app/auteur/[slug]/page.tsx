@@ -7,6 +7,8 @@ import BookCard from "@/components/design/book-card";
 import Icon, { I } from "@/components/design/icon";
 import { getBooksByAuthorSlug, getCategoriesWithCounts } from "@/lib/books";
 import { getAuthorInfo, formatAuthorName } from "@/lib/authors";
+import JsonLd, { breadcrumbLd, itemListLd } from "@/components/seo/json-ld";
+import { SITE_URL } from "@/lib/site";
 
 interface AuthorPageProps {
   params: Promise<{ slug: string }>;
@@ -38,8 +40,30 @@ export default async function AuthorPage({ params, searchParams }: AuthorPagePro
 
   const author = await getAuthorInfo(slug, authorName);
 
+  const personLd = {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    name: author.name,
+    url: `${SITE_URL}/auteur/${slug}`,
+    ...(author.image ? { image: author.image } : {}),
+    ...(author.bio ? { description: author.bio } : {}),
+    ...(author.birthYear ? { birthDate: String(author.birthYear) } : {}),
+    ...(author.deathYear ? { deathDate: String(author.deathYear) } : {}),
+  };
+
   return (
     <div className="ma">
+      <JsonLd
+        data={[
+          breadcrumbLd([
+            { name: "Accueil", url: "/" },
+            { name: "Auteurs", url: "/auteurs" },
+            { name: author.name, url: `/auteur/${slug}` },
+          ]),
+          personLd,
+          itemListLd(books, `Livres de ${author.name}`),
+        ]}
+      />
       <DesignHeader />
       <main className="page-main">
         <div className="wrap">

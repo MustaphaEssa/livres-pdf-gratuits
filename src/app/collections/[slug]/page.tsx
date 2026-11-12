@@ -8,6 +8,7 @@ import Icon, { I } from "@/components/design/icon";
 import { getPublishedCollectionBySlug } from "@/lib/collections";
 import { getCategoriesWithCounts } from "@/lib/books";
 import { SITE_URL } from "@/lib/site";
+import JsonLd, { breadcrumbLd, itemListLd } from "@/components/seo/json-ld";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -41,6 +42,19 @@ export default async function CollectionDetailPage({ params }: Props) {
 
   return (
     <div className="ma">
+      <JsonLd
+        data={[
+          breadcrumbLd([
+            { name: "Accueil", url: "/" },
+            { name: "Collections", url: "/collections" },
+            { name: col.title, url: `/collections/${slug}` },
+          ]),
+          itemListLd(
+            col.books.map((e) => e.book),
+            col.title
+          ),
+        ]}
+      />
       <DesignHeader />
       <main className="page-main">
         <div className="wrap">

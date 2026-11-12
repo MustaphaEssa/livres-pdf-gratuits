@@ -6,6 +6,7 @@ import Icon, { I } from "@/components/design/icon";
 import { searchBooks } from "@/lib/books";
 import prisma from "@/lib/db";
 import { SITE_NAME } from "@/lib/site";
+import JsonLd, { breadcrumbLd, itemListLd } from "@/components/seo/json-ld";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -42,6 +43,16 @@ export default async function CategoryPage({ params, searchParams }: Props) {
 
   return (
     <DesignShell>
+      <JsonLd
+        data={[
+          breadcrumbLd([
+            { name: "Accueil", url: "/" },
+            { name: "Catalogue", url: "/catalogue" },
+            { name: category.name, url: `/categorie/${slug}` },
+          ]),
+          ...(books.length > 0 ? [itemListLd(books, `Livres ${category.name}`)] : []),
+        ]}
+      />
       <div className="wrap">
         <nav className="breadcrumb" aria-label="Fil d'Ariane" style={{ paddingTop: 16 }}>
           <Link href="/">Accueil</Link>

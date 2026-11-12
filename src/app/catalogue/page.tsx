@@ -4,6 +4,7 @@ import MobileTabbar from "@/components/design/mobile-tabbar";
 import CatalogueClient, { type CatBook } from "@/components/design/catalogue-client";
 import { getCategoriesWithCounts } from "@/lib/books";
 import prisma from "@/lib/db";
+import JsonLd, { breadcrumbLd } from "@/components/seo/json-ld";
 
 export const metadata = {
   title: "Catalogue",
@@ -45,6 +46,12 @@ export default async function CataloguePage({ searchParams }: Props) {
 
   return (
     <div className="ma">
+      <JsonLd
+        data={breadcrumbLd([
+          { name: "Accueil", url: "/" },
+          { name: "Catalogue", url: "/catalogue" },
+        ])}
+      />
       <DesignHeader />
       <main className="page-main">
         <CatalogueClient

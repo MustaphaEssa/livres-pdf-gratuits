@@ -10,7 +10,8 @@ import { getPublishedPostBySlug } from "@/lib/posts";
 import { getCategoriesWithCounts } from "@/lib/books";
 import { getUserSession } from "@/lib/user-server";
 import { formatDate } from "@/lib/utils";
-import { SITE_URL } from "@/lib/site";
+import { SITE_URL, SITE_NAME } from "@/lib/site";
+import JsonLd, { breadcrumbLd } from "@/components/seo/json-ld";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -55,9 +56,41 @@ export default async function PostPage({ params }: Props) {
   const [session, categories] = await Promise.all([getUserSession(), getCategoriesWithCounts()]);
   const paragraphs = post.content.split(/\n\s*\n/).filter(Boolean);
   const shareUrl = `${SITE_URL}/blog/${slug}`;
+  const postImage = post.coverImage
+    ? post.coverImage.startsWith("http")
+      ? post.coverImage
+      : `${SITE_URL}${post.coverImage}`
+    : `${SITE_URL}/og-image.png`;
+  const articleLd = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: post.title,
+    url: shareUrl,
+    mainEntityOfPage: shareUrl,
+    image: postImage,
+    datePublished: new Date(post.publishedAt ?? post.createdAt).toISOString(),
+    dateModified: new Date(post.updatedAt ?? post.publishedAt ?? post.createdAt).toISOString(),
+    author: { "@type": post.author ? "Person" : "Organization", name: post.author || SITE_NAME },
+    publisher: {
+      "@type": "Organization",
+      name: SITE_NAME,
+      logo: { "@type": "ImageObject", url: `${SITE_URL}/og-image.png` },
+    },
+    ...(post.excerpt ? { description: post.excerpt } : {}),
+  };
 
   return (
     <div className="ma">
+      <JsonLd
+        data={[
+          breadcrumbLd([
+            { name: "Accueil", url: "/" },
+            { name: "Blog", url: "/blog" },
+            { name: post.title, url: `/blog/${slug}` },
+          ]),
+          articleLd,
+        ]}
+      />
       <DesignHeader />
       <main className="page-main">
         <article className="wrap" style={{ maxWidth: 820 }}>

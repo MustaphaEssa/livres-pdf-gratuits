@@ -7,6 +7,7 @@ import HeroSearch from "@/components/design/hero-search";
 import LangShelf from "@/components/design/lang-shelf";
 import Icon, { I } from "@/components/design/icon";
 import { ZelligePattern } from "@/components/design/patterns";
+import JsonLd, { websiteLd, organizationLd, itemListLd } from "@/components/seo/json-ld";
 import {
   getFeaturedBooks,
   getLatestBooks,
@@ -47,7 +48,8 @@ export default async function HomePage() {
 
   const stats = [
     { value: `${fmt(bookCount)}+`, label: "livres en PDF" },
-    { value: `${fmt(audioCount)}`, label: "livres audio" },
+    // N'afficher la stat audio que s'il existe au moins un livre audio
+    ...(audioCount > 0 ? [{ value: `${fmt(audioCount)}`, label: "livres audio" }] : []),
     { value: `${fmt(authorCount.length)}+`, label: "auteurs" },
     { value: "0 €", label: "toujours gratuit" },
   ];
@@ -56,6 +58,13 @@ export default async function HomePage() {
 
   return (
     <div className="ma">
+      <JsonLd
+        data={[
+          websiteLd(),
+          organizationLd(),
+          itemListLd(featured, "Les livres les plus consultés"),
+        ]}
+      />
       <DesignHeader />
 
       <main className="page-main">

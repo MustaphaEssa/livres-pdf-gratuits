@@ -40,7 +40,12 @@ export default function BookCover({
     // eslint-disable-next-line @next/next/no-img-element
     return (
       <div className={cls}>
-        <img src={book.coverImage} alt={`Couverture de ${book.title}`} loading="lazy" />
+        <img
+          src={book.coverImage}
+          alt={`Couverture de ${book.title}`}
+          loading="lazy"
+          decoding="async"
+        />
       </div>
     );
   }
