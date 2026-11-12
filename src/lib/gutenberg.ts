@@ -3,7 +3,7 @@ import { writeFile, mkdir, readFile, stat } from "fs/promises";
 import path from "path";
 import prisma from "@/lib/db";
 import { slugify } from "@/lib/utils";
-import { formatAuthorName } from "@/lib/import-archive";
+import { formatAuthorName, findAudioForWork } from "@/lib/import-archive";
 
 /**
  * Import depuis Project Gutenberg (domaine public, fichiers TEXTE légers).
@@ -388,7 +388,8 @@ function parseYear(row: GutenbergRow): number | null {
 export async function importGutenbergBook(
   row: GutenbergRow,
   fallbackAuthor: string,
-  categoryMap: Record<string, string>
+  categoryMap: Record<string, string>,
+  withAudio = false // attache aussi l'audio LibriVox correspondant si trouvé
 ): Promise<ImportResult> {
   const sourceId = `gutenberg:${row.id}`;
 
@@ -423,6 +424,19 @@ export async function importGutenbergBook(
     .map((s) => categoryMap[s])
     .filter((id): id is string => Boolean(id));
 
+  // Audio multi-format : attache un enregistrement LibriVox correspondant (option)
+  let audioFields: Record<string, unknown> = {};
+  if (withAudio) {
+    const audio = await findAudioForWork(title, authorName).catch(() => null);
+    if (audio) {
+      audioFields = {
+        audioSourceId: audio.audioSourceId,
+        audioTracks: JSON.stringify(audio.tracks),
+        audioDuration: audio.totalDuration,
+      };
+    }
+  }
+
   await prisma.book.create({
     data: {
       slug,
@@ -440,6 +454,7 @@ export async function importGutenbergBook(
       publishedYear: year,
       isPublished: true,
       isFeatured: false,
+      ...audioFields,
       categories: catIds.length ? { create: catIds.map((categoryId) => ({ categoryId })) } : undefined,
     },
   });

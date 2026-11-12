@@ -62,7 +62,8 @@ async function run(
   importAll: boolean,
   minDownloads: number,
   mediaType: "PDF" | "AUDIO" = "PDF",
-  source: "ia" | "gutenberg" = "ia"
+  source: "ia" | "gutenberg" = "ia",
+  withAudio = false
 ) {
   const isAudio = mediaType === "AUDIO";
   const isGut = source === "gutenberg" && !isAudio;
@@ -82,7 +83,7 @@ async function run(
       job.log.push(`${docs.length} résultat(s) audio trouvé(s) sur Internet Archive`);
     } else if (isGut) {
       const grows = await searchGutenbergAuthor(author, rows);
-      tasks = grows.map((r) => ({ run: () => importGutenbergBook(r, author, categoryMap) }));
+      tasks = grows.map((r) => ({ run: () => importGutenbergBook(r, author, categoryMap, withAudio) }));
       job.log.push(
         `${grows.length} œuvre(s) trouvée(s) dans le catalogue Project Gutenberg (fichiers légers)`
       );
@@ -90,7 +91,7 @@ async function run(
       const docs = await searchAuthor(author, rows);
       tasks = docs.map((d) => ({
         downloads: d.downloads,
-        run: () => importBook(d.identifier, author, categoryMap),
+        run: () => importBook(d.identifier, author, categoryMap, withAudio),
       }));
       job.log.push(
         `${docs.length} résultat(s) trouvé(s) sur Internet Archive` +
@@ -195,6 +196,9 @@ export async function POST(request: Request) {
   // Archive (scans). L'audio provient toujours d'Internet Archive (LibriVox).
   const source: "ia" | "gutenberg" =
     body.source === "gutenberg" && mediaType !== "AUDIO" ? "gutenberg" : "ia";
+  // Audio en même temps : attache un livre audio LibriVox correspondant à la
+  // fiche PDF/EPUB (par défaut activé ; sans objet pour un import audio pur).
+  const withAudio = body.withAudio !== false && mediaType !== "AUDIO";
   const importAll = body.all === true;
   // Mode « tout importer » : plafond par auteur (évite de saturer le VPS avec un
   // auteur à plusieurs centaines d'œuvres) ; sinon la valeur demandée.
@@ -234,7 +238,7 @@ export async function POST(request: Request) {
   jobs.set(id, job);
   prune();
   // Lance en arrière-plan (pas de await) — le serveur Node persistant poursuit la tâche
-  void run(job, author, max, categoryMap, importAll, minDownloads, mediaType, source);
+  void run(job, author, max, categoryMap, importAll, minDownloads, mediaType, source, withAudio);
 
   return NextResponse.json({ jobId: id });
 }

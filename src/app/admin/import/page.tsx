@@ -29,6 +29,7 @@ export default function AdminImportPage() {
   const [author, setAuthor] = useState("");
   const [mediaType, setMediaType] = useState<"PDF" | "AUDIO">("PDF");
   const [source, setSource] = useState<"gutenberg" | "ia">("gutenberg");
+  const [withAudio, setWithAudio] = useState(true);
   const [max, setMax] = useState(20);
   const [minDownloads, setMinDownloads] = useState(100);
   const [job, setJob] = useState<Job | null>(null);
@@ -86,6 +87,7 @@ export default function AdminImportPage() {
           minDownloads,
           mediaType: opts.mediaType ?? "PDF",
           source,
+          withAudio,
         }),
       });
       const data = await res.json();
@@ -321,6 +323,21 @@ export default function AdminImportPage() {
                 téléchargements sur Internet Archive (0 = tout importer). S&apos;applique
                 aussi à « Tout importer ».
               </p>
+              <label
+                className={`flex items-center gap-2 text-sm ${
+                  mediaType === "AUDIO" ? "opacity-40" : ""
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={withAudio && mediaType !== "AUDIO"}
+                  onChange={(e) => setWithAudio(e.target.checked)}
+                  disabled={running || mediaType === "AUDIO"}
+                  className="h-4 w-4 accent-amber-500"
+                />
+                Récupérer aussi l&apos;audio (LibriVox) si l&apos;œuvre existe — une seule fiche PDF +
+                EPUB + Audio
+              </label>
               <div className="flex items-center gap-2">
                 <Button
                   type="submit"

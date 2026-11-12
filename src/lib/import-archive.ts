@@ -231,7 +231,8 @@ function detectCategorySlugs(md: Record<string, unknown>): string[] {
 export async function importBook(
   identifier: string,
   fallbackAuthor: string,
-  categoryMap: Record<string, string> // slug -> id des catégories existantes
+  categoryMap: Record<string, string>, // slug -> id des catégories existantes
+  withAudio = false // attache aussi l'audio LibriVox correspondant si trouvé
 ): Promise<ImportResult> {
   // Anti-doublon : si ce livre d'Internet Archive est déjà importé, on saute
   // (avant tout téléchargement) et on renvoie son titre pour le journal
@@ -352,6 +353,19 @@ export async function importBook(
     .map((s) => categoryMap[s])
     .filter((id): id is string => Boolean(id));
 
+  // Audio multi-format : attache un enregistrement LibriVox correspondant (option)
+  let audioFields: Record<string, unknown> = {};
+  if (withAudio) {
+    const audio = await findAudioForWork(cleanTitle, authorName).catch(() => null);
+    if (audio) {
+      audioFields = {
+        audioSourceId: audio.audioSourceId,
+        audioTracks: JSON.stringify(audio.tracks),
+        audioDuration: audio.totalDuration,
+      };
+    }
+  }
+
   await prisma.book.create({
     data: {
       slug,
@@ -371,6 +385,7 @@ export async function importBook(
       isbn: one(md.isbn) ?? null,
       isPublished: true,
       isFeatured: false,
+      ...audioFields,
       categories: catIds.length
         ? { create: catIds.map((categoryId) => ({ categoryId })) }
         : undefined,
@@ -500,18 +515,16 @@ export async function searchLibrivox(query: string, rows: number): Promise<Searc
   return data?.response?.docs ?? [];
 }
 
-// Importe un livre audio : métadonnées + playlist de chapitres (streaming) + couverture.
-export async function importAudiobook(
-  identifier: string,
-  fallbackAuthor: string,
-  categoryMap: Record<string, string>
-): Promise<ImportResult> {
-  const dup = await prisma.book.findFirst({
-    where: { sourceId: identifier },
-    select: { title: true },
-  });
-  if (dup) return { status: "duplicate", title: dup.title };
-
+// Construit la playlist de chapitres (streaming) d'un enregistrement audio
+// Internet Archive/LibriVox. Partagé entre l'import audio et l'attache d'audio
+// à un livre texte. Renvoie null si pas d'audio exploitable.
+export async function fetchAudiobookMeta(identifier: string): Promise<{
+  md: Record<string, unknown>;
+  tracks: AudioTrack[];
+  totalDuration: number;
+  title: string;
+  creator: string;
+} | null> {
   let meta: {
     metadata?: Record<string, unknown>;
     files?: { name: string; format?: string; title?: string; track?: string; length?: string }[];
@@ -519,11 +532,11 @@ export async function importAudiobook(
   try {
     meta = (await fetchJson(`https://archive.org/metadata/${identifier}`)) as typeof meta;
   } catch {
-    return { status: "fail" };
+    return null;
   }
   const md = meta?.metadata ?? {};
   const files = meta?.files ?? [];
-  if (md["access-restricted-item"] === "true") return { status: "skip" };
+  if (md["access-restricted-item"] === "true") return null;
 
   // Sélectionne UNE série de fichiers audio (un fichier par chapitre), en
   // privilégiant un format léger pour le streaming.
@@ -535,7 +548,7 @@ export async function importAudiobook(
   } else {
     chosen = files.filter((f) => /\.mp3$/i.test(f.name));
   }
-  if (!chosen.length) return { status: "skip" };
+  if (!chosen.length) return null;
 
   const trackNum = (f: { name: string; track?: string }): number => {
     const t = parseInt(one(f.track) ?? "", 10);
@@ -554,8 +567,69 @@ export async function importAudiobook(
     duration: parseLength(f.length),
   }));
   const totalDuration = tracks.reduce((acc, t) => acc + t.duration, 0);
+  const title = fixEncoding(one(md.title)) || identifier;
+  const creator = (Array.isArray(md.creator) ? one(md.creator) : one(md.creator)) ?? "";
+  return { md, tracks, totalDuration, title, creator };
+}
 
-  const title = (fixEncoding(one(md.title)) || identifier).slice(0, 250);
+// Tokens significatifs d'un titre (pour matcher une œuvre à son enregistrement)
+const AUDIO_STOP = new Set([
+  "le", "la", "les", "un", "une", "des", "du", "de", "d", "et", "ou", "a", "au",
+  "aux", "en", "the", "of", "and", "to", "tome", "volume", "vol",
+]);
+function titleTokens(s: string): string[] {
+  return norm(s).split(" ").filter((t) => t.length >= 3 && !AUDIO_STOP.has(t));
+}
+
+// Cherche un livre audio LibriVox correspondant à une œuvre (titre + auteur),
+// avec une correspondance STRICTE pour éviter les faux positifs. Sert à attacher
+// l'audio à la fiche d'un livre PDF/EPUB (fiche multi-format).
+export async function findAudioForWork(
+  title: string,
+  author: string
+): Promise<{ audioSourceId: string; tracks: AudioTrack[]; totalDuration: number } | null> {
+  let docs: SearchDoc[];
+  try {
+    docs = await searchLibrivox(`${author} ${title}`, 8);
+  } catch {
+    return null;
+  }
+  const want = titleTokens(title);
+  if (!want.length) return null;
+  const sn = surname(author);
+  for (const d of docs) {
+    const meta = await fetchAudiobookMeta(d.identifier).catch(() => null);
+    if (!meta) continue;
+    const got = titleTokens(meta.title);
+    const overlap = want.filter((t) => got.includes(t)).length;
+    const ratio = overlap / want.length;
+    const creatorOk = !sn || norm(meta.creator).includes(sn);
+    if (creatorOk && ratio >= 0.6 && overlap >= Math.min(2, want.length)) {
+      return { audioSourceId: d.identifier, tracks: meta.tracks, totalDuration: meta.totalDuration };
+    }
+  }
+  return null;
+}
+
+// Importe un livre audio : métadonnées + playlist de chapitres (streaming) + couverture.
+export async function importAudiobook(
+  identifier: string,
+  fallbackAuthor: string,
+  categoryMap: Record<string, string>
+): Promise<ImportResult> {
+  const dup = await prisma.book.findFirst({
+    where: { sourceId: identifier },
+    select: { title: true },
+  });
+  if (dup) return { status: "duplicate", title: dup.title };
+
+  const audio = await fetchAudiobookMeta(identifier);
+  if (!audio) return { status: "skip" };
+  const md = audio.md;
+  const tracks = audio.tracks;
+  const totalDuration = audio.totalDuration;
+
+  const title = audio.title.slice(0, 250);
   let slug = slugify(title) || slugify(identifier);
   if (await prisma.book.count({ where: { slug } })) {
     slug = `${slug}-${identifier.slice(-6).toLowerCase()}`;
