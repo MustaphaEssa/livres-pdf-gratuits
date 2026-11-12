@@ -46,20 +46,28 @@ export async function PATCH(request: Request) {
 
   // Changement de mot de passe : exige le mot de passe actuel
   if (parsed.data.newPassword) {
-    if (!parsed.data.currentPassword) {
-      return NextResponse.json(
-        { error: "Mot de passe actuel requis" },
-        { status: 400 }
+    // Compte Google sans mot de passe local : on en définit un directement
+    if (!user.password) {
+      data.password = await hashPassword(parsed.data.newPassword);
+    } else {
+      if (!parsed.data.currentPassword) {
+        return NextResponse.json(
+          { error: "Mot de passe actuel requis" },
+          { status: 400 }
+        );
+      }
+      const ok = await bcrypt.compare(
+        parsed.data.currentPassword,
+        user.password
       );
+      if (!ok) {
+        return NextResponse.json(
+          { error: "Mot de passe actuel incorrect" },
+          { status: 400 }
+        );
+      }
+      data.password = await hashPassword(parsed.data.newPassword);
     }
-    const ok = await bcrypt.compare(parsed.data.currentPassword, user.password);
-    if (!ok) {
-      return NextResponse.json(
-        { error: "Mot de passe actuel incorrect" },
-        { status: 400 }
-      );
-    }
-    data.password = await hashPassword(parsed.data.newPassword);
   }
 
   if (Object.keys(data).length === 0) {

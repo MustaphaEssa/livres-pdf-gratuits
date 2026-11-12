@@ -6,6 +6,7 @@ import { useState } from "react";
 import Logo from "./logo";
 import Icon, { I } from "./icon";
 import { MotifStrip } from "./patterns";
+import { useAuth } from "@/components/auth/auth-modal";
 
 const NAV = [
   { href: "/", label: "Accueil" },
@@ -18,6 +19,7 @@ const NAV = [
 export default function DesignHeader() {
   const path = usePathname();
   const [open, setOpen] = useState(false);
+  const { user, openAuth } = useAuth();
   const isCurrent = (href: string) => (href === "/" ? path === "/" : path.startsWith(href));
 
   return (
@@ -39,9 +41,15 @@ export default function DesignHeader() {
             <Link href="/compte" className="icon-btn" aria-label="Mes favoris">
               <Icon d={I.bookmark} />
             </Link>
-            <Link href="/auth/connexion" className="signin">
-              Se connecter
-            </Link>
+            {user ? (
+              <Link href="/compte" className="signin" title={user.email}>
+                {user.name?.split(" ")[0] || "Mon compte"}
+              </Link>
+            ) : (
+              <button type="button" className="signin" onClick={() => openAuth()}>
+                Se connecter
+              </button>
+            )}
             <button
               className="icon-btn menu-btn"
               type="button"
@@ -62,9 +70,19 @@ export default function DesignHeader() {
                   {n.label}
                 </Link>
               ))}
-              <Link href="/auth/connexion" onClick={() => setOpen(false)}>
-                Se connecter
-              </Link>
+              {user ? (
+                <Link href="/compte" onClick={() => setOpen(false)}>
+                  Mon compte
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  className="mobile-signin"
+                  onClick={() => { setOpen(false); openAuth(); }}
+                >
+                  Se connecter
+                </button>
+              )}
             </nav>
           </div>
         )}

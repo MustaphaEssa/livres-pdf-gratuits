@@ -57,9 +57,47 @@ export async function verifyUserCredentials(
     where: { email: email.toLowerCase().trim() },
   });
   if (!user || !user.isActive) return null;
+  // Compte créé via Google uniquement : pas de mot de passe local.
+  if (!user.password) return null;
 
   const ok = await bcrypt.compare(password, user.password);
   if (!ok) return null;
 
   return { id: user.id, name: user.name, email: user.email };
+}
+
+// Connecte (ou crée) un utilisateur à partir d'un profil Google vérifié.
+// Lie par googleId, sinon par email (compte email existant), sinon crée.
+export async function upsertGoogleUser(profile: {
+  googleId: string;
+  email: string;
+  name: string;
+  image?: string | null;
+}): Promise<PublicUser> {
+  const email = profile.email.toLowerCase().trim();
+  const name = profile.name.trim() || email.split("@")[0];
+
+  const byGoogle = await prisma.user.findUnique({
+    where: { googleId: profile.googleId },
+  });
+  if (byGoogle) {
+    return { id: byGoogle.id, name: byGoogle.name, email: byGoogle.email };
+  }
+
+  const byEmail = await prisma.user.findUnique({ where: { email } });
+  if (byEmail) {
+    const updated = await prisma.user.update({
+      where: { id: byEmail.id },
+      data: {
+        googleId: profile.googleId,
+        image: byEmail.image ?? profile.image ?? null,
+      },
+    });
+    return { id: updated.id, name: updated.name, email: updated.email };
+  }
+
+  const created = await prisma.user.create({
+    data: { name, email, googleId: profile.googleId, image: profile.image ?? null },
+  });
+  return { id: created.id, name: created.name, email: created.email };
 }

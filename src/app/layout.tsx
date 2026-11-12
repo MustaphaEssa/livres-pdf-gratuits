@@ -3,6 +3,7 @@ import NextTopLoader from "nextjs-toploader";
 import { Inter, Noto_Sans_Arabic, Fraunces, Amiri } from "next/font/google";
 import { I18nProvider } from "@/components/i18n-provider";
 import { SettingsProvider } from "@/components/settings-provider";
+import { AuthProvider } from "@/components/auth/auth-modal";
 import { Analytics } from "@/components/analytics";
 import { getLocale } from "@/i18n/server";
 import { getSiteSettings } from "@/lib/settings";
@@ -100,7 +101,9 @@ export default async function RootLayout({
       >
         <NextTopLoader color="#f59e0b" height={3} showSpinner={false} />
         <I18nProvider locale={locale}>
-          <SettingsProvider settings={settings}>{children}</SettingsProvider>
+          <SettingsProvider settings={settings}>
+            <AuthProvider>{children}</AuthProvider>
+          </SettingsProvider>
         </I18nProvider>
 
         {/* Google Analytics (si configuré) — exclu des pages /admin */}

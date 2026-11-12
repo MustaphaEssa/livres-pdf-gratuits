@@ -1,30 +1,26 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Icon, { I } from "./icon";
+import { useAuth } from "@/components/auth/auth-modal";
 
 /** Favori lié au compte (API /api/favoris), stylé à la charte. */
 export default function FavButton({
   bookId,
-  slug,
+  title,
   initialFavorited,
   isLoggedIn,
 }: {
   bookId: string;
-  slug: string;
+  title?: string;
   initialFavorited: boolean;
   isLoggedIn: boolean;
 }) {
-  const router = useRouter();
+  const { openAuth } = useAuth();
   const [fav, setFav] = useState(initialFavorited);
   const [loading, setLoading] = useState(false);
 
-  const toggle = async () => {
-    if (!isLoggedIn) {
-      router.push(`/auth/connexion?from=/livre/${slug}`);
-      return;
-    }
+  const addFavorite = async () => {
     setLoading(true);
     try {
       const res = await fetch("/api/favoris", {
@@ -36,6 +32,19 @@ export default function FavButton({
     } finally {
       setLoading(false);
     }
+  };
+
+  const toggle = () => {
+    if (!isLoggedIn) {
+      openAuth({
+        reason: title
+          ? `Connectez-vous pour enregistrer « ${title} » dans vos favoris.`
+          : "Connectez-vous pour enregistrer ce livre dans vos favoris.",
+        onSuccess: addFavorite,
+      });
+      return;
+    }
+    addFavorite();
   };
 
   return (

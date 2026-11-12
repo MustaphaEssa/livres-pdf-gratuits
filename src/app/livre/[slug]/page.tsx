@@ -242,7 +242,7 @@ export default async function BookPage({ params }: BookPageProps) {
                     <Icon d={I.headphones} /> Écouter
                   </a>
                 )}
-                <FavButton bookId={book.id} slug={book.slug} initialFavorited={isFavorited} isLoggedIn={isLoggedIn} />
+                <FavButton bookId={book.id} title={book.title} initialFavorited={isFavorited} isLoggedIn={isLoggedIn} />
                 <ShareButtons url={`${SITE_URL}/livre/${book.slug}`} title={book.title} />
               </div>
             </div>
