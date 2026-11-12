@@ -25,6 +25,10 @@ PRISMA="./node_modules/.bin/prisma"
 [ -x "$PRISMA" ] || PRISMA="npx --no-install prisma"
 
 echo "==> 1/6  Récupération du code (git pull origin $BRANCH)"
+# `next build` re-patche package-lock.json (dépendances @next/swc) côté serveur,
+# ce qui ferait échouer le git pull suivant ("local changes would be overwritten").
+# On écarte cette modif auto avant de récupérer le code (le lockfile fait foi côté dépôt).
+git checkout -- package-lock.json 2>/dev/null || true
 git pull origin "$BRANCH"
 
 echo "==> 2/6  Installation des dépendances"
