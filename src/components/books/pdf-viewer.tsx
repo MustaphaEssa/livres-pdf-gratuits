@@ -128,6 +128,12 @@ export function PdfViewer({ pdfUrl, title, onClose, initialPage = 1, onPageChang
   const [flipCur, setFlipCur] = useState(Math.max(0, initialPage - 1));
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const flipRef = useRef<any>(null);
+  // Pages pré-rendues en IMAGE pour un flip fluide (bien plus léger à animer
+  // qu'un canvas react-pdf vivant).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pdfDocRef = useRef<any>(null);
+  const renderingRef = useRef<Set<number>>(new Set());
+  const [pageImgs, setPageImgs] = useState<Record<number, string>>({});
 
   // Réglages au montage (indépendants du chargement du PDF)
   useEffect(() => {
@@ -185,6 +191,40 @@ export function PdfViewer({ pdfUrl, title, onClose, initialPage = 1, onPageChang
     const w = Math.max(160, Math.floor(Math.min(maxWPer, maxH / aspect)));
     return { w, h: Math.floor(w * aspect) };
   }, [area, aspect]);
+
+  // Rend une page en image (JPEG) une seule fois, puis la met en cache — pour
+  // que le mode flip anime des images statiques (fluide) plutôt que des canvas.
+  const renderPageImage = useCallback(
+    async (n: number, w: number) => {
+      const pdf = pdfDocRef.current;
+      if (!pdf || n < 1 || n > numPages || renderingRef.current.has(n) || w < 40) return;
+      renderingRef.current.add(n);
+      try {
+        const page = await pdf.getPage(n);
+        const base = page.getViewport({ scale: 1 });
+        const scale = (w * Math.min(2, dpr)) / base.width;
+        const vp = page.getViewport({ scale });
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.ceil(vp.width);
+        canvas.height = Math.ceil(vp.height);
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        await page.render({ canvasContext: ctx, viewport: vp }).promise;
+        setPageImgs((m) => (m[n] ? m : { ...m, [n]: canvas.toDataURL("image/jpeg", 0.82) }));
+      } catch {
+        renderingRef.current.delete(n); // autorise une nouvelle tentative
+      }
+    },
+    [numPages, dpr]
+  );
+
+  // Pré-rend une fenêtre de pages autour de la page courante (mode flip)
+  useEffect(() => {
+    if (!flip || !numPages || !flipSize.w) return;
+    const from = Math.max(1, flipCur - 1);
+    const to = Math.min(numPages, flipCur + 4);
+    for (let p = from; p <= to; p++) renderPageImage(p, flipSize.w);
+  }, [flip, flipCur, numPages, flipSize.w, renderPageImage]);
 
   const goTo = useCallback(
     (n: number) => {
@@ -339,7 +379,10 @@ export function PdfViewer({ pdfUrl, title, onClose, initialPage = 1, onPageChang
 
           <button
             type="button"
-            onClick={() => setFlip((v) => !v)}
+            onClick={() => {
+              setFlipCur(Math.max(0, pageNumber - 1));
+              setFlip((v) => !v);
+            }}
             title="Mode livre animé (Flip Book)"
             className={`ml-1 inline-flex h-9 items-center gap-1.5 rounded-lg border px-2.5 text-sm font-medium transition-colors ${
               flip
@@ -390,6 +433,7 @@ export function PdfViewer({ pdfUrl, title, onClose, initialPage = 1, onPageChang
         file={pdfUrl}
         options={PDF_OPTIONS}
         onLoadSuccess={(pdf) => {
+          pdfDocRef.current = pdf;
           setNumPages(pdf.numPages);
           setError(null);
           pdf.getOutline?.().then((o) => setHasOutline(!!o && o.length > 0)).catch(() => {});
@@ -483,9 +527,9 @@ export function PdfViewer({ pdfUrl, title, onClose, initialPage = 1, onPageChang
                 maxHeight={2400}
                 showCover
                 mobileScrollSupport
-                flippingTime={700}
+                flippingTime={550}
                 drawShadow
-                maxShadowOpacity={0.3}
+                maxShadowOpacity={0.35}
                 usePortrait={(area.w || 900) < flipSize.w * 2 + 60}
                 startPage={Math.max(0, Math.min(numPages - 1, pageNumber - 1))}
                 className="flip-book shadow-2xl shadow-black/30"
@@ -500,28 +544,20 @@ export function PdfViewer({ pdfUrl, title, onClose, initialPage = 1, onPageChang
               >
                 {Array.from({ length: numPages }, (_, i) => i + 1).map((n) => (
                   <div key={n} className="bg-white" style={{ width: flipSize.w, height: flipSize.h }}>
-                    {Math.abs(n - 1 - flipCur) <= 3 ? (
-                      <Page
-                        pageNumber={n}
-                        width={flipSize.w}
-                        devicePixelRatio={dpr}
-                        renderTextLayer={false}
-                        renderAnnotationLayer={false}
-                        loading={
-                          <div
-                            className="flex items-center justify-center text-[#c9bfae]"
-                            style={{ height: flipSize.h }}
-                          >
-                            <Loader2 className="h-5 w-5 animate-spin" />
-                          </div>
-                        }
+                    {pageImgs[n] ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={pageImgs[n]}
+                        alt={`Page ${n}`}
+                        draggable={false}
+                        style={{ width: flipSize.w, height: flipSize.h, display: "block" }}
                       />
                     ) : (
                       <div
                         className="flex items-center justify-center text-[#c9bfae]"
                         style={{ height: flipSize.h }}
                       >
-                        {n}
+                        <Loader2 className="h-5 w-5 animate-spin" />
                       </div>
                     )}
                   </div>
