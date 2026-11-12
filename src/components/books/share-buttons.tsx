@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Share2, Link2, Check } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 /**
  * Bouton de partage : menu natif du navigateur si disponible, sinon liste de
@@ -52,29 +51,27 @@ export function ShareButtons({
   ];
 
   return (
-    <div className={`relative ${className}`}>
-      <Button
+    <div className={className} style={{ position: "relative" }}>
+      <button
         type="button"
-        variant="outline"
-        size="icon"
-        className="w-full"
+        className="btn btn-light btn-lg"
         onClick={nativeShare}
         aria-label="Partager"
         title="Partager"
       >
-        <Share2 className="h-5 w-5" />
-      </Button>
+        <Share2 width={20} height={20} />
+      </button>
 
       {open && (
         <>
           {/* clic extérieur pour fermer */}
           <button
             type="button"
-            className="fixed inset-0 z-10 cursor-default"
             aria-hidden
             onClick={() => setOpen(false)}
+            style={{ position: "fixed", inset: 0, zIndex: 10, cursor: "default", background: "transparent", border: 0 }}
           />
-          <div className="absolute right-0 z-20 mt-2 w-48 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-lg p-1">
+          <div className="share-menu">
             {networks.map((n) => (
               <a
                 key={n.name}
@@ -82,24 +79,19 @@ export function ShareButtons({
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => setOpen(false)}
-                className="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700"
               >
-                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: n.color }} />
+                <span className="share-dot" style={{ backgroundColor: n.color }} />
                 {n.name}
               </a>
             ))}
-            <button
-              type="button"
-              onClick={copy}
-              className="flex w-full items-center gap-2 px-3 py-2 rounded-md text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700"
-            >
+            <button type="button" onClick={copy}>
               {copied ? (
                 <>
-                  <Check className="h-4 w-4 text-green-500" /> Lien copié !
+                  <Check width={16} height={16} style={{ color: "var(--accent)" }} /> Lien copié !
                 </>
               ) : (
                 <>
-                  <Link2 className="h-4 w-4" /> Copier le lien
+                  <Link2 width={16} height={16} /> Copier le lien
                 </>
               )}
             </button>

@@ -2,9 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { Star } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { useI18n } from "@/components/i18n-provider";
 
 interface Review {
@@ -13,6 +10,23 @@ interface Review {
   rating: number;
   comment: string | null;
   createdAt: string;
+}
+
+/** Liste d'étoiles (affichage seul), harmonisée à la charte. */
+function Stars({ value, size = 14 }: { value: number; size?: number }) {
+  return (
+    <span className="star-row" aria-label={`${value} / 5`}>
+      {[1, 2, 3, 4, 5].map((s) => (
+        <Star
+          key={s}
+          width={size}
+          height={size}
+          className={s <= value ? "on" : ""}
+          fill={s <= value ? "currentColor" : "none"}
+        />
+      ))}
+    </span>
+  );
 }
 
 export function Reviews({
@@ -77,99 +91,69 @@ export function Reviews({
 
   return (
     <div>
-      <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-4">
-        {t.reviews.title} {reviews.length > 0 && `(${reviews.length})`}
-      </h2>
-
       {/* Formulaire */}
-      <Card className="mb-6">
-        <CardContent className="p-5">
-          {done ? (
-            <p className="text-green-600 dark:text-green-400 text-sm">
-              {t.reviews.thanks}
-            </p>
-          ) : (
-            <form onSubmit={submit} className="space-y-3">
-              <div className="flex items-center gap-1">
-                {[1, 2, 3, 4, 5].map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => setRating(s)}
-                    onMouseEnter={() => setHover(s)}
-                    onMouseLeave={() => setHover(0)}
-                    aria-label={`${s} étoile${s > 1 ? "s" : ""}`}
-                  >
-                    <Star
-                      className={`h-6 w-6 transition-colors ${
-                        s <= (hover || rating)
-                          ? "fill-amber-500 text-amber-500"
-                          : "text-slate-300 dark:text-slate-600"
-                      }`}
-                    />
-                  </button>
-                ))}
-              </div>
-              {!isLoggedIn && (
-                <Input
-                  placeholder={t.reviews.yourName}
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
-              )}
-              <textarea
-                placeholder={t.reviews.comment}
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                rows={3}
-                className="flex w-full rounded-md border border-slate-200 dark:border-slate-700 bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+      <div className="review-form">
+        {done ? (
+          <p className="form-note ok">{t.reviews.thanks}</p>
+        ) : (
+          <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div className="stars-input" role="radiogroup" aria-label={t.reviews.chooseRating}>
+              {[1, 2, 3, 4, 5].map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  className={s <= (hover || rating) ? "on" : ""}
+                  onClick={() => setRating(s)}
+                  onMouseEnter={() => setHover(s)}
+                  onMouseLeave={() => setHover(0)}
+                  role="radio"
+                  aria-checked={rating === s}
+                  aria-label={`${s} étoile${s > 1 ? "s" : ""}`}
+                >
+                  <Star
+                    width={26}
+                    height={26}
+                    fill={s <= (hover || rating) ? "currentColor" : "none"}
+                  />
+                </button>
+              ))}
+            </div>
+            {!isLoggedIn && (
+              <input
+                className="field"
+                placeholder={t.reviews.yourName}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
               />
-              {error && <p className="text-sm text-red-500">{error}</p>}
-              <Button
-                type="submit"
-                disabled={submitting}
-                className="bg-amber-500 hover:bg-amber-600"
-              >
-                {submitting ? t.reviews.sending : t.reviews.publish}
-              </Button>
-            </form>
-          )}
-        </CardContent>
-      </Card>
+            )}
+            <textarea
+              className="field"
+              placeholder={t.reviews.comment}
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              rows={3}
+            />
+            {error && <p className="form-note err">{error}</p>}
+            <button type="submit" className="btn btn-primary" disabled={submitting} style={{ alignSelf: "flex-start" }}>
+              {submitting ? t.reviews.sending : t.reviews.publish}
+            </button>
+          </form>
+        )}
+      </div>
 
       {/* Liste */}
       {reviews.length === 0 ? (
-        <p className="text-slate-500 text-sm">{t.reviews.none}</p>
+        <p className="review-empty">{t.reviews.none}</p>
       ) : (
-        <div className="space-y-4">
+        <div className="review-list">
           {reviews.map((r) => (
-            <div
-              key={r.id}
-              className="border-b border-slate-100 dark:border-slate-700 pb-4"
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <span className="font-medium text-slate-900 dark:text-white">
-                  {r.name || t.reviews.anonymous}
-                </span>
-                <span className="flex items-center">
-                  {[1, 2, 3, 4, 5].map((s) => (
-                    <Star
-                      key={s}
-                      className={`h-3.5 w-3.5 ${
-                        s <= r.rating
-                          ? "fill-amber-500 text-amber-500"
-                          : "text-slate-300 dark:text-slate-600"
-                      }`}
-                    />
-                  ))}
-                </span>
+            <div key={r.id} className="review-item">
+              <div className="review-head">
+                <span className="who">{r.name || t.reviews.anonymous}</span>
+                <Stars value={r.rating} />
               </div>
-              {r.comment && (
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  {r.comment}
-                </p>
-              )}
+              {r.comment && <p>{r.comment}</p>}
             </div>
           ))}
         </div>
