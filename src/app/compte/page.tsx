@@ -43,11 +43,8 @@ export default async function ComptePage() {
   const favoriteBooks = favorites.map((f) => f.book);
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-
-      <main className="flex-1 bg-slate-50 dark:bg-slate-900/50">
-        <div className="container mx-auto px-4 py-10 max-w-5xl">
+    <DesignShell>
+      <div className="container mx-auto px-4 py-10 max-w-5xl">
           {/* En-tête */}
           <div className="flex items-center gap-4 mb-8">
             <span className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-500 text-white text-2xl font-bold">
@@ -156,10 +153,7 @@ export default async function ComptePage() {
               </Button>
             </Link>
           </div>
-        </div>
-      </main>
-
-      <Footer />
-    </div>
+      </div>
+    </DesignShell>
   );
 }
