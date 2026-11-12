@@ -24,7 +24,16 @@ const GRAPH = process.env.FACEBOOK_GRAPH_VERSION || "v21.0";
 // "all" (articles prioritaires puis livres). Défaut : all.
 const SHARE = (process.env.FACEBOOK_SHARE || "all").toLowerCase();
 
-async function postToFacebook(message: string, link: string): Promise<string> {
+// Transforme un chemin de couverture en URL absolue publique (requis par Facebook).
+function absoluteUrl(path?: string | null): string | null {
+  if (!path) return null;
+  if (/^https?:\/\//i.test(path)) return path;
+  return `${SITE_URL}${path.startsWith("/") ? "" : "/"}${path}`;
+}
+
+// Publication « lien » classique (repli quand aucune couverture n'est dispo).
+// À éviter : Facebook réduit la portée des posts sans média natif.
+async function postLinkToFacebook(message: string, link: string): Promise<string> {
   const url = `https://graph.facebook.com/${GRAPH}/${PAGE_ID}/feed`;
   const body = new URLSearchParams({ message, link, access_token: TOKEN as string });
   const res = await fetch(url, { method: "POST", body });
@@ -33,6 +42,41 @@ async function postToFacebook(message: string, link: string): Promise<string> {
     throw new Error(JSON.stringify(data.error ?? data));
   }
   return data.id ?? "";
+}
+
+// Publication PHOTO native : la couverture est postée comme vraie image et le
+// lien est inclus dans la légende. Facebook traite ça comme un post avec média
+// (meilleure portée) au lieu d'un simple partage de lien.
+async function postPhotoToFacebook(
+  caption: string,
+  imageUrl: string,
+): Promise<string> {
+  const url = `https://graph.facebook.com/${GRAPH}/${PAGE_ID}/photos`;
+  const body = new URLSearchParams({
+    url: imageUrl,
+    caption,
+    access_token: TOKEN as string,
+  });
+  const res = await fetch(url, { method: "POST", body });
+  const data = (await res.json()) as { id?: string; post_id?: string; error?: unknown };
+  if (!res.ok || data.error) {
+    throw new Error(JSON.stringify(data.error ?? data));
+  }
+  return data.post_id ?? data.id ?? "";
+}
+
+// Poste en photo si une couverture est dispo, sinon repli sur le lien.
+async function share(message: string, link: string, cover?: string | null): Promise<string> {
+  const img = absoluteUrl(cover);
+  if (img) {
+    try {
+      return await postPhotoToFacebook(`${message}\n\n${link}`, img);
+    } catch (e) {
+      // Image inaccessible / refusée par Facebook → on bascule sur le lien.
+      console.warn("⚠️ Photo refusée, repli sur lien :", e instanceof Error ? e.message : e);
+    }
+  }
+  return postLinkToFacebook(message, link);
 }
 
 async function main() {
@@ -50,7 +94,7 @@ async function main() {
     if (post) {
       const link = `${SITE_URL}/blog/${post.slug}`;
       const msg = `📝 ${post.title}${post.excerpt ? `\n\n${post.excerpt}` : ""}\n\nÀ lire sur notre blog 👇`;
-      const fbId = await postToFacebook(msg, link);
+      const fbId = await share(msg, link, post.coverImage);
       await prisma.post.update({ where: { id: post.id }, data: { fbPostedAt: new Date() } });
       console.log(`✅ Article partagé : « ${post.title} » (post Facebook ${fbId})`);
       return;
@@ -62,12 +106,12 @@ async function main() {
     const book = await prisma.book.findFirst({
       where: { isPublished: true, fbPostedAt: null },
       orderBy: { createdAt: "asc" },
-      select: { id: true, slug: true, title: true, author: true },
+      select: { id: true, slug: true, title: true, author: true, coverImage: true },
     });
     if (book) {
       const link = `${SITE_URL}/livre/${book.slug}`;
       const msg = `📖 ${book.title}\n\npar ${formatAuthorName(book.author)} — livre gratuit à télécharger en PDF et à lire en ligne 👇`;
-      const fbId = await postToFacebook(msg, link);
+      const fbId = await share(msg, link, book.coverImage);
       await prisma.book.update({ where: { id: book.id }, data: { fbPostedAt: new Date() } });
       console.log(`✅ Livre partagé : « ${book.title} » (post Facebook ${fbId})`);
       return;
