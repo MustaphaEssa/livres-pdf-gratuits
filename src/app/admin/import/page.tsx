@@ -39,9 +39,24 @@ export default function AdminImportPage() {
   const [stopping, setStopping] = useState(false);
   const [error, setError] = useState("");
   const [statuses, setStatuses] = useState<AuthorStatus[]>([]);
+  const [discovered, setDiscovered] = useState<
+    { name: string; slug: string; count: number }[] | null
+  >(null);
+  const [discoverBusy, setDiscoverBusy] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const running = job?.status === "running";
+
+  // Découvre d'autres auteurs Gutenberg FR pas encore en base
+  const fetchDiscovered = useCallback(async () => {
+    setDiscoverBusy(true);
+    try {
+      const r = await fetch("/api/admin/import/discover-authors?max=40");
+      if (r.ok) setDiscovered((await r.json()).authors);
+    } finally {
+      setDiscoverBusy(false);
+    }
+  }, []);
 
   // Charge le statut (compte + « à jour ») de chaque auteur suggéré
   const fetchStatuses = useCallback(async () => {
@@ -68,6 +83,7 @@ export default function AdminImportPage() {
     all?: boolean;
     max?: number;
     mediaType?: "PDF" | "AUDIO";
+    source?: "ia" | "gutenberg";
   }) => {
     if (starting || running) return;
     setStarting(true);
@@ -86,7 +102,7 @@ export default function AdminImportPage() {
           max: opts.max,
           minDownloads,
           mediaType: opts.mediaType ?? "PDF",
-          source,
+          source: opts.source ?? source,
           withAudio,
         }),
       });
@@ -445,6 +461,81 @@ export default function AdminImportPage() {
                 );
               })}
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Découverte dynamique d'auteurs Gutenberg pas encore importés */}
+        <Card className="mb-6">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-base">Découvrir d&apos;autres auteurs</CardTitle>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={fetchDiscovered}
+              disabled={discoverBusy}
+            >
+              {discoverBusy ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <Search className="h-4 w-4 mr-1" /> Explorer le catalogue
+                </>
+              )}
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+              Auteurs du catalogue Project Gutenberg (français, domaine public){" "}
+              <strong>pas encore dans ta base</strong>, classés par nombre
+              d&apos;œuvres disponibles. « Importer » télécharge toutes leurs œuvres
+              depuis Gutenberg (fichiers légers).
+            </p>
+            {discovered === null ? (
+              <p className="text-sm text-slate-400">
+                Clique sur « Explorer le catalogue » pour lister de nouveaux auteurs.
+              </p>
+            ) : discovered.length === 0 ? (
+              <p className="text-sm text-slate-500">
+                Aucun nouvel auteur trouvé (tous déjà importés ou déjà listés).
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {discovered.map((a) => {
+                  const isRunning = runningAuthor === a.name;
+                  return (
+                    <div
+                      key={a.slug}
+                      className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2"
+                    >
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-medium text-slate-800 dark:text-slate-200">
+                          {a.name}
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          {a.count} œuvre{a.count > 1 ? "s" : ""} au catalogue
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={running}
+                        onClick={() =>
+                          startJob({ author: a.name, all: true, source: "gutenberg" })
+                        }
+                        className="shrink-0 bg-amber-500 hover:bg-amber-600"
+                      >
+                        {isRunning ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          "Importer"
+                        )}
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
 

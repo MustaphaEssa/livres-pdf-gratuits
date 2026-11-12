@@ -197,6 +197,61 @@ export async function suggestGutenbergAuthors(query: string, max = 20): Promise<
     .slice(0, max);
 }
 
+export interface DiscoveredAuthor {
+  name: string;
+  slug: string;
+  count: number; // nb d'œuvres FR dans le catalogue Gutenberg
+}
+
+// Bruit fréquent dans le champ "Authors" du catalogue (pas de vrais auteurs)
+const AUTHOR_NOISE =
+  /\b(various|anonymous|unknown|inconnu|anonyme|collectif|sundry|active)\b/i;
+
+/**
+ * Découvre dynamiquement des auteurs du catalogue Gutenberg FR **pas encore
+ * présents en base** — pour ne jamais tomber à court de suggestions.
+ * Trie par nombre d'œuvres disponibles (desc). `excludeSlugs` écarte les auteurs
+ * déjà proposés en dur (SUGGESTED_AUTHORS).
+ */
+export async function discoverGutenbergAuthors(opts?: {
+  min?: number; // seuil minimum d'œuvres pour retenir un auteur
+  max?: number; // nb max d'auteurs renvoyés
+  excludeSlugs?: string[];
+}): Promise<DiscoveredAuthor[]> {
+  const min = opts?.min ?? 3;
+  const max = opts?.max ?? 40;
+  const exclude = new Set(opts?.excludeSlugs ?? []);
+
+  const cat = await loadCatalog();
+  const counts = new Map<string, number>();
+  for (const r of cat) {
+    const first = r.authors.split(";")[0]?.trim();
+    if (!first) continue;
+    const name = formatAuthorName(first); // retire crochets/dates, "Nom, Prénom" → "Prénom Nom"
+    if (!name || name.length < 3 || AUTHOR_NOISE.test(name)) continue;
+    counts.set(name, (counts.get(name) ?? 0) + 1);
+  }
+
+  const candidates = [...counts.entries()]
+    .map(([name, count]) => ({ name, count, slug: slugify(name) }))
+    .filter((c) => c.count >= min && c.slug && !exclude.has(c.slug))
+    .sort((a, b) => b.count - a.count);
+
+  // Écarte les auteurs ayant déjà ≥1 livre en base (on veut du NOUVEAU)
+  const slugs = candidates.map((c) => c.slug);
+  const inDb = new Set<string>();
+  if (slugs.length) {
+    const grouped = await prisma.book.groupBy({
+      by: ["authorSlug"],
+      where: { authorSlug: { in: slugs } },
+      _count: { _all: true },
+    });
+    for (const g of grouped) if (g.authorSlug && g._count._all > 0) inDb.add(g.authorSlug);
+  }
+
+  return candidates.filter((c) => !inDb.has(c.slug)).slice(0, max);
+}
+
 // ---------------------------------------------------------------- catégories
 
 const SUBJECT_RULES: { slug: string; re: RegExp }[] = [
