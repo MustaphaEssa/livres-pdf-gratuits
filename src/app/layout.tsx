@@ -99,7 +99,7 @@ export default async function RootLayout({
           rtl ? "font-arabic" : "font-sans"
         } antialiased`}
       >
-        <NextTopLoader color="#f59e0b" height={3} showSpinner={false} />
+        <NextTopLoader color="#fca311" height={3} showSpinner={false} />
         <I18nProvider locale={locale}>
           <SettingsProvider settings={settings}>
             <AuthProvider>{children}</AuthProvider>

@@ -51,9 +51,9 @@ export default function AdminLoginPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2">
-            <BookOpen className="h-10 w-10 text-amber-500" />
+            <BookOpen className="h-10 w-10 text-[#fca311]" />
             <span className="text-2xl font-bold text-slate-900 dark:text-white">
-              Livre PDF<span className="text-amber-500">Gratuit</span>
+              Livre PDF<span className="text-[#fca311]">Gratuit</span>
             </span>
           </Link>
         </div>
@@ -117,14 +117,14 @@ export default function AdminLoginPage() {
                   <input type="checkbox" className="rounded border-slate-300" />
                   <span className="text-slate-600 dark:text-slate-400">{t.admin.remember}</span>
                 </label>
-                <Link href="/admin/mot-de-passe-oublie" className="text-sm text-amber-500 hover:underline">
+                <Link href="/admin/mot-de-passe-oublie" className="text-sm text-[#fca311] hover:underline">
                   {t.admin.forgot}
                 </Link>
               </div>
 
               <Button
                 type="submit"
-                className="w-full bg-amber-500 hover:bg-amber-600"
+                className="w-full bg-[#14213D] hover:bg-[#1e2d4d]"
                 disabled={loading}
               >
                 {loading ? t.admin.signingIn : t.admin.signIn}
@@ -134,7 +134,7 @@ export default function AdminLoginPage() {
         </Card>
 
         <p className="text-center mt-6">
-          <Link href="/" className="text-sm text-slate-500 hover:text-amber-500">
+          <Link href="/" className="text-sm text-slate-500 hover:text-[#fca311]">
             ← Retour au site
           </Link>
         </p>

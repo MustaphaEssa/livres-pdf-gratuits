@@ -5,18 +5,20 @@
 ------------------------------------------------------------------- */
 
 :root {
-  --accent: #2d3fa6;
-  --accent-tint: #e8ebf8;
+  /* Identité de marque : navy #14213D + orange #FCA311 (voir mark.svg) */
+  --accent: #14213d;          /* navy — couleur primaire */
+  --accent-tint: #e8ebf3;     /* navy très clair (fonds de pastilles) */
   --ink: #1c1b19;
   --muted: #5d584f;
   --paper: #faf6ef;
   --sand: #f1e9da;
   --sand-2: #f3ece0;
   --line: #e6dfd2;
-  --terra: #b4532a;
-  --terra-dark: #8f3f1f;
+  --terra: #c06a10;           /* accent chaud = orange profond (lisible en texte) */
+  --terra-dark: #9a5509;
   --placeholder: #8a5a00;
-  --star: #d98a2b;
+  --star: #fca311;            /* orange vif de marque (étoiles, surbrillances) */
+  --brand-orange: #fca311;    /* orange vif de marque */
   --radius: 20px;
   --ma-serif: var(--font-fraunces), var(--font-amiri), Georgia, serif;
 }
@@ -58,7 +60,7 @@
   .header-inner { max-width: 1240px; margin: 0 auto; padding: 12px 32px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; }
   .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; min-height: 44px; }
   .logo-text { font-family: var(--ma-serif); font-weight: 600; font-size: 21px; letter-spacing: -0.01em; }
-  .logo-text span { color: var(--accent); }
+  .logo-text span { color: var(--brand-orange); }
   .nav { display: flex; align-items: center; gap: 4px; }
   .nav a { text-decoration: none; font-weight: 500; font-size: 15px; padding: 10px 14px; border-radius: 999px; }
   .nav a[aria-current='page'] { background: var(--accent-tint); color: var(--accent); font-weight: 600; }

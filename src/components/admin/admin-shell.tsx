@@ -77,8 +77,8 @@ export function AdminShell({ active, children }: AdminShellProps) {
           href={href}
           className={`flex items-center gap-3 px-4 py-3 rounded-lg ${
             key === active
-              ? "bg-amber-500 text-white"
-              : "text-slate-300 hover:bg-slate-800"
+              ? "bg-[#fca311] text-[#14213D] font-semibold"
+              : "text-slate-200 hover:bg-white/10"
           }`}
         >
           <Icon className="h-5 w-5" />
@@ -94,10 +94,10 @@ export function AdminShell({ active, children }: AdminShellProps) {
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="fixed inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
-          <aside className="fixed left-0 top-0 bottom-0 w-64 bg-slate-900 text-white p-4 overflow-y-auto">
+          <aside className="fixed left-0 top-0 bottom-0 w-64 bg-[#14213D] text-white p-4 overflow-y-auto">
             <div className="flex items-center justify-between mb-8">
               <Link href="/admin/dashboard" className="flex items-center gap-2">
-                <BookOpen className="h-8 w-8 text-amber-500" />
+                <BookOpen className="h-8 w-8 text-[#fca311]" />
                 <span className="text-xl font-bold">Admin</span>
               </Link>
               <button onClick={() => setSidebarOpen(false)}>
@@ -110,9 +110,9 @@ export function AdminShell({ active, children }: AdminShellProps) {
       )}
 
       {/* Sidebar desktop */}
-      <aside className="hidden lg:block lg:fixed left-0 top-0 bottom-0 w-64 bg-slate-900 text-white p-4 overflow-y-auto">
+      <aside className="hidden lg:block lg:fixed left-0 top-0 bottom-0 w-64 bg-[#14213D] text-white p-4 overflow-y-auto">
         <Link href="/admin/dashboard" className="flex items-center gap-2 mb-8">
-          <BookOpen className="h-8 w-8 text-amber-500" />
+          <BookOpen className="h-8 w-8 text-[#fca311]" />
           <span className="text-xl font-bold">Admin</span>
         </Link>
         {nav}
@@ -129,7 +129,7 @@ export function AdminShell({ active, children }: AdminShellProps) {
               <Menu className="h-6 w-6" />
             </button>
             <div className="flex items-center gap-4 ml-auto">
-              <Link href="/" className="text-sm text-slate-600 dark:text-slate-400 hover:text-amber-500">
+              <Link href="/" className="text-sm text-slate-600 dark:text-slate-400 hover:text-[#fca311]">
                 {t.admin.viewSite}
               </Link>
               <Button
