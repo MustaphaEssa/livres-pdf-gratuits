@@ -10,7 +10,9 @@ export async function GET(request: Request) {
   if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   const { searchParams } = new URL(request.url);
   const minMb = Math.max(1, Number(searchParams.get("minMb")) || 5);
-  const books = await listHeavyBooks(minMb * 1024 * 1024, 300);
+  // Pas de plafond serveur : on liste TOUS les livres lourds (le réimport côté
+  // client les traite un par un, l'utilisateur garde l'onglet ouvert).
+  const books = await listHeavyBooks(minMb * 1024 * 1024, 100000);
   return NextResponse.json({
     books: books.map((b) => ({ ...b, sizeMb: Math.round(((b.pdfSize ?? 0) / 1024 / 1024) * 10) / 10 })),
     total: books.length,
