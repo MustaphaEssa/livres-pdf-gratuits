@@ -92,7 +92,7 @@
   /* ---------- Carte livre ---------- */
   .book-card { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
   .book-card-cover { display: block; position: relative; text-decoration: none; }
-  .book-title { font-family: var(--ma-serif); font-weight: 600; font-size: 17px; line-height: 1.25; text-decoration: none; }
+  .book-title { font-family: var(--ma-serif); font-weight: 600; font-size: 17px; line-height: 1.25; text-decoration: none; display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
   .book-author { font-size: 13px; color: var(--muted); }
   .book-cat { font-size: 12px; color: var(--terra); font-weight: 700; }
   .book-card-text { display: flex; flex-direction: column; gap: 2px; }
