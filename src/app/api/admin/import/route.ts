@@ -13,7 +13,7 @@ import { searchGutenbergAuthor, importGutenbergBook } from "@/lib/gutenberg";
 import { slugify, formatAuthorName } from "@/lib/utils";
 
 type ImportLike = {
-  status: "ok" | "skip" | "duplicate" | "fail";
+  status: "ok" | "skip" | "duplicate" | "fail" | "replaced";
   title?: string;
   authorSlug?: string;
   authorRaw?: string;
@@ -33,10 +33,11 @@ const MIN_IMPORT_DOWNLOADS = Number(process.env.MIN_IMPORT_DOWNLOADS) || 0;
 interface Job {
   id: string;
   status: "running" | "done" | "error";
-  author: string;
+  author: string; // libellé (un auteur, ou « N auteurs »)
   source: "ia" | "gutenberg";
   found: number;
   imported: number;
+  replaced: number; // doublons IA remplacés par la version Gutenberg légère
   skipped: number; // doublons déjà présents
   log: string[];
   error?: string;
@@ -54,9 +55,129 @@ function prune() {
   }
 }
 
-async function run(
+// Importe les œuvres d'UN auteur dans le job (counters cumulés sur le job).
+async function runOneAuthor(
   job: Job,
   author: string,
+  max: number,
+  categoryMap: Record<string, string>,
+  importAll: boolean,
+  minDownloads: number,
+  isAudio: boolean,
+  isGut: boolean,
+  withAudio: boolean
+) {
+  // Marge (×4) pour compenser doublons et écarts de créateur ; en mode complet
+  // on vise le plafond par auteur avec une marge suffisante.
+  const rows = importAll ? Math.max(1000, max * 3) : max * 4;
+
+  // Construit la liste de tâches d'import selon la source choisie.
+  let tasks: Task[];
+  if (isAudio) {
+    const docs = await searchLibrivox(author, rows);
+    tasks = docs.map((d) => ({
+      downloads: d.downloads,
+      run: () => importAudiobook(d.identifier, author, categoryMap),
+    }));
+    job.log.push(`${docs.length} résultat(s) audio trouvé(s) sur Internet Archive`);
+  } else if (isGut) {
+    const grows = await searchGutenbergAuthor(author, rows);
+    tasks = grows.map((r) => ({ run: () => importGutenbergBook(r, author, categoryMap, withAudio) }));
+    job.log.push(
+      `${grows.length} œuvre(s) trouvée(s) dans le catalogue Project Gutenberg (fichiers légers)`
+    );
+  } else {
+    const docs = await searchAuthor(author, rows);
+    tasks = docs.map((d) => ({
+      downloads: d.downloads,
+      run: () => importBook(d.identifier, author, categoryMap, withAudio),
+    }));
+    job.log.push(
+      `${docs.length} résultat(s) trouvé(s) sur Internet Archive` +
+        (minDownloads > 0 ? ` · popularité min. ${minDownloads} téléch.` : "")
+    );
+  }
+  job.found += tasks.length;
+
+  const authorsSeen = new Map<string, string>();
+  // Compteur d'ajouts propre à cet auteur (max s'applique par auteur).
+  let addedThisAuthor = 0;
+  for (const task of tasks) {
+    if (addedThisAuthor >= max) break;
+    if (job.cancelled) {
+      job.log.push("⏹️ Import arrêté par l'utilisateur.");
+      break;
+    }
+    // Seuil de popularité (IA uniquement : les résultats sont triés par
+    // téléchargements décroissants → dès qu'on passe sous le seuil, fin).
+    if (minDownloads > 0 && typeof task.downloads === "number" && task.downloads < minDownloads) {
+      job.log.push(
+        `⏹️ Popularité minimale atteinte (${task.downloads} < ${minDownloads} téléch.) — fin pour cet auteur.`
+      );
+      break;
+    }
+    // Stoppe avant de saturer le disque du serveur (PDF seulement : l'audio
+    // est diffusé en streaming, rien n'est téléchargé).
+    if (!isAudio && MIN_FREE_DISK_MB > 0) {
+      const free = await freeDiskMb();
+      if (free !== null && free < MIN_FREE_DISK_MB) {
+        job.cancelled = true;
+        job.log.push(
+          `⚠️ Espace disque faible (${free} Mo restants) — import interrompu pour préserver le serveur.`
+        );
+        break;
+      }
+    }
+    try {
+      const res = await task.run();
+      if (res.status === "ok") {
+        job.imported++;
+        addedThisAuthor++;
+        job.log.push(`✓ Importé : ${res.title}`);
+        if (res.authorSlug && res.authorRaw) authorsSeen.set(res.authorSlug, res.authorRaw);
+      } else if (res.status === "replaced") {
+        job.replaced++;
+        addedThisAuthor++;
+        job.log.push(`♻️ Allégé (scan → Gutenberg) : ${res.title}`);
+        if (res.authorSlug && res.authorRaw) authorsSeen.set(res.authorSlug, res.authorRaw);
+      } else if (res.status === "duplicate") {
+        job.skipped++;
+        job.log.push(`⏭️ Doublon (déjà présent) : ${res.title}`);
+      }
+    } catch {
+      /* on saute les échecs */
+    }
+    if (job.log.length > 300) job.log.splice(0, job.log.length - 300);
+  }
+
+  // Fiches auteur + statut « à jour » : pour les PDF uniquement (flux audio
+  // orienté catalogue LibriVox, la recherche peut porter sur un titre).
+  if (!isAudio) {
+    // Toujours (re)créer la fiche de l'auteur recherché — même si tous les
+    // livres existaient déjà (anti-doublon) → garantit la photo/bio.
+    const searchedName = formatAuthorName(author);
+    authorsSeen.set(slugify(searchedName), searchedName);
+
+    for (const [slug, raw] of authorsSeen) {
+      await upsertAuthorProfile(slug, raw).catch(() => {});
+    }
+
+    // Marque l'auteur « à jour » si un import COMPLET non interrompu n'a rien
+    // ramené de nouveau (tout son corpus disponible est déjà en base).
+    if (importAll && !job.cancelled) {
+      await prisma.author
+        .update({
+          where: { slug: slugify(searchedName) },
+          data: { fullyImported: addedThisAuthor === 0 },
+        })
+        .catch(() => {});
+    }
+  }
+}
+
+async function run(
+  job: Job,
+  authors: string[],
   max: number,
   categoryMap: Record<string, string>,
   importAll: boolean,
@@ -67,110 +188,30 @@ async function run(
 ) {
   const isAudio = mediaType === "AUDIO";
   const isGut = source === "gutenberg" && !isAudio;
+  const multi = authors.length > 1;
   try {
-    // Marge (×4) pour compenser doublons et écarts de créateur ; en mode complet
-    // on vise le plafond par auteur avec une marge suffisante.
-    const rows = importAll ? Math.max(1000, max * 3) : max * 4;
-
-    // Construit la liste de tâches d'import selon la source choisie.
-    let tasks: Task[];
-    if (isAudio) {
-      const docs = await searchLibrivox(author, rows);
-      tasks = docs.map((d) => ({
-        downloads: d.downloads,
-        run: () => importAudiobook(d.identifier, author, categoryMap),
-      }));
-      job.log.push(`${docs.length} résultat(s) audio trouvé(s) sur Internet Archive`);
-    } else if (isGut) {
-      const grows = await searchGutenbergAuthor(author, rows);
-      tasks = grows.map((r) => ({ run: () => importGutenbergBook(r, author, categoryMap, withAudio) }));
-      job.log.push(
-        `${grows.length} œuvre(s) trouvée(s) dans le catalogue Project Gutenberg (fichiers légers)`
+    for (let i = 0; i < authors.length; i++) {
+      if (job.cancelled) break;
+      const author = authors[i];
+      if (multi) job.log.push(`\n━━ Auteur ${i + 1}/${authors.length} : ${author} ━━`);
+      await runOneAuthor(
+        job,
+        author,
+        max,
+        categoryMap,
+        importAll,
+        minDownloads,
+        isAudio,
+        isGut,
+        withAudio
       );
-    } else {
-      const docs = await searchAuthor(author, rows);
-      tasks = docs.map((d) => ({
-        downloads: d.downloads,
-        run: () => importBook(d.identifier, author, categoryMap, withAudio),
-      }));
-      job.log.push(
-        `${docs.length} résultat(s) trouvé(s) sur Internet Archive` +
-          (minDownloads > 0 ? ` · popularité min. ${minDownloads} téléch.` : "")
-      );
-    }
-    job.found = tasks.length;
-
-    const authorsSeen = new Map<string, string>();
-    for (const task of tasks) {
-      if (job.imported >= max) break;
-      if (job.cancelled) {
-        job.log.push("⏹️ Import arrêté par l'utilisateur.");
-        break;
-      }
-      // Seuil de popularité (IA uniquement : les résultats sont triés par
-      // téléchargements décroissants → dès qu'on passe sous le seuil, fin).
-      if (minDownloads > 0 && typeof task.downloads === "number" && task.downloads < minDownloads) {
-        job.log.push(
-          `⏹️ Popularité minimale atteinte (${task.downloads} < ${minDownloads} téléch.) — fin de l'import.`
-        );
-        break;
-      }
-      // Stoppe avant de saturer le disque du serveur (PDF seulement : l'audio
-      // est diffusé en streaming, rien n'est téléchargé).
-      if (!isAudio && MIN_FREE_DISK_MB > 0) {
-        const free = await freeDiskMb();
-        if (free !== null && free < MIN_FREE_DISK_MB) {
-          job.cancelled = true;
-          job.log.push(
-            `⚠️ Espace disque faible (${free} Mo restants) — import interrompu pour préserver le serveur.`
-          );
-          break;
-        }
-      }
-      try {
-        const res = await task.run();
-        if (res.status === "ok") {
-          job.imported++;
-          job.log.push(`✓ Importé : ${res.title}`);
-          if (res.authorSlug && res.authorRaw) authorsSeen.set(res.authorSlug, res.authorRaw);
-        } else if (res.status === "duplicate") {
-          job.skipped++;
-          job.log.push(`⏭️ Doublon (déjà présent) : ${res.title}`);
-        }
-      } catch {
-        /* on saute les échecs */
-      }
-      if (job.log.length > 300) job.log.splice(0, job.log.length - 300);
-    }
-
-    // Fiches auteur + statut « à jour » : pour les PDF uniquement (flux audio
-    // orienté catalogue LibriVox, la recherche peut porter sur un titre).
-    if (!isAudio) {
-      // Toujours (re)créer la fiche de l'auteur recherché — même si tous les
-      // livres existaient déjà (anti-doublon) → garantit la photo/bio.
-      const searchedName = formatAuthorName(author);
-      authorsSeen.set(slugify(searchedName), searchedName);
-
-      for (const [slug, raw] of authorsSeen) {
-        await upsertAuthorProfile(slug, raw).catch(() => {});
-      }
-
-      // Marque l'auteur « à jour » si un import COMPLET non interrompu n'a rien
-      // ramené de nouveau (tout son corpus disponible est déjà en base).
-      if (importAll && !job.cancelled) {
-        await prisma.author
-          .update({
-            where: { slug: slugify(searchedName) },
-            data: { fullyImported: job.imported === 0 },
-          })
-          .catch(() => {});
-      }
     }
 
     job.status = "done";
-    job.log.push(
-      `${job.cancelled ? "⏹️ Arrêté" : "✅ Terminé"} : ${job.imported} importé(s), ${job.skipped} doublon(s) ignoré(s).`
-    );
+    const parts = [`${job.imported} importé(s)`];
+    if (job.replaced > 0) parts.push(`${job.replaced} allégé(s)`);
+    parts.push(`${job.skipped} doublon(s) ignoré(s)`);
+    job.log.push(`${job.cancelled ? "⏹️ Arrêté" : "✅ Terminé"} : ${parts.join(", ")}.`);
   } catch (e) {
     job.status = "error";
     job.error = e instanceof Error ? e.message : "Erreur inconnue";
@@ -189,7 +230,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Requête invalide" }, { status: 400 });
   }
 
-  const author = String(body.author || "").trim();
+  // Liste d'auteurs : soit `authors` (tableau), soit `author` (texte, une ou
+  // plusieurs lignes). On découpe par ligne, nettoie et dédoublonne.
+  const rawAuthors: string[] = Array.isArray(body.authors)
+    ? (body.authors as unknown[]).map((a) => String(a))
+    : String(body.author || "").split(/\r?\n/);
+  const seenAuthors = new Set<string>();
+  const authors: string[] = [];
+  for (const a of rawAuthors) {
+    const name = a.trim();
+    if (!name) continue;
+    const key = name.toLowerCase();
+    if (seenAuthors.has(key)) continue;
+    seenAuthors.add(key);
+    authors.push(name);
+  }
+  const author = authors[0] ?? "";
   const mediaType: "PDF" | "AUDIO" =
     body.mediaType === "audio" || body.mediaType === "AUDIO" ? "AUDIO" : "PDF";
   // Source d'import : Gutenberg (fichiers légers, PDF généré) ou Internet
@@ -210,7 +266,7 @@ export async function POST(request: Request) {
     body.minDownloads !== undefined
       ? Math.max(0, Number(body.minDownloads) || 0)
       : MIN_IMPORT_DOWNLOADS;
-  if (!author)
+  if (!authors.length)
     return NextResponse.json(
       { error: mediaType === "AUDIO" ? "Terme de recherche requis" : "Nom d'auteur requis" },
       { status: 400 }
@@ -228,17 +284,18 @@ export async function POST(request: Request) {
   const job: Job = {
     id,
     status: "running",
-    author,
+    author: authors.length === 1 ? authors[0] : `${authors.length} auteurs`,
     source,
     found: 0,
     imported: 0,
+    replaced: 0,
     skipped: 0,
     log: [],
   };
   jobs.set(id, job);
   prune();
   // Lance en arrière-plan (pas de await) — le serveur Node persistant poursuit la tâche
-  void run(job, author, max, categoryMap, importAll, minDownloads, mediaType, source, withAudio);
+  void run(job, authors, max, categoryMap, importAll, minDownloads, mediaType, source, withAudio);
 
   return NextResponse.json({ jobId: id });
 }

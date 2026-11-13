@@ -13,6 +13,7 @@ interface Job {
   author: string;
   found: number;
   imported: number;
+  replaced: number;
   skipped: number;
   log: string[];
   error?: string;
@@ -27,9 +28,7 @@ interface AuthorStatus {
 
 export default function AdminImportPage() {
   const [author, setAuthor] = useState("");
-  const [mediaType, setMediaType] = useState<"PDF" | "AUDIO">("PDF");
   const [source, setSource] = useState<"gutenberg" | "ia">("gutenberg");
-  const [withAudio, setWithAudio] = useState(true);
   const [max, setMax] = useState(20);
   const [minDownloads, setMinDownloads] = useState(100);
   const [job, setJob] = useState<Job | null>(null);
@@ -77,33 +76,37 @@ export default function AdminImportPage() {
     };
   }, [fetchStatuses]);
 
-  // Démarre un import (manuel ou « tout importer ») et suit sa progression
+  // Démarre un import (manuel multi-auteurs ou « tout importer ») et suit sa
+  // progression. `authors` prioritaire sur `author`.
   const startJob = async (opts: {
-    author: string;
+    author?: string;
+    authors?: string[];
     all?: boolean;
     max?: number;
-    mediaType?: "PDF" | "AUDIO";
     source?: "ia" | "gutenberg";
   }) => {
-    if (starting || running) return;
+    const list = (opts.authors && opts.authors.length ? opts.authors : opts.author ? [opts.author] : [])
+      .map((a) => a.trim())
+      .filter(Boolean);
+    if (!list.length || starting || running) return;
     setStarting(true);
     setStopping(false);
     setError("");
     setJob(null);
     setJobId(null);
-    setRunningAuthor(opts.author);
+    setRunningAuthor(list.length === 1 ? list[0] : null);
     try {
       const res = await fetch("/api/admin/import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          author: opts.author,
+          authors: list,
           all: opts.all,
           max: opts.max,
           minDownloads,
-          mediaType: opts.mediaType ?? "PDF",
           source: opts.source ?? source,
-          withAudio,
+          // Toujours récupérer aussi l'audio (LibriVox) si l'œuvre existe.
+          withAudio: true,
         }),
       });
       const data = await res.json();
@@ -133,8 +136,13 @@ export default function AdminImportPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!author.trim()) return;
-    startJob({ author: author.trim(), max, mediaType });
+    // Un auteur par ligne → import multiple en une seule file.
+    const list = author
+      .split(/\r?\n/)
+      .map((a) => a.trim())
+      .filter(Boolean);
+    if (!list.length) return;
+    startJob({ authors: list, max });
   };
 
   // Demande l'arrêt de l'import en cours (les livres déjà importés sont gardés)
@@ -230,12 +238,13 @@ export default function AdminImportPage() {
           Importer des livres
         </h1>
         <p className="text-slate-600 dark:text-slate-400 mb-6">
-          Depuis Internet Archive (livres du domaine public). Importe un auteur
-          précis, ou télécharge d&apos;un coup <strong>tout le corpus</strong> d&apos;un
-          auteur listé ci-dessous.
+          Livres du domaine public. Importe un ou <strong>plusieurs auteurs d&apos;un
+          coup</strong> (un par ligne), ou télécharge tout le corpus d&apos;un auteur
+          listé ci-dessous. Chaque œuvre récupère automatiquement son PDF + EPUB
+          et son audio (LibriVox) s&apos;il existe.
         </p>
 
-        {/* Import manuel (auteur libre + nombre) */}
+        {/* Import manuel (un ou plusieurs auteurs) */}
         <Card className="mb-6">
           <CardHeader>
             <CardTitle className="text-base">Import par auteur (manuel)</CardTitle>
@@ -254,9 +263,9 @@ export default function AdminImportPage() {
                       key={opt.v}
                       type="button"
                       onClick={() => setSource(opt.v)}
-                      disabled={running || mediaType === "AUDIO"}
+                      disabled={running}
                       className={`px-4 py-1.5 text-sm font-medium transition-colors disabled:opacity-50 ${
-                        source === opt.v && mediaType !== "AUDIO"
+                        source === opt.v
                           ? "bg-amber-500 text-white"
                           : "bg-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
                       }`}
@@ -266,46 +275,22 @@ export default function AdminImportPage() {
                   ))}
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  {mediaType === "AUDIO"
-                    ? "Les livres audio proviennent toujours d'Internet Archive (LibriVox)."
-                    : source === "gutenberg"
-                    ? "Fichiers texte propres : PDF généré + EPUB, légers (~1 Mo). Domaine public."
+                  {source === "gutenberg"
+                    ? "Fichiers texte propres : PDF généré + EPUB, légers (~1 Mo). Domaine public. Si une œuvre existe déjà en scan Internet Archive, elle est remplacée par cette version légère."
                     : "Scans d'Internet Archive, souvent lourds (20–50 Mo)."}
                 </p>
               </div>
-              {/* Type de média */}
-              <div>
-                <label className="block text-sm font-medium mb-1">Type</label>
-                <div className="inline-flex rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
-                  {([
-                    { v: "PDF", label: "Livres PDF" },
-                    { v: "AUDIO", label: "Livres audio" },
-                  ] as const).map((opt) => (
-                    <button
-                      key={opt.v}
-                      type="button"
-                      onClick={() => setMediaType(opt.v)}
-                      disabled={running}
-                      className={`px-4 py-1.5 text-sm font-medium transition-colors ${
-                        mediaType === opt.v
-                          ? "bg-amber-500 text-white"
-                          : "bg-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
               <div>
                 <label className="block text-sm font-medium mb-1">
-                  {mediaType === "AUDIO" ? "Auteur ou titre *" : "Auteur *"}
+                  Auteur(s) * <span className="font-normal text-slate-500">— un par ligne pour un import multiple</span>
                 </label>
-                <Input
+                <textarea
                   value={author}
                   onChange={(e) => setAuthor(e.target.value)}
-                  placeholder={mediaType === "AUDIO" ? "ex. Jules Verne, ou un titre" : "ex. Victor Hugo"}
+                  placeholder={"ex. Victor Hugo\nJules Verne\nÉmile Zola"}
                   disabled={running}
+                  rows={4}
+                  className="flex w-full rounded-md border border-slate-200 dark:border-slate-700 bg-transparent px-3 py-2 text-sm placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 disabled:cursor-not-allowed disabled:opacity-50 resize-y"
                 />
               </div>
               <div className="flex flex-wrap gap-4">
@@ -339,21 +324,6 @@ export default function AdminImportPage() {
                 téléchargements sur Internet Archive (0 = tout importer). S&apos;applique
                 aussi à « Tout importer ».
               </p>
-              <label
-                className={`flex items-center gap-2 text-sm ${
-                  mediaType === "AUDIO" ? "opacity-40" : ""
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  checked={withAudio && mediaType !== "AUDIO"}
-                  onChange={(e) => setWithAudio(e.target.checked)}
-                  disabled={running || mediaType === "AUDIO"}
-                  className="h-4 w-4 accent-amber-500"
-                />
-                Récupérer aussi l&apos;audio (LibriVox) si l&apos;œuvre existe — une seule fiche PDF +
-                EPUB + Audio
-              </label>
               <div className="flex items-center gap-2">
                 <Button
                   type="submit"
@@ -654,7 +624,8 @@ export default function AdminImportPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-base">
-                {job.author} — {job.imported} importé(s), {job.skipped} doublon(s)
+                {job.author} — {job.imported} importé(s)
+                {job.replaced > 0 && `, ${job.replaced} allégé(s)`}, {job.skipped} doublon(s)
                 {job.found > 0 && ` · ${job.found} trouvé(s)`}
               </CardTitle>
               {running ? (

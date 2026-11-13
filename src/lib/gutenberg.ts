@@ -370,7 +370,7 @@ async function generatePdf(
 // ---------------------------------------------------------------- import
 
 export interface ImportResult {
-  status: "ok" | "skip" | "duplicate" | "fail";
+  status: "ok" | "skip" | "duplicate" | "fail" | "replaced";
   title?: string;
   authorSlug?: string;
   authorRaw?: string;
@@ -462,10 +462,39 @@ export async function importGutenbergBook(
   const authorSlug = slugify(authorName);
   const normTitle = norm(title);
 
-  // Anti-doublon par titre + auteur (évite les variantes IA déjà présentes)
+  // Anti-doublon par titre + auteur (évite les variantes IA déjà présentes).
+  // Mais si le doublon existant est une version Internet Archive (scan, souvent
+  // lourd) et que la même œuvre existe sur Gutenberg, on REMPLACE les fichiers
+  // par la version Gutenberg légère (PDF généré + EPUB) au lieu de l'ignorer.
   if (authorSlug && normTitle) {
-    const sameAuthor = await prisma.book.findMany({ where: { authorSlug }, select: { title: true } });
-    if (sameAuthor.some((e) => norm(e.title) === normTitle)) return { status: "duplicate", title };
+    const sameAuthor = await prisma.book.findMany({
+      where: { authorSlug },
+      select: { id: true, slug: true, title: true, sourceId: true, pdfSize: true, mediaType: true },
+    });
+    const match = sameAuthor.find((e) => norm(e.title) === normTitle);
+    if (match) {
+      const isIa = match.mediaType !== "AUDIO" && !(match.sourceId ?? "").startsWith("gutenberg:");
+      if (isIa) {
+        const files = await buildGutenbergFiles(row.id, match.slug, title, authorName);
+        // Remplace seulement si Gutenberg est bien plus léger (ou taille inconnue
+        // côté IA : proxy archive.org → on bascule en local léger).
+        if (files && (!match.pdfSize || files.pdfSize < match.pdfSize)) {
+          await prisma.book.update({
+            where: { id: match.id },
+            data: {
+              sourceId, // bascule la source sur Gutenberg
+              pdfUrl: `/uploads/books/${match.slug}.pdf`,
+              pdfSize: files.pdfSize,
+              pageCount: files.pages,
+              ...(files.epubUrl ? { epubUrl: files.epubUrl } : {}),
+              ...(files.coverImage ? { coverImage: files.coverImage } : {}),
+            },
+          });
+          return { status: "replaced", title, authorSlug, authorRaw: authorName };
+        }
+      }
+      return { status: "duplicate", title };
+    }
   }
 
   // Slug unique
