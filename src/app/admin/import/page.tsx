@@ -42,6 +42,8 @@ export default function AdminImportPage() {
     { name: string; slug: string; count: number }[] | null
   >(null);
   const [discoverBusy, setDiscoverBusy] = useState(false);
+  // Sélection multiple d'auteurs découverts (par slug) pour un import groupé.
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const running = job?.status === "running";
@@ -52,10 +54,20 @@ export default function AdminImportPage() {
     try {
       const r = await fetch("/api/admin/import/discover-authors?max=40");
       if (r.ok) setDiscovered((await r.json()).authors);
+      setSelected(new Set()); // repart d'une sélection vierge
     } finally {
       setDiscoverBusy(false);
     }
   }, []);
+
+  // Coche / décoche un auteur découvert.
+  const toggleSelected = (slug: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(slug)) next.delete(slug);
+      else next.add(slug);
+      return next;
+    });
 
   // Charge le statut (compte + « à jour ») de chaque auteur suggéré
   const fetchStatuses = useCallback(async () => {
@@ -458,7 +470,8 @@ export default function AdminImportPage() {
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
               Auteurs du catalogue Project Gutenberg (français, domaine public){" "}
               <strong>pas encore dans ta base</strong>, classés par nombre
-              d&apos;œuvres disponibles. « Importer » télécharge toutes leurs œuvres
+              d&apos;œuvres disponibles. Coche plusieurs auteurs puis « Importer la
+              sélection », ou importe-les un par un. Télécharge toutes leurs œuvres
               depuis Gutenberg (fichiers légers).
             </p>
             {discovered === null ? (
@@ -470,41 +483,95 @@ export default function AdminImportPage() {
                 Aucun nouvel auteur trouvé (tous déjà importés ou déjà listés).
               </p>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {discovered.map((a) => {
-                  const isRunning = runningAuthor === a.name;
-                  return (
-                    <div
-                      key={a.slug}
-                      className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2"
-                    >
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-medium text-slate-800 dark:text-slate-200">
-                          {a.name}
-                        </div>
-                        <div className="text-xs text-slate-500">
-                          {a.count} œuvre{a.count > 1 ? "s" : ""} au catalogue
-                        </div>
-                      </div>
-                      <Button
-                        type="button"
-                        size="sm"
-                        disabled={running}
-                        onClick={() =>
-                          startJob({ author: a.name, all: true, source: "gutenberg" })
-                        }
-                        className="shrink-0 bg-amber-500 hover:bg-amber-600"
+              <>
+                {/* Barre d'actions de sélection multiple */}
+                <div className="flex flex-wrap items-center gap-2 mb-3">
+                  <label className="inline-flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 accent-amber-500"
+                      disabled={running}
+                      checked={selected.size === discovered.length && discovered.length > 0}
+                      ref={(el) => {
+                        if (el) el.indeterminate = selected.size > 0 && selected.size < discovered.length;
+                      }}
+                      onChange={(e) =>
+                        setSelected(
+                          e.target.checked ? new Set(discovered.map((a) => a.slug)) : new Set()
+                        )
+                      }
+                    />
+                    Tout sélectionner
+                  </label>
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={running || selected.size === 0}
+                    onClick={() =>
+                      startJob({
+                        authors: discovered.filter((a) => selected.has(a.slug)).map((a) => a.name),
+                        all: true,
+                        source: "gutenberg",
+                      })
+                    }
+                    className="bg-amber-500 hover:bg-amber-600"
+                  >
+                    {running && runningAuthor === null ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : null}
+                    Importer la sélection{selected.size > 0 ? ` (${selected.size})` : ""}
+                  </Button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {discovered.map((a) => {
+                    const isRunning = runningAuthor === a.name;
+                    const isChecked = selected.has(a.slug);
+                    return (
+                      <div
+                        key={a.slug}
+                        className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 ${
+                          isChecked
+                            ? "border-amber-400 bg-amber-50/50 dark:border-amber-500/40 dark:bg-amber-500/5"
+                            : "border-slate-200 dark:border-slate-700"
+                        }`}
                       >
-                        {isRunning ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          "Importer"
-                        )}
-                      </Button>
-                    </div>
-                  );
-                })}
-              </div>
+                        <label className="flex min-w-0 items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 shrink-0 accent-amber-500"
+                            disabled={running}
+                            checked={isChecked}
+                            onChange={() => toggleSelected(a.slug)}
+                          />
+                          <span className="min-w-0">
+                            <span className="block truncate text-sm font-medium text-slate-800 dark:text-slate-200">
+                              {a.name}
+                            </span>
+                            <span className="block text-xs text-slate-500">
+                              {a.count} œuvre{a.count > 1 ? "s" : ""} au catalogue
+                            </span>
+                          </span>
+                        </label>
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={running}
+                          onClick={() =>
+                            startJob({ author: a.name, all: true, source: "gutenberg" })
+                          }
+                          className="shrink-0 bg-amber-500 hover:bg-amber-600"
+                        >
+                          {isRunning ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            "Importer"
+                          )}
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
