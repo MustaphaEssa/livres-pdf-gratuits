@@ -157,7 +157,7 @@ export default async function BookPage({ params }: BookPageProps) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
       <DesignHeader />
 
-      <main className="page-main">
+      <main className="page-main" id="contenu">
         <div className="wrap book-page">
           <nav className="breadcrumb" aria-label="Fil d'Ariane">
             <Link href="/">Accueil</Link>

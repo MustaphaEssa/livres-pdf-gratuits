@@ -32,7 +32,7 @@ export default function ContactPage() {
     <div className="ma">
       <DesignHeader />
       
-      <main className="page-main">
+      <main className="page-main" id="contenu">
         <div className="container mx-auto px-4 py-16">
           {/* Page Header */}
           <div className="text-center mb-12">

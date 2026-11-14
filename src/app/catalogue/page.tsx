@@ -53,7 +53,7 @@ export default async function CataloguePage({ searchParams }: Props) {
         ])}
       />
       <DesignHeader />
-      <main className="page-main">
+      <main className="page-main" id="contenu">
         <CatalogueClient
           books={books as CatBook[]}
           categories={catNames}

@@ -65,7 +65,7 @@ export default async function AuthorPage({ params, searchParams }: AuthorPagePro
         ]}
       />
       <DesignHeader />
-      <main className="page-main">
+      <main className="page-main" id="contenu">
         <div className="wrap">
           <nav className="breadcrumb" aria-label="Fil d'Ariane" style={{ paddingTop: 16 }}>
             <Link href="/">Accueil</Link>

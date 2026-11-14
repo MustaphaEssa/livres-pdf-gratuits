@@ -24,6 +24,9 @@ export default function DesignHeader() {
 
   return (
     <header>
+      <a className="skip-link" href="#contenu">
+        Aller au contenu
+      </a>
       <div className="site-header">
         <div className="header-inner">
           <Logo />

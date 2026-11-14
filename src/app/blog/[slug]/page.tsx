@@ -92,7 +92,7 @@ export default async function PostPage({ params }: Props) {
         ]}
       />
       <DesignHeader />
-      <main className="page-main">
+      <main className="page-main" id="contenu">
         <article className="wrap" style={{ maxWidth: 820 }}>
           <nav className="breadcrumb" aria-label="Fil d'Ariane" style={{ paddingTop: 16 }}>
             <Link href="/">Accueil</Link>

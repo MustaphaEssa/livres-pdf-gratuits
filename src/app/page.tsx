@@ -50,7 +50,7 @@ export default async function HomePage() {
       />
       <DesignHeader />
 
-      <main className="page-main">
+      <main className="page-main" id="contenu">
         <div className="hero-wrap">
           <ZelligePattern id="z-hero" className="fade" />
           <section className="hero">

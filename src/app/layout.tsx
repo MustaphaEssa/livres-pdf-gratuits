@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import NextTopLoader from "nextjs-toploader";
-import { Inter, Noto_Sans_Arabic, Source_Serif_4, Amiri } from "next/font/google";
+import { Inter, Geist, Noto_Sans_Arabic, Source_Serif_4, Amiri } from "next/font/google";
 import { I18nProvider } from "@/components/i18n-provider";
 import { SettingsProvider } from "@/components/settings-provider";
 import { AuthProvider } from "@/components/auth/auth-modal";
@@ -17,16 +17,23 @@ const inter = Inter({
   variable: "--font-sans",
 });
 
+// Police d'interface du design public (.ma) — l'admin garde Inter.
+const geist = Geist({
+  subsets: ["latin"],
+  variable: "--font-ui",
+});
+
 const arabic = Noto_Sans_Arabic({
   subsets: ["arabic"],
   variable: "--font-arabic",
 });
 
-// Charte graphique (design system open-design « kami ») : serif éditorial
-// Source Serif 4 (proche de Charter) + arabe serif (Amiri). Graisses 400/500 uniquement.
+// Charte « Riad de papier » (open-design : kami + redesign-skill) : serif éditorial
+// Source Serif 4 + arabe serif (Amiri). Voir docs/redesign/DESIGN.md.
 const serif = Source_Serif_4({
   subsets: ["latin"],
-  weight: ["400", "500"],
+  weight: ["400", "500", "600"],
+  style: ["normal", "italic"],
   variable: "--font-serif",
 });
 
@@ -95,11 +102,11 @@ export default async function RootLayout({
   return (
     <html lang={locale} dir={rtl ? "rtl" : "ltr"} suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${arabic.variable} ${serif.variable} ${amiri.variable} ${
+        className={`${inter.variable} ${geist.variable} ${arabic.variable} ${serif.variable} ${amiri.variable} ${
           rtl ? "font-arabic" : "font-sans"
         } antialiased`}
       >
-        <NextTopLoader color="#1b365d" height={3} showSpinner={false} />
+        <NextTopLoader color="#fca311" height={3} showSpinner={false} />
         <I18nProvider locale={locale}>
           <SettingsProvider settings={settings}>
             <AuthProvider>{children}</AuthProvider>

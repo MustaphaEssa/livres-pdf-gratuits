@@ -10,7 +10,7 @@ export default async function DesignShell({ children }: { children: ReactNode })
   return (
     <div className="ma">
       <DesignHeader />
-      <main className="page-main">{children}</main>
+      <main className="page-main" id="contenu">{children}</main>
       <DesignFooter categories={categories} />
       <MobileTabbar />
     </div>
