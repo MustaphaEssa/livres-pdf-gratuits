@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import DesignHeader from "@/components/design/header";
 import DesignFooter from "@/components/design/footer";
 import MobileTabbar from "@/components/design/mobile-tabbar";
+import BookActionBar from "@/components/design/book-action-bar";
 import BookCover from "@/components/design/book-cover";
 import BookMini from "@/components/design/book-mini";
 import BookCard from "@/components/design/book-card";
@@ -487,6 +488,11 @@ export default async function BookPage({ params }: BookPageProps) {
       </main>
 
       <DesignFooter categories={book.categories.map((c) => c.category)} />
+      <BookActionBar
+        readerHref={hasPdf ? readerHref : null}
+        downloadHref={hasPdf ? downloadHref : null}
+        listenHref={hasAudio ? "#ecouter" : null}
+      />
       <MobileTabbar />
     </div>
   );

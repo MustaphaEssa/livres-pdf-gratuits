@@ -1,9 +1,38 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { formatAuthorName } from "@/lib/utils";
 import { useI18n } from "@/components/i18n-provider";
 import { fmt } from "@/i18n/format";
 import { RTL_LANGS } from "@/lib/languages";
+
+// Couvertures « vides » : beaucoup de scans Internet Archive montrent la reliure
+// (rectangle brun/noir uni) ou une page blanche. On les détecte sur une vignette
+// 12×18 px et on affiche à la place la couverture typographique générée.
+const coverVerdict = new Map<string, boolean>(); // src → couverture inutilisable ?
+
+function isBlankCover(img: HTMLImageElement): boolean {
+  try {
+    const w = 12, h = 18;
+    const c = document.createElement("canvas");
+    c.width = w;
+    c.height = h;
+    const ctx = c.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return false;
+    ctx.drawImage(img, 0, 0, w, h);
+    const d = ctx.getImageData(0, 0, w, h).data;
+    const lum: number[] = [];
+    for (let i = 0; i < d.length; i += 4) lum.push((0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]) / 255);
+    const mean = lum.reduce((a, b) => a + b, 0) / lum.length;
+    const sd = Math.sqrt(lum.reduce((a, b) => a + (b - mean) ** 2, 0) / lum.length);
+    // Calibré sur les couvertures du site : reliures noires/bordeaux/brunes
+    // (luminosité < 0,45, peu de contraste) ou surface quasi unie. Les pages de
+    // titre claires avec un peu de texte (écart-type ≥ 0,035) sont conservées.
+    return (mean < 0.45 && sd < 0.09) || sd < 0.02;
+  } catch {
+    return false; // image d'un autre domaine (canvas « tainted ») : on la garde
+  }
+}
 
 const PALETTE = [
   { bg: "#1f3a5f", fg: "#f4efe6" },
@@ -42,14 +71,35 @@ export default function BookCover({
   priority?: boolean;
 }) {
   const { t } = useI18n();
+  const imgRef = useRef<HTMLImageElement>(null);
+  const local = !!book.coverImage && book.coverImage.startsWith("/");
+  const [blank, setBlank] = useState(() => (book.coverImage ? coverVerdict.get(book.coverImage) === true : false));
+
+  // Analyse une fois l'image chargée (y compris si elle l'était déjà avant l'hydratation)
+  useEffect(() => {
+    const img = imgRef.current;
+    const src = book.coverImage;
+    if (!img || !src || !local || coverVerdict.has(src)) return;
+    const check = () => {
+      if (!img.naturalWidth) return;
+      const v = isBlankCover(img);
+      coverVerdict.set(src, v);
+      if (v) setBlank(true);
+    };
+    if (img.complete) check();
+    else img.addEventListener("load", check, { once: true });
+    return () => img.removeEventListener("load", check);
+  }, [book.coverImage, local]);
+
   const rtl = !!book.language && RTL_LANGS.has(book.language);
   const cls = `cover ${mini ? "cover-mini" : ""} ${rtl ? "is-rtl" : ""} ${className}`.trim();
 
-  if (book.coverImage) {
+  if (book.coverImage && !blank) {
     // eslint-disable-next-line @next/next/no-img-element
     return (
       <div className={cls}>
         <img
+          ref={imgRef}
           src={book.coverImage}
           alt={fmt(t.common.coverOf, { title: book.title })}
           loading={priority ? "eager" : "lazy"}

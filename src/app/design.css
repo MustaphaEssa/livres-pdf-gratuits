@@ -125,7 +125,7 @@
   .cover-spine { position: absolute; inset-inline-start: 0; top: 0; bottom: 0; width: 5%; background: rgba(0,0,0,.18); }
   .cover-inner { position: absolute; inset: 0; padding: 11cqw 10cqw 9cqw 14cqw; display: flex; flex-direction: column; justify-content: space-between; }
   .cover-author { font: 600 6.5cqw var(--font-sans); letter-spacing: .14em; text-transform: uppercase; }
-  .cover-title { font: 600 14cqw/1.1 var(--ma-serif); text-wrap: balance; }
+  .cover-title { font: 600 14cqw/1.1 var(--ma-serif); text-wrap: balance; overflow-wrap: anywhere; hyphens: auto; }
   .cover-foot { display: flex; align-items: center; gap: 4cqw; font: 600 6.5cqw var(--font-sans); letter-spacing: .14em; }
   .cover-foot::before { content: ''; flex: 1; height: 1px; background: currentColor; opacity: .6; }
   .cover.is-rtl .cover-author, .cover.is-rtl .cover-foot { letter-spacing: 0; }
@@ -924,4 +924,36 @@
    perçu et le Largest Contentful Paint mesuré par Google). */
 .ma {
   .hero-copy > h1, .book-hero-info > h1, .arch-carousel { animation: none; }
+}
+
+/* ---------- Fiche livre sur mobile (lot 3) ---------- */
+.ma {
+  .book-action-bar { display: none; }
+  @media (max-width: 760px) {
+    /* Barre « Lire / PDF » fixée au-dessus de la barre d'onglets, visible quand
+       les boutons du haut de fiche sont sortis de l'écran. */
+    .book-action-bar {
+      position: fixed; inset-inline: 12px; bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 25;
+      display: flex; gap: 8px; padding: 8px; border-radius: 18px;
+      background: color-mix(in srgb, var(--accent) 94%, transparent);
+      -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+      box-shadow: 0 18px 40px -16px rgba(15, 26, 49, .7);
+      transform: translateY(16px); opacity: 0; pointer-events: none;
+      transition: transform .2s var(--ease), opacity .2s var(--ease);
+    }
+    .book-action-bar[data-visible='true'] { transform: none; opacity: 1; pointer-events: auto; }
+    .book-action-bar .btn { min-height: 46px; }
+    .book-action-bar .btn-primary { flex: 1; background: var(--brand-orange); color: var(--accent); }
+    .book-action-bar .btn-outline { color: #fff; border-color: rgba(255,255,255,.45); }
+    /* Place pour la barre en bas de la fiche */
+    .book-page { padding-bottom: 72px; }
+
+    /* Couverture plus compacte : titre et boutons visibles plus tôt */
+    .book-hero { gap: 20px; padding-top: 24px; }
+    .book-hero-cover { width: 46%; max-width: 150px; }
+    .arch-door { inset: -12px -10px -10px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .book-action-bar { transition: none; }
+  }
 }

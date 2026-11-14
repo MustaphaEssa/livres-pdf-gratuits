@@ -46,22 +46,27 @@ export async function getBooksByLang(
   language: string,
   limit = 8
 ): Promise<BookWithCategories[]> {
-  return prisma.book.findMany({
+  const books = await prisma.book.findMany({
     where: { isPublished: true, mediaType: "PDF", language },
     include: bookWithCategories.include,
     orderBy: { downloadCount: "desc" },
+    distinct: ["author"], // un livre par auteur : rangée variée
     take: limit,
   });
+  return books;
 }
 
 // Derniers livres ajoutés
 export async function getLatestBooks(limit = 6): Promise<BookWithCategories[]> {
-  return prisma.book.findMany({
+  const books = await prisma.book.findMany({
     where: { isPublished: true, mediaType: "PDF" },
     include: bookWithCategories.include,
     orderBy: { createdAt: "desc" },
+    // Un livre par auteur : sinon un import récent d'un seul auteur remplit toute la rangée
+    distinct: ["author"],
     take: limit,
   });
+  return books;
 }
 
 export interface SearchBooksParams {
