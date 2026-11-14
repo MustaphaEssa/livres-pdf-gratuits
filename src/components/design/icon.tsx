@@ -29,6 +29,9 @@ export default function Icon({
 
 export const I = {
   search: "M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z M21 21l-4.3-4.3",
+  shuffle: "M16 3h5v5 M4 20 21 3 M21 16v5h-5 M15 15l6 6 M4 4l5 5",
+  chevL: "M15 6l-6 6 6 6",
+  chevR: "M9 6l6 6-6 6",
   arrow: "M5 12h14 M13 6l6 6-6 6",
   down: "M6 9l6 6 6-6",
   download: "M12 4v12 M6 11l6 6 6-6 M5 20h14",

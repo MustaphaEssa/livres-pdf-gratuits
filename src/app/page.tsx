@@ -4,6 +4,7 @@ import DesignFooter from "@/components/design/footer";
 import MobileTabbar from "@/components/design/mobile-tabbar";
 import BookCover from "@/components/design/book-cover";
 import HeroSearch from "@/components/design/hero-search";
+import HeroArch from "@/components/design/hero-arch";
 import LangShelf from "@/components/design/lang-shelf";
 import Icon, { I } from "@/components/design/icon";
 import { ZelligePattern } from "@/components/design/patterns";
@@ -48,7 +49,15 @@ export default async function HomePage() {
       getLatestPosts(3),
     ]);
 
-  const hero = featured.slice(0, 3);
+  // Arche « à la une » : données minimales sérialisables pour le composant client
+  const hero = featured.slice(0, 5).map((b) => ({
+    slug: b.slug,
+    title: b.title,
+    author: b.author,
+    coverImage: b.coverImage,
+    language: b.language,
+    hasPdf: !!b.pdfUrl,
+  }));
 
   return (
     <div className="ma">
@@ -76,26 +85,8 @@ export default async function HomePage() {
               </p>
               <HeroSearch />
             </div>
-            <div className="hero-visual" aria-hidden="true">
-              <div className="hero-stage">
-                <div className="arch" />
-                <div className="arch-inner" />
-                {hero[0] && (
-                  <div className="hero-cover" style={{ left: "4%", top: "16%", transform: "rotate(-8deg)" }}>
-                    <BookCover book={hero[0]} />
-                  </div>
-                )}
-                {hero[1] && (
-                  <div className="hero-cover" style={{ left: "30%", top: "4%", transform: "rotate(2deg)", zIndex: 2 }}>
-                    <BookCover book={hero[1]} />
-                  </div>
-                )}
-                {hero[2] && (
-                  <div className="hero-cover" style={{ left: "54%", top: "20%", transform: "rotate(9deg)", zIndex: 1 }}>
-                    <BookCover book={hero[2]} />
-                  </div>
-                )}
-              </div>
+            <div className="hero-visual">
+              <HeroArch books={hero} />
             </div>
           </section>
         </div>
