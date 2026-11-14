@@ -137,3 +137,22 @@ export async function updateCollection(
 export async function deleteCollection(id: string): Promise<void> {
   await prisma.collection.delete({ where: { id } });
 }
+
+// Collections de l'accueil : quelques collections avec leurs 3 premières couvertures
+export async function getHomeCollections(limit = 4) {
+  return prisma.collection.findMany({
+    where: { isPublished: true },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+    include: {
+      _count: { select: { books: true } },
+      books: {
+        orderBy: { order: "asc" },
+        take: 3,
+        include: {
+          book: { select: { slug: true, title: true, author: true, coverImage: true, language: true } },
+        },
+      },
+    },
+  });
+}

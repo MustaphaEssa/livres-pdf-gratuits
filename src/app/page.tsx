@@ -8,12 +8,18 @@ import LangShelf from "@/components/design/lang-shelf";
 import Icon, { I } from "@/components/design/icon";
 import { ZelligePattern } from "@/components/design/patterns";
 import JsonLd, { websiteLd, organizationLd, itemListLd } from "@/components/seo/json-ld";
+import BookCard from "@/components/design/book-card";
 import {
   getFeaturedBooks,
   getLatestBooks,
   getBooksByLang,
   getCategoriesWithCounts,
+  getTopAuthors,
+  getLatestAudiobooks,
 } from "@/lib/books";
+import { getHomeCollections } from "@/lib/collections";
+import { getLatestPosts } from "@/lib/posts";
+import { formatDate } from "@/lib/utils";
 
 // Icônes (tracés SVG) par catégorie
 const CAT_ICON: Record<string, string> = {
@@ -28,14 +34,19 @@ const CAT_ICON: Record<string, string> = {
 };
 
 export default async function HomePage() {
-  const [newest, fr, en, ar, featured, categories] = await Promise.all([
-    getLatestBooks(8),
-    getBooksByLang("fr", 8),
-    getBooksByLang("en", 8),
-    getBooksByLang("ar", 8),
-    getFeaturedBooks(6),
-    getCategoriesWithCounts(),
-  ]);
+  const [newest, fr, en, ar, featured, categories, collections, authors, audiobooks, posts] =
+    await Promise.all([
+      getLatestBooks(8),
+      getBooksByLang("fr", 8),
+      getBooksByLang("en", 8),
+      getBooksByLang("ar", 8),
+      getFeaturedBooks(6),
+      getCategoriesWithCounts(),
+      getHomeCollections(4),
+      getTopAuthors(10),
+      getLatestAudiobooks(6),
+      getLatestPosts(3),
+    ]);
 
   const hero = featured.slice(0, 3);
 
@@ -94,6 +105,40 @@ export default async function HomePage() {
 
         <LangShelf newest={newest} byLang={{ fr, en, ar }} />
 
+        {collections.length > 0 && (
+          <section className="section wrap" aria-labelledby="lists-title">
+            <div className="section-head">
+              <div>
+                <div className="eyebrow">Listes de lecture</div>
+                <h2 id="lists-title">Des collections pour vous guider</h2>
+              </div>
+              <Link href="/collections" className="link-arrow">
+                Toutes les collections <Icon d={I.arrow} />
+              </Link>
+            </div>
+            <div className="list-grid">
+              {collections.map((c) => (
+                <Link key={c.id} href={`/collections/${c.slug}`} className="list-card">
+                  <span className="list-stack" aria-hidden="true">
+                    {c.books.map(({ book }) => (
+                      <span key={book.slug} className="list-stack-item">
+                        <BookCover book={book} />
+                      </span>
+                    ))}
+                  </span>
+                  <span className="list-card-text">
+                    <span className="list-card-title">{c.title}</span>
+                    {c.description && <span className="list-card-desc">{c.description}</span>}
+                    <span className="list-card-count">
+                      {c._count.books} livre{c._count.books > 1 ? "s" : ""}
+                    </span>
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
         <section className="section wrap" aria-labelledby="genres-title">
           <div className="section-head">
             <div>
@@ -128,6 +173,42 @@ export default async function HomePage() {
           </div>
         </section>
 
+        {authors.length > 0 && (
+          <section className="section wrap" aria-labelledby="authors-title">
+            <div className="section-head">
+              <div>
+                <div className="eyebrow">Auteurs</div>
+                <h2 id="authors-title">Les auteurs à découvrir</h2>
+              </div>
+              <Link href="/auteurs" className="link-arrow">
+                Tous les auteurs <Icon d={I.arrow} />
+              </Link>
+            </div>
+            <ul className="author-rail">
+              {authors.map((a) => (
+                <li key={a.slug}>
+                  <Link href={`/auteur/${a.slug}`} className="author-chip">
+                    {a.image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img className="author-photo" src={a.image} alt="" loading="lazy" />
+                    ) : (
+                      <span className="author-photo" aria-hidden="true">
+                        {[...a.name][0]}
+                      </span>
+                    )}
+                    <span className="author-name" dir="auto">
+                      {a.name}
+                    </span>
+                    <span className="author-count">
+                      {a.count} livre{a.count > 1 ? "s" : ""}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
         <div className="band">
           <div className="band-inner">
             <div className="band-copy">
@@ -161,6 +242,25 @@ export default async function HomePage() {
           </div>
         </div>
 
+        {audiobooks.length > 0 && (
+          <section className="section wrap" aria-labelledby="audio-title">
+            <div className="section-head">
+              <div>
+                <div className="eyebrow">À écouter</div>
+                <h2 id="audio-title">Livres audio gratuits</h2>
+              </div>
+              <Link href="/livres-audio" className="link-arrow">
+                Tous les livres audio <Icon d={I.arrow} />
+              </Link>
+            </div>
+            <div className="shelf">
+              {audiobooks.map((b) => (
+                <BookCard key={b.slug} book={b} />
+              ))}
+            </div>
+          </section>
+        )}
+
         <section className="section wrap" aria-labelledby="help-title">
           <div className="help-strip">
             <div className="help-copy">
@@ -171,37 +271,74 @@ export default async function HomePage() {
                 Guides de lecture <Icon d={I.arrow} />
               </Link>
             </div>
-            <div className="format-cards">
-              <div className="format-card">
+            <ol className="format-cards">
+              <li className="format-card">
+                <span className="format-num" aria-hidden="true">1</span>
                 <span className="tag tag-read">Lire en ligne</span>
                 <p>Ouvrez le livre dans le lecteur, sans rien télécharger.</p>
                 <p className="opens">
                   Fonctionne sur : <strong>tout navigateur</strong>
                 </p>
-              </div>
-              <div className="format-card">
+              </li>
+              <li className="format-card">
+                <span className="format-num" aria-hidden="true">2</span>
                 <span className="tag tag-pdf">PDF / EPUB</span>
                 <p>Un fichier à conserver, lisible hors ligne, même sur liseuse.</p>
                 <p className="opens">
                   S&apos;ouvre avec : <strong>Aperçu, Acrobat, Kindle</strong>
                 </p>
-              </div>
-            </div>
+              </li>
+              <li className="format-card">
+                <span className="format-num" aria-hidden="true">3</span>
+                <span className="tag tag-audio">Écouter</span>
+                <p>Des livres lus à voix haute, à écouter en ligne quand la version audio existe.</p>
+                <p className="opens">
+                  Où : <Link href="/livres-audio">Livres audio</Link>
+                </p>
+              </li>
+            </ol>
           </div>
         </section>
 
-        <section className="section wrap">
-          <div className="cta-band">
-            <ZelligePattern id="z-cta" className="light" />
-            <div>
-              <h2>Des collections pour vous guider</h2>
-              <p>Des sélections thématiques de livres, choisies autour d&apos;une idée.</p>
+        {posts.length > 0 && (
+          <section className="section wrap" aria-labelledby="posts-title">
+            <div className="section-head">
+              <div>
+                <div className="eyebrow">Le journal</div>
+                <h2 id="posts-title">Guides et articles</h2>
+              </div>
+              <Link href="/blog" className="link-arrow">
+                Tout le blog <Icon d={I.arrow} />
+              </Link>
             </div>
-            <Link className="btn" href="/collections">
-              Voir les collections <Icon d={I.arrow} />
-            </Link>
-          </div>
-        </section>
+            <div className="post-grid">
+              {posts.map((post, i) => (
+                <Link
+                  key={post.id}
+                  href={`/blog/${post.slug}`}
+                  className={`post-card ${i === 0 ? "is-lead" : ""}`}
+                >
+                  {post.coverImage ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img className="post-cover" src={post.coverImage} alt="" loading="lazy" />
+                  ) : (
+                    <span className="post-cover is-empty" aria-hidden="true">
+                      <ZelligePattern id={`z-post-${i}`} className="light" />
+                    </span>
+                  )}
+                  <span className="post-body">
+                    {post.categories[0] && (
+                      <span className="book-cat">{post.categories[0].category.name}</span>
+                    )}
+                    <span className="post-title">{post.title}</span>
+                    {post.excerpt && <span className="post-excerpt">{post.excerpt}</span>}
+                    <span className="post-meta">{formatDate(post.publishedAt ?? post.createdAt)}</span>
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
       </main>
 
       <DesignFooter categories={categories} />

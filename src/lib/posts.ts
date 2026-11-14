@@ -119,3 +119,13 @@ export async function getApprovedComments(postId: string) {
     select: { id: true, name: true, content: true, createdAt: true },
   });
 }
+
+// Derniers articles publiés (accueil)
+export async function getLatestPosts(limit = 3): Promise<PostWithCategories[]> {
+  return prisma.post.findMany({
+    where: { isPublished: true },
+    include: postWithCategories.include,
+    orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
+    take: limit,
+  });
+}

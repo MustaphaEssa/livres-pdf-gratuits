@@ -581,3 +581,14 @@ export async function getUserDownloads(
   }
   return books;
 }
+
+// Auteurs mis en avant sur l'accueil : ceux avec photo d'abord, puis les plus fournis.
+// Exclut les auteurs génériques (« Auteur inconnu », « Anonyme »…).
+const GENERIC_AUTHOR = /^(auteur inconnu|inconnu|anonyme|anonymous|unknown|various|divers)$/i;
+export async function getTopAuthors(limit = 10) {
+  const all = await getAuthorsWithCounts();
+  return all
+    .filter((a) => !GENERIC_AUTHOR.test(a.name.trim()))
+    .sort((a, b) => Number(!!b.image) - Number(!!a.image) || b.count - a.count)
+    .slice(0, limit);
+}
