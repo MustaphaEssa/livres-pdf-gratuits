@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth-server";
 import { slugify, formatAuthorName } from "@/lib/utils";
-import { discoverGutenbergAuthors } from "@/lib/gutenberg";
+import { discoverGutenbergAuthors, toGutenbergLang } from "@/lib/gutenberg";
 import { SUGGESTED_AUTHORS } from "@/lib/suggested-authors";
 
 export const runtime = "nodejs";
@@ -23,7 +23,8 @@ export async function GET(request: Request) {
   const excludeSlugs = SUGGESTED_AUTHORS.map((n) => slugify(formatAuthorName(n)));
 
   try {
-    const authors = await discoverGutenbergAuthors({ min, max, excludeSlugs });
+    const lang = toGutenbergLang(searchParams.get("lang"));
+    const authors = await discoverGutenbergAuthors({ min, max, excludeSlugs, lang });
     return NextResponse.json({ authors });
   } catch (e) {
     return NextResponse.json(

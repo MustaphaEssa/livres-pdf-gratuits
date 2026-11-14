@@ -117,7 +117,32 @@ async function ensureCatalogFile(): Promise<void> {
   await writeFile(CATALOG_PATH, buf);
 }
 
-// Charge (et met en cache mémoire) les livres TEXTE en français du catalogue
+// Langues proposées à l'import. Limité aux écritures latines : le PDF est
+// généré avec la police intégrée Times-Roman (pas d'arabe, cyrillique, CJK).
+export const GUTENBERG_LANGS = ["fr", "en", "es", "de", "it", "pt", "nl", "la"] as const;
+export type GutenbergLang = (typeof GUTENBERG_LANGS)[number];
+
+export function toGutenbergLang(v: unknown): GutenbergLang {
+  return (GUTENBERG_LANGS as readonly string[]).includes(String(v)) ? (v as GutenbergLang) : "fr";
+}
+
+// Codes de langue d'une ligne du catalogue ("fr; en" → ["fr", "en"])
+function langCodes(language: string): string[] {
+  return language.toLowerCase().split(/[;,\s]+/).filter(Boolean);
+}
+
+function hasLang(row: GutenbergRow, lang: GutenbergLang): boolean {
+  return langCodes(row.language).includes(lang);
+}
+
+// Langue principale d'un livre (1er code du champ)
+function primaryLang(row: GutenbergRow, fallback: GutenbergLang): string {
+  const first = langCodes(row.language)[0];
+  return first && /^[a-z]{2,3}$/.test(first) ? first : fallback;
+}
+
+// Charge (et met en cache mémoire) les livres TEXTE du catalogue en langues
+// d'écriture latine ; le filtrage par langue se fait à la recherche.
 export async function loadCatalog(): Promise<GutenbergRow[]> {
   if (CATALOG) return CATALOG;
   await ensureCatalogFile();
@@ -132,7 +157,8 @@ export async function loadCatalog(): Promise<GutenbergRow[]> {
     const type = f[1];
     const language = f[4];
     if (type !== "Text") continue;
-    if (!/\bfr\b/i.test(language)) continue; // français (fr, parfois "fr, en")
+    const codes = langCodes(language);
+    if (!GUTENBERG_LANGS.some((l) => codes.includes(l))) continue;
     const id = parseInt(f[0], 10);
     if (!Number.isFinite(id)) continue;
     rows.push({
@@ -153,8 +179,12 @@ export function catalogSize(): number | null {
 }
 
 // Recherche les ouvrages d'un auteur (français, texte) dans le catalogue Gutenberg.
-export async function searchGutenbergAuthor(author: string, max = 50): Promise<GutenbergRow[]> {
-  const cat = await loadCatalog();
+export async function searchGutenbergAuthor(
+  author: string,
+  max = 50,
+  lang: GutenbergLang = "fr"
+): Promise<GutenbergRow[]> {
+  const cat = (await loadCatalog()).filter((r) => hasLang(r, lang));
   const sn = surname(author);
   const full = norm(author);
   if (!sn) return [];
@@ -179,8 +209,12 @@ export async function searchGutenbergAuthor(author: string, max = 50): Promise<G
 }
 
 // Liste les auteurs distincts du catalogue dont le nom matche une requête (pour l'admin)
-export async function suggestGutenbergAuthors(query: string, max = 20): Promise<{ name: string; count: number }[]> {
-  const cat = await loadCatalog();
+export async function suggestGutenbergAuthors(
+  query: string,
+  max = 20,
+  lang: GutenbergLang = "fr"
+): Promise<{ name: string; count: number }[]> {
+  const cat = (await loadCatalog()).filter((r) => hasLang(r, lang));
   const q = norm(query);
   const counts = new Map<string, number>();
   for (const r of cat) {
@@ -217,12 +251,14 @@ export async function discoverGutenbergAuthors(opts?: {
   min?: number; // seuil minimum d'œuvres pour retenir un auteur
   max?: number; // nb max d'auteurs renvoyés
   excludeSlugs?: string[];
+  lang?: GutenbergLang;
 }): Promise<DiscoveredAuthor[]> {
   const min = opts?.min ?? 3;
   const max = opts?.max ?? 40;
   const exclude = new Set(opts?.excludeSlugs ?? []);
+  const lang = opts?.lang ?? "fr";
 
-  const cat = await loadCatalog();
+  const cat = (await loadCatalog()).filter((r) => hasLang(r, lang));
   const counts = new Map<string, number>();
   for (const r of cat) {
     const first = r.authors.split(";")[0]?.trim();
@@ -449,7 +485,8 @@ export async function importGutenbergBook(
   row: GutenbergRow,
   fallbackAuthor: string,
   categoryMap: Record<string, string>,
-  withAudio = false // attache aussi l'audio LibriVox correspondant si trouvé
+  withAudio = false, // attache aussi l'audio LibriVox correspondant si trouvé
+  lang: GutenbergLang = "fr"
 ): Promise<ImportResult> {
   const sourceId = `gutenberg:${row.id}`;
 
@@ -539,7 +576,7 @@ export async function importGutenbergBook(
       epubUrl: files.epubUrl,
       pageCount: files.pages,
       coverImage: files.coverImage,
-      language: "fr",
+      language: primaryLang(row, lang),
       publishedYear: year,
       isPublished: true,
       isFeatured: false,
@@ -566,6 +603,7 @@ export async function reimportFromGutenberg(bookId: string): Promise<ReimportRes
     where: { id: bookId },
     select: {
       id: true, slug: true, title: true, author: true, mediaType: true, pdfSize: true, sourceId: true,
+      language: true,
     },
   });
   if (!book) return { status: "notfound" };
@@ -573,7 +611,7 @@ export async function reimportFromGutenberg(bookId: string): Promise<ReimportRes
   const oldSize = book.pdfSize ?? 0;
 
   // 1) Gutenberg : texte → PDF léger (+ EPUB) si plus léger que l'actuel
-  const rows = await searchGutenbergAuthor(book.author, 80);
+  const rows = await searchGutenbergAuthor(book.author, 80, toGutenbergLang(book.language));
   const nt = norm(book.title);
   const gMatch =
     rows.find((r) => norm(r.title) === nt) ??

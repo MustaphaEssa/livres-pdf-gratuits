@@ -9,7 +9,12 @@ import {
   upsertAuthorProfile,
   freeDiskMb,
 } from "@/lib/import-archive";
-import { searchGutenbergAuthor, importGutenbergBook } from "@/lib/gutenberg";
+import {
+  searchGutenbergAuthor,
+  importGutenbergBook,
+  toGutenbergLang,
+  type GutenbergLang,
+} from "@/lib/gutenberg";
 import { slugify, formatAuthorName } from "@/lib/utils";
 
 type ImportLike = {
@@ -65,7 +70,8 @@ async function runOneAuthor(
   minDownloads: number,
   isAudio: boolean,
   isGut: boolean,
-  withAudio: boolean
+  withAudio: boolean,
+  lang: GutenbergLang
 ) {
   // Marge (×4) pour compenser doublons et écarts de créateur ; en mode complet
   // on vise le plafond par auteur avec une marge suffisante.
@@ -81,10 +87,12 @@ async function runOneAuthor(
     }));
     job.log.push(`${docs.length} résultat(s) audio trouvé(s) sur Internet Archive`);
   } else if (isGut) {
-    const grows = await searchGutenbergAuthor(author, rows);
-    tasks = grows.map((r) => ({ run: () => importGutenbergBook(r, author, categoryMap, withAudio) }));
+    const grows = await searchGutenbergAuthor(author, rows, lang);
+    tasks = grows.map((r) => ({
+      run: () => importGutenbergBook(r, author, categoryMap, withAudio, lang),
+    }));
     job.log.push(
-      `${grows.length} œuvre(s) trouvée(s) dans le catalogue Project Gutenberg (fichiers légers)`
+      `${grows.length} œuvre(s) [${lang}] trouvée(s) dans le catalogue Project Gutenberg (fichiers légers)`
     );
   } else {
     const docs = await searchAuthor(author, rows);
@@ -184,7 +192,8 @@ async function run(
   minDownloads: number,
   mediaType: "PDF" | "AUDIO" = "PDF",
   source: "ia" | "gutenberg" = "ia",
-  withAudio = false
+  withAudio = false,
+  lang: GutenbergLang = "fr"
 ) {
   const isAudio = mediaType === "AUDIO";
   const isGut = source === "gutenberg" && !isAudio;
@@ -203,7 +212,8 @@ async function run(
         minDownloads,
         isAudio,
         isGut,
-        withAudio
+        withAudio,
+        lang
       );
     }
 
@@ -255,6 +265,8 @@ export async function POST(request: Request) {
   // Audio en même temps : attache un livre audio LibriVox correspondant à la
   // fiche PDF/EPUB (par défaut activé ; sans objet pour un import audio pur).
   const withAudio = body.withAudio !== false && mediaType !== "AUDIO";
+  // Langue des livres Gutenberg à importer (fr par défaut)
+  const lang = toGutenbergLang(body.lang);
   const importAll = body.all === true;
   // Mode « tout importer » : plafond par auteur (évite de saturer le VPS avec un
   // auteur à plusieurs centaines d'œuvres) ; sinon la valeur demandée.
@@ -295,7 +307,7 @@ export async function POST(request: Request) {
   jobs.set(id, job);
   prune();
   // Lance en arrière-plan (pas de await) — le serveur Node persistant poursuit la tâche
-  void run(job, authors, max, categoryMap, importAll, minDownloads, mediaType, source, withAudio);
+  void run(job, authors, max, categoryMap, importAll, minDownloads, mediaType, source, withAudio, lang);
 
   return NextResponse.json({ jobId: id });
 }

@@ -26,9 +26,23 @@ interface AuthorStatus {
   fullyImported: boolean;
 }
 
+// Doit rester aligné sur GUTENBERG_LANGS (src/lib/gutenberg.ts, server-only)
+const GUT_LANGS = [
+  { v: "fr", label: "Français" },
+  { v: "en", label: "Anglais" },
+  { v: "es", label: "Espagnol" },
+  { v: "de", label: "Allemand" },
+  { v: "it", label: "Italien" },
+  { v: "pt", label: "Portugais" },
+  { v: "nl", label: "Néerlandais" },
+  { v: "la", label: "Latin" },
+] as const;
+
 export default function AdminImportPage() {
   const [author, setAuthor] = useState("");
   const [source, setSource] = useState<"gutenberg" | "ia">("gutenberg");
+  // Langue des livres Gutenberg (import manuel + découverte d'auteurs)
+  const [lang, setLang] = useState<string>("fr");
   const [max, setMax] = useState(20);
   const [minDownloads, setMinDownloads] = useState(100);
   const [job, setJob] = useState<Job | null>(null);
@@ -48,17 +62,23 @@ export default function AdminImportPage() {
 
   const running = job?.status === "running";
 
-  // Découvre d'autres auteurs Gutenberg FR pas encore en base
+  // Découvre d'autres auteurs Gutenberg (dans la langue choisie) pas encore en base
   const fetchDiscovered = useCallback(async () => {
     setDiscoverBusy(true);
     try {
-      const r = await fetch("/api/admin/import/discover-authors?max=40");
+      const r = await fetch(`/api/admin/import/discover-authors?max=40&lang=${lang}`);
       if (r.ok) setDiscovered((await r.json()).authors);
       setSelected(new Set()); // repart d'une sélection vierge
     } finally {
       setDiscoverBusy(false);
     }
-  }, []);
+  }, [lang]);
+
+  // Changer de langue invalide la liste découverte (autres auteurs)
+  useEffect(() => {
+    setDiscovered(null);
+    setSelected(new Set());
+  }, [lang]);
 
   // Coche / décoche un auteur découvert.
   const toggleSelected = (slug: string) =>
@@ -117,6 +137,7 @@ export default function AdminImportPage() {
           max: opts.max,
           minDownloads,
           source: opts.source ?? source,
+          lang,
           // Toujours récupérer aussi l'audio (LibriVox) si l'œuvre existe.
           withAudio: true,
         }),
@@ -292,6 +313,27 @@ export default function AdminImportPage() {
                     : "Scans d'Internet Archive, souvent lourds (20–50 Mo)."}
                 </p>
               </div>
+              {source === "gutenberg" && (
+                <div>
+                  <label className="block text-sm font-medium mb-1">Langue des livres</label>
+                  <select
+                    value={lang}
+                    onChange={(e) => setLang(e.target.value)}
+                    disabled={running}
+                    className="h-9 rounded-md border border-slate-200 dark:border-slate-700 bg-transparent px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 disabled:opacity-50"
+                  >
+                    {GUT_LANGS.map((l) => (
+                      <option key={l.v} value={l.v}>
+                        {l.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    S&apos;applique aussi à « Découvrir d&apos;autres auteurs ». Langues à alphabet
+                    latin uniquement (le PDF est généré avec une police latine).
+                  </p>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium mb-1">
                   Auteur(s) * <span className="font-normal text-slate-500">— un par ligne pour un import multiple</span>
@@ -468,7 +510,8 @@ export default function AdminImportPage() {
           </CardHeader>
           <CardContent>
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-              Auteurs du catalogue Project Gutenberg (français, domaine public){" "}
+              Auteurs du catalogue Project Gutenberg (
+              {(GUT_LANGS.find((l) => l.v === lang)?.label ?? lang).toLowerCase()}, domaine public){" "}
               <strong>pas encore dans ta base</strong>, classés par nombre
               d&apos;œuvres disponibles. Coche plusieurs auteurs puis « Importer la
               sélection », ou importe-les un par un. Télécharge toutes leurs œuvres

@@ -14,7 +14,6 @@ import {
   getBooksByLang,
   getCategoriesWithCounts,
 } from "@/lib/books";
-import prisma from "@/lib/db";
 
 // Icônes (tracés SVG) par catégorie
 const CAT_ICON: Record<string, string> = {
@@ -28,31 +27,15 @@ const CAT_ICON: Record<string, string> = {
   informatique: "M8 8l-5 4 5 4 M16 8l5 4-5 4 M14 5l-4 14",
 };
 
-function fmt(n: number): string {
-  return n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : String(n);
-}
-
 export default async function HomePage() {
-  const [newest, fr, en, ar, featured, categories, bookCount, audioCount, authorCount] =
-    await Promise.all([
-      getLatestBooks(8),
-      getBooksByLang("fr", 8),
-      getBooksByLang("en", 8),
-      getBooksByLang("ar", 8),
-      getFeaturedBooks(6),
-      getCategoriesWithCounts(),
-      prisma.book.count({ where: { isPublished: true, mediaType: "PDF" } }),
-      prisma.book.count({ where: { isPublished: true, mediaType: "AUDIO" } }),
-      prisma.book.groupBy({ by: ["authorSlug"], where: { isPublished: true, authorSlug: { not: null } } }),
-    ]);
-
-  const stats = [
-    { value: `${fmt(bookCount)}+`, label: "livres en PDF" },
-    // N'afficher la stat audio que s'il existe au moins un livre audio
-    ...(audioCount > 0 ? [{ value: `${fmt(audioCount)}`, label: "livres audio" }] : []),
-    { value: `${fmt(authorCount.length)}+`, label: "auteurs" },
-    { value: "0 €", label: "toujours gratuit" },
-  ];
+  const [newest, fr, en, ar, featured, categories] = await Promise.all([
+    getLatestBooks(8),
+    getBooksByLang("fr", 8),
+    getBooksByLang("en", 8),
+    getBooksByLang("ar", 8),
+    getFeaturedBooks(6),
+    getCategoriesWithCounts(),
+  ]);
 
   const hero = featured.slice(0, 3);
 
@@ -106,16 +89,8 @@ export default async function HomePage() {
           </section>
         </div>
 
-        <div className="stats">
-          <div className="stats-inner">
-            {stats.map((s) => (
-              <div className="stat" key={s.label}>
-                <strong>{s.value}</strong>
-                <span>{s.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+        {/* Emplacement réservé à un bandeau publicitaire (ex-bandeau de stats,
+            masqué tant que le catalogue est petit). */}
 
         <LangShelf newest={newest} byLang={{ fr, en, ar }} />
 
