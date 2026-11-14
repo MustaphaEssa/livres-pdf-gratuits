@@ -5,27 +5,20 @@ import Link from "next/link";
 import BookCard, { type CardBook } from "./book-card";
 import Icon, { I } from "./icon";
 
-type Tab = "new" | "fr" | "en" | "ar";
-const TABS: { id: Tab; label: string }[] = [
-  { id: "new", label: "Nouveautés" },
-  { id: "fr", label: "Français" },
-  { id: "en", label: "English" },
-  { id: "ar", label: "العربية" },
-];
+export interface LangShelfTab {
+  code: string; // code de langue ("fr", "es"…)
+  label: string; // nom dans la langue (« Español »)
+  books: CardBook[];
+}
 
-export default function LangShelf({
-  newest,
-  byLang,
-}: {
-  newest: CardBook[];
-  byLang: Record<"fr" | "en" | "ar", CardBook[]>;
-}) {
-  const [tab, setTab] = useState<Tab>("new");
-  const list = tab === "new" ? newest : byLang[tab];
-  const href = tab === "new" ? "/catalogue" : `/catalogue?language=${tab}`;
+export default function LangShelf({ newest, langs }: { newest: CardBook[]; langs: LangShelfTab[] }) {
+  const [tab, setTab] = useState<string>("new");
+  const current = langs.find((l) => l.code === tab);
+  const list = current ? current.books : newest;
+  const href = current ? `/catalogue?language=${current.code}` : "/catalogue";
 
-  // N'affiche que les onglets qui ont des livres (en plus de « Nouveautés »)
-  const visibleTabs = TABS.filter((t) => t.id === "new" || (byLang[t.id] && byLang[t.id].length > 0));
+  // N'affiche que les langues qui ont des livres (en plus de « Nouveautés »)
+  const tabs = [{ code: "new", label: "Nouveautés" }, ...langs.filter((l) => l.books.length > 0)];
 
   return (
     <section className="section wrap" aria-labelledby="shelf-title">
@@ -35,14 +28,15 @@ export default function LangShelf({
           <h2 id="shelf-title">Commencer par un classique</h2>
         </div>
         <div className="tabs" role="tablist" aria-label="Langue">
-          {visibleTabs.map((t) => (
+          {tabs.map((t) => (
             <button
-              key={t.id}
+              key={t.code}
               type="button"
               role="tab"
               className="tab"
-              aria-selected={tab === t.id}
-              onClick={() => setTab(t.id)}
+              lang={t.code === "new" ? undefined : t.code}
+              aria-selected={tab === t.code}
+              onClick={() => setTab(t.code)}
             >
               {t.label}
             </button>

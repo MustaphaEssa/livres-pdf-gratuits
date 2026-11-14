@@ -14,6 +14,7 @@ import {
   getFeaturedBooks,
   getLatestBooks,
   getBooksByLang,
+  getLanguagesWithCounts,
   getCategoriesWithCounts,
   getTopAuthors,
   getLatestAudiobooks,
@@ -21,6 +22,7 @@ import {
 import { getHomeCollections } from "@/lib/collections";
 import { getLatestPosts } from "@/lib/posts";
 import { formatDate } from "@/lib/utils";
+import { languageLabel, sortLanguages } from "@/lib/languages";
 
 // Icônes (tracés SVG) par catégorie
 const CAT_ICON: Record<string, string> = {
@@ -35,12 +37,13 @@ const CAT_ICON: Record<string, string> = {
 };
 
 export default async function HomePage() {
-  const [newest, fr, en, ar, featured, categories, collections, authors, audiobooks, posts] =
+  // Étagère par langue : les 5 premières langues présentes (FR, EN, ES, AR… selon le catalogue)
+  const shelfLangs = sortLanguages(await getLanguagesWithCounts()).slice(0, 5);
+
+  const [newest, langBooks, featured, categories, collections, authors, audiobooks, posts] =
     await Promise.all([
       getLatestBooks(8),
-      getBooksByLang("fr", 8),
-      getBooksByLang("en", 8),
-      getBooksByLang("ar", 8),
+      Promise.all(shelfLangs.map((l) => getBooksByLang(l.code, 8))),
       getFeaturedBooks(6),
       getCategoriesWithCounts(),
       getHomeCollections(4),
@@ -80,7 +83,7 @@ export default async function HomePage() {
                 Des milliers de livres, <em>gratuits</em> et sans compte.
               </h1>
               <p className="lead">
-                Trouvez un classique en français, en anglais ou en arabe. Ouvrez sa fiche, puis
+                Trouvez un classique en français, en anglais, en espagnol, en arabe… Ouvrez sa fiche, puis
                 lisez-le en ligne, téléchargez-le en PDF/EPUB ou écoutez-le.
               </p>
               <HeroSearch />
@@ -94,7 +97,10 @@ export default async function HomePage() {
         {/* Emplacement réservé à un bandeau publicitaire (ex-bandeau de stats,
             masqué tant que le catalogue est petit). */}
 
-        <LangShelf newest={newest} byLang={{ fr, en, ar }} />
+        <LangShelf
+          newest={newest}
+          langs={shelfLangs.map((l, i) => ({ code: l.code, label: languageLabel(l.code), books: langBooks[i] }))}
+        />
 
         {collections.length > 0 && (
           <section className="section wrap" aria-labelledby="lists-title">

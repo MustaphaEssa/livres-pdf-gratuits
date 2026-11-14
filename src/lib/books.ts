@@ -602,3 +602,15 @@ export async function getTopAuthors(limit = 10) {
     .sort((a, b) => Number(!!b.image) - Number(!!a.image) || b.count - a.count)
     .slice(0, limit);
 }
+
+// Langues des livres publiés (PDF), avec leur nombre de livres
+export async function getLanguagesWithCounts(): Promise<{ code: string; count: number }[]> {
+  const rows = await prisma.book.groupBy({
+    by: ["language"],
+    where: { isPublished: true, mediaType: "PDF" },
+    _count: { _all: true },
+  });
+  return rows
+    .filter((r) => !!r.language)
+    .map((r) => ({ code: r.language as string, count: r._count._all }));
+}

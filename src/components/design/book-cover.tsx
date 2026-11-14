@@ -1,4 +1,5 @@
 import { formatAuthorName } from "@/lib/utils";
+import { RTL_LANGS } from "@/lib/languages";
 
 const PALETTE = [
   { bg: "#1f3a5f", fg: "#f4efe6" },
@@ -33,7 +34,7 @@ export default function BookCover({
   mini?: boolean;
   className?: string;
 }) {
-  const rtl = book.language === "ar";
+  const rtl = !!book.language && RTL_LANGS.has(book.language);
   const cls = `cover ${mini ? "cover-mini" : ""} ${rtl ? "is-rtl" : ""} ${className}`.trim();
 
   if (book.coverImage) {

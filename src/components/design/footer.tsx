@@ -13,7 +13,7 @@ export default function DesignFooter({
           <Logo />
           <p>
             Une bibliothèque numérique libre : des livres du domaine public à télécharger en PDF,
-            à lire en ligne ou à écouter, en français, anglais et arabe.
+            à lire en ligne ou à écouter, dans plusieurs langues.
           </p>
         </div>
         <div className="footer-col">

@@ -6,13 +6,13 @@ import BookCard, { type CardBook } from "./book-card";
 import BookCover from "./book-cover";
 import Icon, { I } from "./icon";
 import { formatAuthorName } from "@/lib/utils";
+import { languageLabel, sortLanguages } from "@/lib/languages";
 
 export interface CatBook extends CardBook {
   mediaType?: string | null;
   audioSourceId?: string | null;
 }
 
-const LANG_LABELS: Record<string, string> = { fr: "Français", en: "English", ar: "العربية" };
 const PAGE = 24;
 type Sort = "relevance" | "az" | "author";
 
@@ -36,10 +36,12 @@ export default function CatalogueClient({
   const [sort, setSort] = useState<Sort>("relevance");
   const [shown, setShown] = useState(PAGE);
 
-  const langsAvailable = useMemo(
-    () => (["fr", "en", "ar"] as const).filter((l) => books.some((b) => b.language === l)),
-    [books]
-  );
+  // Langues présentes dans le catalogue (toutes, pas seulement FR/EN/AR)
+  const langsAvailable = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const b of books) if (b.language) counts.set(b.language, (counts.get(b.language) ?? 0) + 1);
+    return sortLanguages([...counts].map(([code, count]) => ({ code, count }))).map((l) => l.code);
+  }, [books]);
   const count = (f: (b: CatBook) => boolean) => books.filter(f).length;
 
   const results = useMemo(() => {
@@ -121,7 +123,7 @@ export default function CatalogueClient({
                 <label key={l} className="check">
                   <span>
                     <input type="checkbox" checked={langs.includes(l)} onChange={() => toggle(langs, l, setLangs)} />
-                    {LANG_LABELS[l]}
+                    {languageLabel(l)}
                   </span>
                   <small>{count((b) => b.language === l)}</small>
                 </label>
@@ -189,7 +191,7 @@ export default function CatalogueClient({
               ))}
               {langs.map((l) => (
                 <button key={l} type="button" className="chip" onClick={() => toggle(langs, l, setLangs)}>
-                  {LANG_LABELS[l]} <Icon d={I.close} size={14} />
+                  {languageLabel(l)} <Icon d={I.close} size={14} />
                 </button>
               ))}
               {audio && (

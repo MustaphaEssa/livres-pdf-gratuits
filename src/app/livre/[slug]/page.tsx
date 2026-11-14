@@ -1,3 +1,4 @@
+import { languageLabel } from "@/lib/languages";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import DesignHeader from "@/components/design/header";
@@ -64,7 +65,6 @@ export async function generateMetadata({ params }: BookPageProps) {
   };
 }
 
-const LANG_LABELS: Record<string, string> = { fr: "Français", en: "English", ar: "العربية" };
 
 export default async function BookPage({ params }: BookPageProps) {
   const { slug } = await params;
@@ -103,7 +103,7 @@ export default async function BookPage({ params }: BookPageProps) {
   const audioTracks = parseAudioTracks(book.audioTracks);
   const hasAudio = audioTracks.length > 0;
   const hasPdf = !!book.pdfUrl;
-  const langLabel = LANG_LABELS[book.language] ?? book.language;
+  const langLabel = languageLabel(book.language);
   const reportEmail = settings.email || "contact@livrespdfgratuits.com";
   const reportHref = `mailto:${reportEmail}?subject=${encodeURIComponent(
     `Signalement : ${book.title}`

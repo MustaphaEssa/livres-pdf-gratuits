@@ -871,3 +871,25 @@
 
 @keyframes arch-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 @keyframes suggest-in { from { opacity: 0; translate: 0 -6px; } to { opacity: 1; translate: 0 0; } }
+
+/* ------------------------------------------------------------------
+   Pagination (liens)
+------------------------------------------------------------------- */
+.ma {
+  .pager { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 10px; margin-top: 48px; }
+  .pager-pages { display: flex; align-items: center; gap: 4px; padding: 4px; background: var(--sand); border-radius: 12px; }
+  .pager-num { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; height: 40px; padding: 0 10px; border-radius: 9px; font: 600 14px var(--font-sans); font-variant-numeric: tabular-nums; color: var(--muted); text-decoration: none; transition: background-color .2s var(--ease), color .2s var(--ease); }
+  .pager-num:hover { color: var(--ink); background: var(--ivory); }
+  .pager-num[aria-current="page"] { background: var(--accent); color: #fff; box-shadow: 0 4px 10px -4px rgba(20,33,61,.5); }
+  .pager-gap { min-width: 24px; text-align: center; color: var(--muted); }
+  .pager-step { display: inline-flex; align-items: center; gap: 6px; min-height: 48px; padding: 0 16px; border: 1.5px solid var(--line); border-radius: 12px; background: var(--ivory); font: 600 14px var(--font-sans); color: var(--ink); text-decoration: none; transition: border-color .2s var(--ease), background-color .2s var(--ease); }
+  .pager-step:hover { border-color: var(--accent); }
+  .pager-step.is-disabled { opacity: .45; pointer-events: none; }
+  [dir="rtl"] & .pager-step svg { transform: scaleX(-1); }
+  @media (max-width: 560px) {
+    .pager { gap: 8px; }
+    .pager-step span { display: none; }
+    .pager-step { padding: 0 12px; }
+    .pager-num { min-width: 36px; height: 36px; }
+  }
+}

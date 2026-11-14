@@ -5,18 +5,34 @@ import MobileTabbar from "@/components/design/mobile-tabbar";
 import BookCard from "@/components/design/book-card";
 import Icon, { I } from "@/components/design/icon";
 import { getAudiobooks, getCategoriesWithCounts } from "@/lib/books";
-import { SITE_URL } from "@/lib/site";
+import Pagination from "@/components/design/pagination";
 
-export const metadata = {
-  title: "Livres audio gratuits",
-  description:
-    "Écoutez gratuitement des livres audio du domaine public (LibriVox) en streaming : romans, classiques, essais, lus par des bénévoles. Sans inscription.",
-  alternates: { canonical: "/livres-audio" },
+const PAGE_SIZE = 24;
+
+interface Props {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+const pageFrom = (v: string | string[] | undefined) => {
+  const n = parseInt(Array.isArray(v) ? v[0] : v ?? "1", 10);
+  return Number.isFinite(n) && n > 1 ? n : 1;
 };
+const pageHref = (p: number) => (p > 1 ? `/livres-audio?page=${p}` : "/livres-audio");
 
-export default async function LivresAudioPage() {
-  const [{ books, total }, categories] = await Promise.all([
-    getAudiobooks(1, 60, "newest"),
+export async function generateMetadata({ searchParams }: Props) {
+  const page = pageFrom((await searchParams).page);
+  return {
+    title: page > 1 ? `Livres audio gratuits — page ${page}` : "Livres audio gratuits",
+    description:
+      "Écoutez gratuitement des livres audio du domaine public (LibriVox) en streaming : romans, classiques, essais, lus par des bénévoles. Sans inscription.",
+    alternates: { canonical: pageHref(page) },
+  };
+}
+
+export default async function LivresAudioPage({ searchParams }: Props) {
+  const requested = pageFrom((await searchParams).page);
+  const [{ books, total, page, totalPages }, categories] = await Promise.all([
+    getAudiobooks(requested, PAGE_SIZE, "newest"),
     getCategoriesWithCounts(),
   ]);
 
@@ -48,10 +64,23 @@ export default async function LivresAudioPage() {
           </div>
 
           {books.length > 0 ? (
-            <div className="grid-books">
-              {books.map((b) => (
-                <BookCard key={b.slug} book={b} />
-              ))}
+            <>
+              <div className="grid-books">
+                {books.map((b) => (
+                  <BookCard key={b.slug} book={b} />
+                ))}
+              </div>
+              <Pagination current={page} total={totalPages} makeHref={pageHref} />
+            </>
+          ) : total > 0 ? (
+            <div className="empty">
+              <h3>Cette page n&apos;existe pas</h3>
+              <p>
+                Il y a {totalPages} page{totalPages > 1 ? "s" : ""} de livres audio.
+              </p>
+              <Link href="/livres-audio" className="btn btn-primary">
+                Revenir à la première page
+              </Link>
             </div>
           ) : (
             <div className="empty">

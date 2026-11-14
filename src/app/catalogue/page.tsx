@@ -5,6 +5,7 @@ import CatalogueClient, { type CatBook } from "@/components/design/catalogue-cli
 import { getCategoriesWithCounts } from "@/lib/books";
 import prisma from "@/lib/db";
 import JsonLd, { breadcrumbLd } from "@/components/seo/json-ld";
+import { isLangCode } from "@/lib/languages";
 
 export const metadata = {
   title: "Catalogue",
@@ -60,7 +61,7 @@ export default async function CataloguePage({ searchParams }: Props) {
           initial={{
             q: one(sp.q),
             cats: initialCatName ? [initialCatName] : [],
-            langs: ["fr", "en", "ar"].includes(lang) ? [lang] : [],
+            langs: isLangCode(lang) ? [lang] : [],
             audio: one(sp.audio) === "1",
           }}
         />
