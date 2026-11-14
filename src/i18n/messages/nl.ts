@@ -2,6 +2,7 @@ import type { DeepPartial, PublicMessages } from "./types";
 
 // Nederlands
 export const nl: DeepPartial<PublicMessages> = {
+  brand: { before: "Gratis", after: "Boeken" },
   meta: {
     defaultTitle: "Download duizenden gratis boeken",
     description: "Een vrije digitale bibliotheek: duizenden boeken uit het publieke domein om online te lezen, als PDF/EPUB te downloaden of te beluisteren, gratis en zonder registratie.",

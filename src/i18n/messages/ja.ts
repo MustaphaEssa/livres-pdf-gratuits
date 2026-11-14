@@ -2,6 +2,7 @@ import type { DeepPartial, PublicMessages } from "./types";
 
 // 日本語
 export const ja: DeepPartial<PublicMessages> = {
+  brand: { before: "無料", after: "書籍" },
   meta: {
     defaultTitle: "数千冊の本を無料でダウンロード",
     description: "自由なデジタル図書館：パブリックドメインの本が数千冊。オンラインで読む、PDF/EPUB でダウンロード、または聴くことができます。無料・登録不要。",

@@ -12,6 +12,8 @@ export interface Plural {
 }
 
 export interface PublicMessages {
+  /** Nom de la marque dans la langue : « {before} PDF {after} » (logo, titres). */
+  brand: { before: string; after: string };
   meta: {
     defaultTitle: string; description: string; keywords: string[];
     catalogueTitle: string; catalogueDesc: string;

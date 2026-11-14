@@ -94,7 +94,7 @@
   .site-header { background: color-mix(in srgb, var(--ivory) 88%, transparent); -webkit-backdrop-filter: saturate(1.4) blur(12px); backdrop-filter: saturate(1.4) blur(12px); border-bottom: 1px solid var(--line); }
   .header-inner { max-width: 1240px; margin: 0 auto; padding: 10px 32px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; }
   .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; min-height: 44px; }
-  .logo-text { font-family: var(--ma-serif); font-weight: 600; font-size: 21px; letter-spacing: -0.015em; }
+  .logo-text { font-family: var(--ma-serif); font-weight: 600; font-size: 21px; letter-spacing: -0.015em; word-spacing: 0.08em; white-space: nowrap; }
   .logo-text span { color: var(--terra); }
   .nav { display: flex; align-items: center; gap: 2px; }
   .nav a { position: relative; text-decoration: none; font-weight: 500; font-size: 15px; padding: 10px 14px; border-radius: 10px; color: var(--muted); transition: color .2s var(--ease), background-color .2s var(--ease); }
@@ -908,5 +908,13 @@
   @media (max-width: 760px) {
     .lang-code { display: none; }
     .lang-btn { width: 44px; padding: 0; }
+  }
+}
+
+/* Nom de marque traduit (parfois long : « Kostenlose PDF Bücher ») sur petits écrans */
+.ma {
+  @media (max-width: 480px) {
+    .logo-text { font-size: 15px; white-space: normal; line-height: 1.15; max-width: 9.5em; }
+    .header-actions .lang-switch { display: none; } /* langues disponibles dans le menu mobile */
   }
 }

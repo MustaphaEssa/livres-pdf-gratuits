@@ -38,3 +38,8 @@ export function categoryLabel(
 ): string {
   return (cat.slug && t.categories[cat.slug]) || cat.name;
 }
+
+/** Nom de la marque dans la langue (« Livres PDF Gratuits », « Free PDF Books »…). */
+export function brandName(t: { brand: { before: string; after: string } }): string {
+  return [t.brand.before, "PDF", t.brand.after].filter(Boolean).join(" ");
+}

@@ -2,6 +2,7 @@ import type { DeepPartial, PublicMessages } from "./types";
 
 // Türkçe
 export const tr: DeepPartial<PublicMessages> = {
+  brand: { before: "Ücretsiz", after: "Kitaplar" },
   meta: {
     defaultTitle: "Binlerce ücretsiz kitap indirin",
     description: "Özgür bir dijital kütüphane: kamu malı binlerce kitabı çevrimiçi okuyun, PDF/EPUB olarak indirin ya da dinleyin; ücretsiz ve kayıt gerekmeden.",

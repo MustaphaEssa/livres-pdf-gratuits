@@ -1,5 +1,17 @@
 import { SITE_URL, SITE_NAME } from "@/lib/site";
-import { DEFAULT_LOCALE, localizePath, type Locale } from "@/i18n/config";
+import { DEFAULT_LOCALE, LOCALES, localizePath, type Locale } from "@/i18n/config";
+import { getMessages } from "@/i18n/messages";
+import { brandName } from "@/i18n/format";
+
+// Noms de la marque dans les 12 langues (« Free PDF Books », « Libros PDF Gratis »…) :
+// déclarés comme noms alternatifs pour que Google les rattache au même site.
+const BRAND_ALTERNATES = [
+  ...new Set([
+    "Livres PDF Gratuits",
+    "livrespdfgratuits.com",
+    ...LOCALES.map((l) => brandName(getMessages(l))),
+  ]),
+].filter((n) => n !== SITE_NAME);
 
 const abs = (locale: Locale, url: string) => (url.startsWith("http") ? url : `${SITE_URL}${localizePath(locale, url)}`);
 
@@ -64,6 +76,7 @@ export function websiteLd(locale: Locale = DEFAULT_LOCALE) {
     "@context": "https://schema.org",
     "@type": "WebSite",
     name: SITE_NAME,
+    alternateName: BRAND_ALTERNATES,
     url: abs(locale, "/"),
     inLanguage: locale,
     potentialAction: {
@@ -83,6 +96,7 @@ export function organizationLd() {
     "@context": "https://schema.org",
     "@type": "Organization",
     name: SITE_NAME,
+    alternateName: BRAND_ALTERNATES,
     url: SITE_URL,
     logo: `${SITE_URL}/og-image.png`,
   };

@@ -2,6 +2,7 @@ import type { DeepPartial, PublicMessages } from "./types";
 
 // 简体中文
 export const zh: DeepPartial<PublicMessages> = {
+  brand: { before: "免费", after: "图书" },
   meta: {
     defaultTitle: "免费下载数千本图书",
     description: "自由的数字图书馆：数千本公版图书，可在线阅读、下载 PDF/EPUB 或收听，完全免费，无需注册。",

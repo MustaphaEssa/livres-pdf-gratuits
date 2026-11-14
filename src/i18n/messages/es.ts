@@ -2,6 +2,7 @@ import type { DeepPartial, PublicMessages } from "./types";
 
 // Español
 export const es: DeepPartial<PublicMessages> = {
+  brand: { before: "Libros", after: "Gratis" },
   meta: {
     defaultTitle: "Descarga miles de libros gratis",
     description: "Biblioteca digital libre: miles de libros de dominio público para leer en línea, descargar en PDF/EPUB o escuchar, gratis y sin registro.",

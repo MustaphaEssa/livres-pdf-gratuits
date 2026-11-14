@@ -2,6 +2,7 @@ import type { PublicMessages } from "./types";
 
 // Dictionnaire de référence (français).
 export const fr: PublicMessages = {
+  brand: { before: "Livres", after: "Gratuits" },
   meta: {
     defaultTitle: "Téléchargez des milliers de livres gratuits",
     description: "Bibliothèque numérique libre : des milliers de livres du domaine public à lire en ligne, télécharger en PDF/EPUB ou écouter, gratuitement et sans inscription.",

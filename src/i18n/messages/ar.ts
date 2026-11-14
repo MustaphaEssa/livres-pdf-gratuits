@@ -2,6 +2,7 @@ import type { DeepPartial, PublicMessages } from "./types";
 
 // العربية (اتجاه من اليمين إلى اليسار)
 export const ar: DeepPartial<PublicMessages> = {
+  brand: { before: "كتب", after: "مجانية" },
   meta: {
     defaultTitle: "حمّل آلاف الكتب مجانًا",
     description: "مكتبة رقمية حرة: آلاف الكتب من الملك العام للقراءة على الإنترنت أو التحميل بصيغة PDF/EPUB أو الاستماع، مجانًا ودون تسجيل.",

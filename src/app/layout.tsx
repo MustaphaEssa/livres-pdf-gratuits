@@ -6,6 +6,7 @@ import { SettingsProvider } from "@/components/settings-provider";
 import { AuthProvider } from "@/components/auth/auth-modal";
 import { Analytics } from "@/components/analytics";
 import { getLocale, getServerI18n } from "@/i18n/server";
+import { brandName } from "@/i18n/format";
 import { getSiteSettings } from "@/lib/settings";
 import { isRtl, LOCALES, LOCALE_INFO } from "@/i18n/config";
 import { SITE_URL } from "@/lib/site";
@@ -45,33 +46,35 @@ const amiri = Amiri({
 
 export async function generateMetadata(): Promise<Metadata> {
   const [settings, { locale, t }] = await Promise.all([getSiteSettings(), getServerI18n()]);
-  const defaultTitle = `${settings.siteName} | ${t.meta.defaultTitle}`;
+  // Nom du site : celui réglé dans l'admin en français, traduit dans les autres langues.
+  const siteName = locale === "fr" ? settings.siteName : brandName(t);
+  const defaultTitle = `${siteName} | ${t.meta.defaultTitle}`;
   // La description réglée dans l'admin est en français : on l'utilise pour le FR uniquement.
   const description = locale === "fr" ? settings.siteDescription || t.meta.description : t.meta.description;
   return {
     metadataBase: new URL(SITE_URL),
     title: {
       default: defaultTitle,
-      template: `%s | ${settings.siteName}`,
+      template: `%s | ${siteName}`,
     },
     description,
     keywords: t.meta.keywords,
-    authors: [{ name: settings.siteName }],
+    authors: [{ name: siteName }],
     openGraph: {
       type: "website",
       locale: LOCALE_INFO[locale].og,
       alternateLocale: LOCALES.filter((l) => l !== locale).map((l) => LOCALE_INFO[l].og),
       url: SITE_URL,
-      siteName: settings.siteName,
+      siteName: siteName,
       title: defaultTitle,
       description,
       images: [
-        { url: "/og-image.png", width: 1200, height: 630, alt: settings.siteName },
+        { url: "/og-image.png", width: 1200, height: 630, alt: siteName },
       ],
     },
     twitter: {
       card: "summary_large_image",
-      title: settings.siteName,
+      title: siteName,
       description,
       images: ["/og-image.png"],
     },

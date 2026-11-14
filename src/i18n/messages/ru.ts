@@ -2,6 +2,7 @@ import type { DeepPartial, PublicMessages } from "./types";
 
 // Русский (формы множественного числа: one / few / many / other)
 export const ru: DeepPartial<PublicMessages> = {
+  brand: { before: "Бесплатные", after: "книги" },
   meta: {
     defaultTitle: "Скачивайте тысячи бесплатных книг",
     description: "Свободная цифровая библиотека: тысячи книг из общественного достояния — читайте онлайн, скачивайте в PDF/EPUB или слушайте бесплатно и без регистрации.",

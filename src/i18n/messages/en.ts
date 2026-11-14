@@ -2,6 +2,7 @@ import type { PublicMessages } from "./types";
 
 // English — also the fallback for keys missing in other languages.
 export const en: PublicMessages = {
+  brand: { before: "Free", after: "Books" },
   meta: {
     defaultTitle: "Download thousands of free books",
     description: "A free digital library: thousands of public-domain books to read online, download as PDF/EPUB or listen to — free, no sign-up.",
