@@ -2,4 +2,4 @@
 export const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL || "https://livrespdfgratuits.com";
 
-export const SITE_NAME = "Livre PDF Gratuit";
+export const SITE_NAME = "Livres PDF Gratuits";

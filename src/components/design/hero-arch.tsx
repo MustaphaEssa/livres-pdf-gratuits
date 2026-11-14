@@ -77,7 +77,7 @@ export default function HeroArch({ books }: { books: ArchBook[] }) {
               className={`arch-cover ${pos}`}
               aria-label={fmt(t.common.seeBookOf, { title: b.title })}
             >
-              <BookCover book={b} />
+              <BookCover book={b} priority={i === active} />
             </Link>
           ) : (
             <button

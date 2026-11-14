@@ -29,7 +29,7 @@ export default function DesignFooter({
         <div className="footer-col">
           <h2>{t.footer.genres}</h2>
           {categories.slice(0, 5).map((c) => (
-            <Link key={c.slug} href={`/catalogue?category=${c.slug}`}>
+            <Link key={c.slug} href={`/categorie/${c.slug}`}>
               {categoryLabel(t, c)}
             </Link>
           ))}

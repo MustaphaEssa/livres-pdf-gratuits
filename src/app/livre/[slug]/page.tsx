@@ -47,8 +47,12 @@ export async function generateMetadata({ params }: BookPageProps) {
       ? book.coverImage
       : `${SITE_URL}${book.coverImage}`
     : `${SITE_URL}/og-image.png`;
+  // Google coupe les titres vers 60 caractères : on raccourcit au dernier mot entier
+  // (le titre complet reste dans la page et dans Open Graph).
+  const shortTitle =
+    book.title.length > 60 ? `${book.title.slice(0, 58).replace(/[\s,;:.\-–]+\S*$/, "")}…` : book.title;
   return {
-    title: book.title,
+    title: shortTitle,
     description: book.description ?? undefined,
     alternates: i18nAlternates(locale, `/livre/${slug}`),
     openGraph: {
@@ -148,7 +152,7 @@ export default async function BookPage({ params }: BookPageProps) {
       { "@type": "ListItem", position: 1, name: t.nav.home, item: `${SITE_URL}${localizePath(locale, "/")}` },
       { "@type": "ListItem", position: 2, name: t.nav.catalogue, item: `${SITE_URL}${localizePath(locale, "/catalogue")}` },
       ...(primaryCategory
-        ? [{ "@type": "ListItem", position: 3, name: primaryCategoryLabel, item: `${SITE_URL}${localizePath(locale, `/catalogue?category=${primaryCategory.slug}`)}` }]
+        ? [{ "@type": "ListItem", position: 3, name: primaryCategoryLabel, item: `${SITE_URL}${localizePath(locale, `/categorie/${primaryCategory.slug}`)}` }]
         : []),
       { "@type": "ListItem", position: primaryCategory ? 4 : 3, name: book.title, item: bookUrl },
     ],
@@ -169,7 +173,7 @@ export default async function BookPage({ params }: BookPageProps) {
             {primaryCategory && (
               <>
                 <span aria-hidden="true">/</span>
-                <Link href={`/catalogue?category=${primaryCategory.slug}`}>{primaryCategoryLabel}</Link>
+                <Link href={`/categorie/${primaryCategory.slug}`}>{primaryCategoryLabel}</Link>
               </>
             )}
             <span aria-hidden="true">/</span>
@@ -182,12 +186,12 @@ export default async function BookPage({ params }: BookPageProps) {
             <ZelligePattern id="z-book" />
             <div className="book-hero-cover">
               <div className="arch-door" />
-              <BookCover book={book} />
+              <BookCover book={book} priority />
             </div>
             <div className="book-hero-info">
               <div className="badges">
                 {primaryCategory && (
-                  <Link className="badge badge-genre" href={`/catalogue?category=${primaryCategory.slug}`}>
+                  <Link className="badge badge-genre" href={`/categorie/${primaryCategory.slug}`}>
                     {primaryCategoryLabel}
                   </Link>
                 )}

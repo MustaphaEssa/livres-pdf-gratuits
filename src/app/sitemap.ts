@@ -13,6 +13,10 @@ function i18n(path: string) {
   return { url: abs(path), alternates: { languages } };
 }
 
+// Régénéré au plus une fois par jour (ISR) : les livres importés après un
+// déploiement apparaissent sans attendre le build suivant.
+export const revalidate = 86400;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Données dynamiques : en cas d'erreur (base indisponible ou schéma pas
   // encore synchronisé au moment du build), on se rabat sur les routes

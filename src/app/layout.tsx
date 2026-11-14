@@ -13,9 +13,11 @@ import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 import "./design.css";
 
+// Police de l'admin uniquement : pas de préchargement sur le site public.
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-sans",
+  preload: false,
 });
 
 // Police d'interface du design public (.ma) — l'admin garde Inter.
@@ -24,9 +26,12 @@ const geist = Geist({
   variable: "--font-ui",
 });
 
+// Polices arabes : chargées seulement quand du texte arabe s'affiche (pas de
+// préchargement sur les pages en français, anglais…). ~270 Ko économisés par visite.
 const arabic = Noto_Sans_Arabic({
   subsets: ["arabic"],
   variable: "--font-arabic",
+  preload: false,
 });
 
 // Charte « Riad de papier » (open-design : kami + redesign-skill) : serif éditorial
@@ -42,6 +47,7 @@ const amiri = Amiri({
   subsets: ["arabic"],
   weight: ["400", "700"],
   variable: "--font-amiri",
+  preload: false,
 });
 
 export async function generateMetadata(): Promise<Metadata> {

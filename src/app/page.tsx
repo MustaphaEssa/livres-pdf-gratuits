@@ -157,7 +157,7 @@ export default async function HomePage() {
             {categories.map((c, i) => (
               <Link
                 key={c.slug}
-                href={`/catalogue?category=${c.slug}`}
+                href={`/categorie/${c.slug}`}
                 className={`genre-tile ${i === 0 ? "is-primary" : ""}`}
               >
                 <span className="genre-icon">

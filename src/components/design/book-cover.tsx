@@ -33,10 +33,13 @@ export default function BookCover({
   book,
   mini = false,
   className = "",
+  priority = false,
 }: {
   book: CoverBook;
   mini?: boolean;
   className?: string;
+  /** Couverture visible dès l'ouverture (haut de page) : chargée tout de suite, en priorité. */
+  priority?: boolean;
 }) {
   const { t } = useI18n();
   const rtl = !!book.language && RTL_LANGS.has(book.language);
@@ -49,8 +52,9 @@ export default function BookCover({
         <img
           src={book.coverImage}
           alt={fmt(t.common.coverOf, { title: book.title })}
-          loading="lazy"
-          decoding="async"
+          loading={priority ? "eager" : "lazy"}
+          fetchPriority={priority ? "high" : "auto"}
+          decoding={priority ? "sync" : "async"}
         />
       </div>
     );

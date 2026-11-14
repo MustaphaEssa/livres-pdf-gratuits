@@ -918,3 +918,10 @@
     .header-actions .lang-switch { display: none; } /* langues disponibles dans le menu mobile */
   }
 }
+
+/* Performance : le titre principal et la couverture du haut de page s'affichent
+   immédiatement (pas d'animation depuis la transparence, qui retardait l'affichage
+   perçu et le Largest Contentful Paint mesuré par Google). */
+.ma {
+  .hero-copy > h1, .book-hero-info > h1, .arch-carousel { animation: none; }
+}
