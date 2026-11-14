@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import NextTopLoader from "nextjs-toploader";
-import { Inter, Noto_Sans_Arabic, Fraunces, Amiri } from "next/font/google";
+import { Inter, Noto_Sans_Arabic, Source_Serif_4, Amiri } from "next/font/google";
 import { I18nProvider } from "@/components/i18n-provider";
 import { SettingsProvider } from "@/components/settings-provider";
 import { AuthProvider } from "@/components/auth/auth-modal";
@@ -22,12 +22,12 @@ const arabic = Noto_Sans_Arabic({
   variable: "--font-arabic",
 });
 
-// Charte graphique : titres serif (Fraunces) + arabe serif (Amiri)
-const fraunces = Fraunces({
+// Charte graphique (design system open-design « kami ») : serif éditorial
+// Source Serif 4 (proche de Charter) + arabe serif (Amiri). Graisses 400/500 uniquement.
+const serif = Source_Serif_4({
   subsets: ["latin"],
-  weight: ["400", "600"],
-  style: ["normal", "italic"],
-  variable: "--font-fraunces",
+  weight: ["400", "500"],
+  variable: "--font-serif",
 });
 
 const amiri = Amiri({
@@ -95,11 +95,11 @@ export default async function RootLayout({
   return (
     <html lang={locale} dir={rtl ? "rtl" : "ltr"} suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${arabic.variable} ${fraunces.variable} ${amiri.variable} ${
+        className={`${inter.variable} ${arabic.variable} ${serif.variable} ${amiri.variable} ${
           rtl ? "font-arabic" : "font-sans"
         } antialiased`}
       >
-        <NextTopLoader color="#fca311" height={3} showSpinner={false} />
+        <NextTopLoader color="#1b365d" height={3} showSpinner={false} />
         <I18nProvider locale={locale}>
           <SettingsProvider settings={settings}>
             <AuthProvider>{children}</AuthProvider>

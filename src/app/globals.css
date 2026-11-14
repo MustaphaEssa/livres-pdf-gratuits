@@ -5,10 +5,10 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  /* Colors - Primary (navy de marque) */
-  --color-primary: #14213d;
-  --color-primary-light: #273655;
-  --color-primary-dark: #0d1526;
+  /* Colors - Primary (encre bleue, design system kami) */
+  --color-primary: #1b365d;
+  --color-primary-light: #2d5a8a;
+  --color-primary-dark: #142a49;
 
   /* Colors - Accent (orange de marque) */
   --color-accent: #fca311;
@@ -16,11 +16,12 @@
   --color-accent-dark: #d4860a;
   
   /* Colors - Neutral */
-  --color-background: #ffffff;
-  --color-foreground: #1e293b;
-  --color-surface: #f8fafc;
-  --color-muted: #64748b;
-  --color-border: #e2e8f0;
+  /* Neutres chauds (design system kami) */
+  --color-background: #f5f4ed;
+  --color-foreground: #141413;
+  --color-surface: #faf9f5;
+  --color-muted: #6b6a64;
+  --color-border: #e3e0d4;
   
   /* Font families */
   --font-sans: "Inter", system-ui, sans-serif;
