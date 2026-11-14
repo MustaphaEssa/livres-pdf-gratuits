@@ -77,6 +77,8 @@ export interface PublicMessages {
   authors: { title: string; count: Plural; empty: string; booksAvailable: Plural; booksOf: string };
   category: { freeBooks: Plural; empty: string; seeCatalogue: string; booksOf: string };
   book: {
+    /** Description générée quand celle de la source est inutilisable. Placeholders : {title} {author} {formats}. */
+    autoDesc: string;
     readOnline: string; by: string; language: string; duration: string; pages: string; downloads: string;
     downloadPdf: string; listen: string; about: string; listenOnline: string; theAuthor: string; allTheirBooks: string;
     sameAuthor: string; moreOf: string; reviews: string; readOrDownload: string; publicDomainNotice: string;

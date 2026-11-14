@@ -107,6 +107,7 @@ export const ar: DeepPartial<PublicMessages> = {
     empty: "لا توجد كتب في هذا التصنيف", seeCatalogue: "عرض الفهرس كاملًا", booksOf: "كتب {name}",
   },
   book: {
+    autoDesc: "«{title}» تأليف {author}. كتاب من الملك العام للقراءة على الإنترنت أو التحميل مجانًا ({formats}).",
     readOnline: "القراءة على الإنترنت", by: "بقلم", language: "اللغة", duration: "المدة", pages: "الصفحات", downloads: "التحميلات",
     downloadPdf: "تحميل PDF", listen: "استمع", about: "نبذة", listenOnline: "الاستماع على الإنترنت", theAuthor: "المؤلف",
     allTheirBooks: "عرض كل كتبه", sameAuthor: "للمؤلف نفسه", moreOf: "المزيد من {genre}", reviews: "الآراء والتقييمات",

@@ -180,7 +180,7 @@
   .chip:hover { border-color: var(--accent); }
   .hero .chip { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.16); color: #e7eaf2; }
   .hero .chip:hover { background: rgba(252,163,17,.16); border-color: var(--brand-orange); color: #fff; }
-  .chip[aria-pressed='true'] { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .chip[aria-pressed='true'], a.chip[aria-current='true'] { background: var(--accent); color: #fff; border-color: var(--accent); }
 
   .hero-visual { flex: 1 1 360px; min-width: 0; display: flex; justify-content: center; }
   .hero-stage { position: relative; width: 100%; max-width: 480px; aspect-ratio: 1 / .98; }

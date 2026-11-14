@@ -113,6 +113,7 @@ export const fr: PublicMessages = {
     empty: "Aucun livre dans cette catégorie", seeCatalogue: "Voir tout le catalogue", booksOf: "Livres {name}",
   },
   book: {
+    autoDesc: "« {title} » de {author}. Livre du domaine public à lire en ligne ou à télécharger gratuitement ({formats}).",
     readOnline: "Lire en ligne", by: "de", language: "Langue", duration: "Durée", pages: "Pages", downloads: "Téléchargements",
     downloadPdf: "Télécharger le PDF", listen: "Écouter", about: "À propos", listenOnline: "Écouter en ligne",
     theAuthor: "L'auteur", allTheirBooks: "Voir tous ses livres", sameAuthor: "Du même auteur", moreOf: "Plus de {genre}",

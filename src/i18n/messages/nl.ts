@@ -103,6 +103,7 @@ export const nl: DeepPartial<PublicMessages> = {
     empty: "Geen boeken in deze categorie", seeCatalogue: "Bekijk de hele catalogus", booksOf: "{name}-boeken",
   },
   book: {
+    autoDesc: "‘{title}’ van {author}. Een boek uit het publieke domein om online te lezen of gratis te downloaden ({formats}).",
     readOnline: "Online lezen", by: "door", language: "Taal", duration: "Duur", pages: "Pagina's", downloads: "Downloads",
     downloadPdf: "PDF downloaden", listen: "Luisteren", about: "Over het boek", listenOnline: "Online luisteren", theAuthor: "De auteur",
     allTheirBooks: "Bekijk al zijn boeken", sameAuthor: "Van dezelfde auteur", moreOf: "Meer {genre}", reviews: "Recensies & beoordelingen",

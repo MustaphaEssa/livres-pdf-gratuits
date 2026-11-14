@@ -99,6 +99,7 @@ export const zh: DeepPartial<PublicMessages> = {
     empty: "该分类暂无图书", seeCatalogue: "查看全部书目", booksOf: "{name}类图书",
   },
   book: {
+    autoDesc: "《{title}》，作者：{author}。公版图书，可在线阅读或免费下载（{formats}）。",
     readOnline: "在线阅读", by: "作者：", language: "语言", duration: "时长", pages: "页数", downloads: "下载次数",
     downloadPdf: "下载 PDF", listen: "收听", about: "简介", listenOnline: "在线收听", theAuthor: "关于作者",
     allTheirBooks: "查看其全部作品", sameAuthor: "同一作者", moreOf: "更多{genre}", reviews: "评论与评分",

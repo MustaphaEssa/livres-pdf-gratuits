@@ -108,6 +108,7 @@ export const ru: DeepPartial<PublicMessages> = {
     empty: "В этой категории пока нет книг", seeCatalogue: "Весь каталог", booksOf: "{name}: книги",
   },
   book: {
+    autoDesc: "«{title}», {author}. Книга из общественного достояния: читайте онлайн или скачивайте бесплатно ({formats}).",
     readOnline: "Читать онлайн", by: "автор:", language: "Язык", duration: "Длительность", pages: "Страниц", downloads: "Скачиваний",
     downloadPdf: "Скачать PDF", listen: "Слушать", about: "О книге", listenOnline: "Слушать онлайн", theAuthor: "Об авторе",
     allTheirBooks: "Все книги автора", sameAuthor: "Другие книги автора", moreOf: "Ещё в жанре «{genre}»", reviews: "Отзывы и оценки",

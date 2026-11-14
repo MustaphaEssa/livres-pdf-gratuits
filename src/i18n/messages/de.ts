@@ -103,6 +103,7 @@ export const de: DeepPartial<PublicMessages> = {
     empty: "Keine Bücher in dieser Kategorie", seeCatalogue: "Den ganzen Katalog ansehen", booksOf: "{name}-Bücher",
   },
   book: {
+    autoDesc: "„{title}“ von {author}. Ein gemeinfreies Buch zum Online-Lesen oder kostenlosen Herunterladen ({formats}).",
     readOnline: "Online lesen", by: "von", language: "Sprache", duration: "Dauer", pages: "Seiten", downloads: "Downloads",
     downloadPdf: "PDF herunterladen", listen: "Anhören", about: "Über das Buch", listenOnline: "Online anhören", theAuthor: "Der Autor",
     allTheirBooks: "Alle Bücher ansehen", sameAuthor: "Vom selben Autor", moreOf: "Mehr {genre}", reviews: "Rezensionen & Bewertungen",

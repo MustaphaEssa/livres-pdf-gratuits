@@ -33,6 +33,7 @@ import { getServerI18n } from "@/i18n/server";
 import { i18nAlternates } from "@/i18n/seo";
 import { localizePath } from "@/i18n/config";
 import { categoryLabel, fmt, formatNumber } from "@/i18n/format";
+import { isUsefulDescription, autoDescription, truncateText } from "@/lib/book-description";
 
 interface BookPageProps {
   params: Promise<{ slug: string }>;
@@ -47,17 +48,29 @@ export async function generateMetadata({ params }: BookPageProps) {
       ? book.coverImage
       : `${SITE_URL}${book.coverImage}`
     : `${SITE_URL}/og-image.png`;
+  // Description : texte de la source s'il est utile, sinon description générée
+  // (les notes techniques d'Internet Archive font de mauvais extraits Google).
+  const metaGenre = book.categories[0]?.category;
+  // Le texte de la source est dans la langue du livre (ou en français pour les
+  // fiches générées à l'import) : ailleurs, on donne une description dans la
+  // langue de la page (une meta unique par version linguistique).
+  const sourceFits = locale === "fr" || locale === book.language;
+  const metaDesc = truncateText(
+    sourceFits && isUsefulDescription(book.description)
+      ? book.description
+      : autoDescription(t, locale, { ...book, hasAudio: !!book.audioTracks }, metaGenre ? categoryLabel(t, metaGenre) : null)
+  );
   // Google coupe les titres vers 60 caractères : on raccourcit au dernier mot entier
   // (le titre complet reste dans la page et dans Open Graph).
   const shortTitle =
     book.title.length > 60 ? `${book.title.slice(0, 58).replace(/[\s,;:.\-–]+\S*$/, "")}…` : book.title;
   return {
     title: shortTitle,
-    description: book.description ?? undefined,
+    description: metaDesc,
     alternates: i18nAlternates(locale, `/livre/${slug}`),
     openGraph: {
       title: book.title,
-      description: book.description ?? undefined,
+      description: metaDesc,
       type: "book",
       url: `${SITE_URL}${localizePath(locale, `/livre/${book.slug}`)}`,
       authors: [book.author],
@@ -66,7 +79,7 @@ export async function generateMetadata({ params }: BookPageProps) {
     twitter: {
       card: "summary_large_image",
       title: book.title,
-      description: book.description ?? undefined,
+      description: metaDesc,
       images: [image],
     },
   };
@@ -117,6 +130,10 @@ export default async function BookPage({ params }: BookPageProps) {
     fmt(t.book.reportSubject, { title: book.title })
   )}&body=${encodeURIComponent(fmt(t.book.reportBody, { title: book.title, url: bookUrl }))}`;
   const primaryCategoryLabel = primaryCategory ? categoryLabel(t, primaryCategory) : "";
+  // Texte « À propos » : description de la source si utile, sinon générée
+  const usefulDesc = isUsefulDescription(book.description) ? book.description : null;
+  const aboutText =
+    usefulDesc ?? autoDescription(t, locale, { ...book, hasAudio }, primaryCategoryLabel || null);
   const fmtDuration = (sec?: number | null) => {
     if (!sec || sec <= 0) return "—";
     const h = Math.floor(sec / 3600);
@@ -131,7 +148,12 @@ export default async function BookPage({ params }: BookPageProps) {
     author: { "@type": "Person", name: book.author },
     inLanguage: book.language,
     url: bookUrl,
-    ...(book.description ? { description: book.description } : {}),
+    description: truncateText(
+      locale === "fr" || locale === book.language
+        ? aboutText
+        : autoDescription(t, locale, { ...book, hasAudio }, primaryCategoryLabel || null),
+      300
+    ),
     ...(book.pageCount ? { numberOfPages: book.pageCount } : {}),
     ...(book.publishedYear ? { datePublished: String(book.publishedYear) } : {}),
     ...(book.isbn ? { isbn: book.isbn } : {}),
@@ -257,14 +279,12 @@ export default async function BookPage({ params }: BookPageProps) {
 
           <div className="detail-layout">
             <div className="detail-main">
-              {book.description && (
-                <section aria-labelledby="about">
-                  <h2 id="about">{t.book.about}</h2>
-                  <p className="prose" dir="auto">
-                    {book.description}
-                  </p>
-                </section>
-              )}
+              <section aria-labelledby="about">
+                <h2 id="about">{t.book.about}</h2>
+                <p className="prose" dir="auto">
+                  {aboutText}
+                </p>
+              </section>
 
               {hasAudio && (
                 <section id="ecouter" aria-labelledby="listen" style={{ scrollMarginTop: 90 }}>

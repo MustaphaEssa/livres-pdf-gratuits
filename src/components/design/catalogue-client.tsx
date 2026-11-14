@@ -1,85 +1,68 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import Link from "@/i18n/navigation";
+import { useState, useTransition, type ReactNode } from "react";
+import Link, { useLocaleRouter, useLocalizedHref } from "@/i18n/navigation";
 import { useI18n } from "@/components/i18n-provider";
-import { categoryLabel, plural } from "@/i18n/format";
+import { categoryLabel, plural, formatNumber } from "@/i18n/format";
 import BookCard, { type CardBook } from "./book-card";
 import BookCover from "./book-cover";
 import Icon, { I } from "./icon";
 import { formatAuthorName } from "@/lib/utils";
 import { languageLabel, sortLanguages } from "@/lib/languages";
+import { catalogueHref, type CatalogueState, type CatSort } from "./catalogue-url";
+
+export { catalogueHref, type CatalogueState, type CatSort };
+
+const hasAudio = (b: CatBook) => b.mediaType === "AUDIO" || !!b.audioSourceId || !!b.audioTracks;
 
 export interface CatBook extends CardBook {
   mediaType?: string | null;
   audioSourceId?: string | null;
 }
 
-const PAGE = 24;
-type Sort = "relevance" | "az" | "author";
-
-const hasAudio = (b: CatBook) => b.mediaType === "AUDIO" || !!b.audioSourceId || !!b.audioTracks;
-const catNames = (b: CatBook) => (b.categories ?? []).map((c) => c.category.name);
-
+/**
+ * Catalogue : la recherche, les filtres et la pagination sont faits côté serveur
+ * (une page de 24 livres). Chaque changement de filtre navigue vers l'URL
+ * correspondante ; sans JavaScript, le formulaire et les liens fonctionnent aussi.
+ */
 export default function CatalogueClient({
   books,
-  categories,
-  initial,
+  total,
+  state,
+  facets,
+  pager,
 }: {
   books: CatBook[];
-  categories: { name: string; slug: string }[];
-  initial: { q: string; cats: string[]; langs: string[]; audio: boolean };
+  total: number;
+  state: CatalogueState;
+  facets: {
+    categories: { name: string; slug: string; count: number }[];
+    languages: { code: string; count: number }[];
+    audioCount: number;
+  };
+  pager: ReactNode;
 }) {
   const { t, locale } = useI18n();
-  const catLabel = (name: string) => {
-    const c = categories.find((x) => x.name === name);
-    return c ? categoryLabel(t, c) : name;
-  };
-  const [q, setQ] = useState(initial.q);
-  const [cats, setCats] = useState<string[]>(initial.cats);
-  const [langs, setLangs] = useState<string[]>(initial.langs);
-  const [audio, setAudio] = useState(initial.audio);
+  const router = useLocaleRouter();
+  const localHref = useLocalizedHref();
+  const [pending, startTransition] = useTransition();
+  const [q, setQ] = useState(state.q);
   const [view, setView] = useState<"grid" | "list">("grid");
-  const [sort, setSort] = useState<Sort>("relevance");
-  const [shown, setShown] = useState(PAGE);
 
-  // Langues présentes dans le catalogue (toutes, pas seulement FR/EN/AR)
-  const langsAvailable = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const b of books) if (b.language) counts.set(b.language, (counts.get(b.language) ?? 0) + 1);
-    return sortLanguages([...counts].map(([code, count]) => ({ code, count }))).map((l) => l.code);
-  }, [books]);
-  const count = (f: (b: CatBook) => boolean) => books.filter(f).length;
-
-  const results = useMemo(() => {
-    const needle = q.trim().toLowerCase();
-    let r = books.filter((b) => {
-      const names = catNames(b);
-      return (
-        (!needle ||
-          b.title.toLowerCase().includes(needle) ||
-          b.author.toLowerCase().includes(needle) ||
-          names.some((n) => n.toLowerCase().includes(needle))) &&
-        (!cats.length || names.some((n) => cats.includes(n))) &&
-        (!langs.length || (b.language != null && langs.includes(b.language))) &&
-        (!audio || hasAudio(b))
-      );
-    });
-    if (sort === "az") r = [...r].sort((a, b) => a.title.localeCompare(b.title));
-    if (sort === "author") r = [...r].sort((a, b) => a.author.localeCompare(b.author));
-    return r;
-  }, [books, q, cats, langs, audio, sort]);
-
-  const toggle = (arr: string[], v: string, set: (x: string[]) => void) =>
-    set(arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
+  const go = (next: Partial<CatalogueState>) =>
+    startTransition(() => router.push(catalogueHref({ ...state, ...next }), { scroll: false }));
+  const toggle = (arr: string[], v: string) => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
   const reset = () => {
     setQ("");
-    setCats([]);
-    setLangs([]);
-    setAudio(false);
-    setShown(PAGE);
+    go({ q: "", cats: [], langs: [], audio: false });
   };
-  const hasFilters = !!(q || cats.length || langs.length || audio);
+  const hasFilters = !!(state.q || state.cats.length || state.langs.length || state.audio);
+  const catBySlug = new Map(facets.categories.map((c) => [c.slug, c]));
+  const catLabelOf = (slug: string) => {
+    const c = catBySlug.get(slug);
+    return c ? categoryLabel(t, c) : slug;
+  };
+  const langs = sortLanguages(facets.languages);
 
   return (
     <div className="wrap">
@@ -94,58 +77,78 @@ export default function CatalogueClient({
             <h1>{t.catalogue.title}</h1>
             <p>{t.catalogue.intro}</p>
           </div>
-          <form className="search-compact" role="search" onSubmit={(e) => e.preventDefault()}>
+          <form
+            className="search-compact"
+            role="search"
+            action={localHref("/catalogue")}
+            onSubmit={(e) => {
+              e.preventDefault();
+              go({ q });
+            }}
+          >
             <Icon d={I.search} />
             <label className="sr-only" htmlFor="cat-q">{t.catalogue.searchLabel}</label>
             <input
               id="cat-q"
+              name="q"
               type="search"
               value={q}
-              onChange={(e) => {
-                setQ(e.target.value);
-                setShown(PAGE);
-              }}
+              onChange={(e) => setQ(e.target.value)}
               placeholder={t.search.placeholder}
             />
           </form>
         </div>
         <div className="chips-scroll" role="group" aria-label={t.catalogue.genres}>
-          <button type="button" className="chip" aria-pressed={!cats.length} onClick={() => setCats([])}>
+          <Link className="chip" aria-current={!state.cats.length ? "true" : undefined} href={catalogueHref({ ...state, cats: [] })} scroll={false}>
             {t.common.all}
-          </button>
-          {categories.map(({ name: c }) => (
-            <button key={c} type="button" className="chip" aria-pressed={cats.includes(c)} onClick={() => toggle(cats, c, setCats)}>
-              {catLabel(c)}
-            </button>
+          </Link>
+          {facets.categories.map((c) => (
+            <Link
+              key={c.slug}
+              className="chip"
+              aria-current={state.cats.includes(c.slug) ? "true" : undefined}
+              href={catalogueHref({ ...state, cats: toggle(state.cats, c.slug) })}
+              scroll={false}
+            >
+              {categoryLabel(t, c)}
+            </Link>
           ))}
         </div>
       </div>
 
       <div className="catalogue-layout">
         <aside className="filters" aria-label={t.catalogue.filters}>
-          {langsAvailable.length > 0 && (
+          {langs.length > 0 && (
             <fieldset>
               <legend>{t.catalogue.language}</legend>
-              {langsAvailable.map((l) => (
-                <label key={l} className="check">
+              {langs.map((l) => (
+                <label key={l.code} className="check">
                   <span>
-                    <input type="checkbox" checked={langs.includes(l)} onChange={() => toggle(langs, l, setLangs)} />
-                    {languageLabel(l)}
+                    <input
+                      type="checkbox"
+                      checked={state.langs.includes(l.code)}
+                      onChange={() => go({ langs: toggle(state.langs, l.code) })}
+                    />
+                    {languageLabel(l.code)}
                   </span>
-                  <small>{count((b) => b.language === l)}</small>
+                  <small>{formatNumber(locale, l.count)}</small>
                 </label>
               ))}
             </fieldset>
           )}
           <fieldset>
             <legend>{t.catalogue.genre}</legend>
-            {categories.map(({ name: c }) => (
-              <label key={c} className="check">
+            {facets.categories.map((c) => (
+              <label key={c.slug} className="check">
                 <span>
-                  <input type="checkbox" checked={cats.includes(c)} onChange={() => toggle(cats, c, setCats)} />
-                  {catLabel(c)}
+                  <input
+                    type="checkbox"
+                    checked={state.cats.includes(c.slug)}
+                    onChange={() => go({ cats: toggle(state.cats, c.slug) })}
+                  />
+                  {categoryLabel(t, c)}
                 </span>
-                <small>{count((b) => catNames(b).includes(c))}</small>
+                <small>{formatNumber(locale, c.count)}</small>
               </label>
             ))}
           </fieldset>
@@ -153,23 +156,27 @@ export default function CatalogueClient({
             <legend>{t.catalogue.format}</legend>
             <label className="check">
               <span>
-                <input type="checkbox" checked={audio} onChange={() => setAudio(!audio)} />
+                <input type="checkbox" checked={state.audio} onChange={() => go({ audio: !state.audio })} />
                 {t.catalogue.withAudio}
               </span>
-              <small>{count(hasAudio)}</small>
+              <small>{formatNumber(locale, facets.audioCount)}</small>
             </label>
           </fieldset>
         </aside>
 
-        <div className="results">
+        <div className="results" aria-busy={pending} style={{ opacity: pending ? 0.6 : 1, transition: "opacity .15s" }}>
           <div className="results-bar">
-            <strong aria-live="polite">
-              {plural(locale, t.common.books, results.length)}
-            </strong>
+            <strong aria-live="polite">{plural(locale, t.common.books, total)}</strong>
             <div className="results-tools">
               <label className="sr-only" htmlFor="sort">{t.catalogue.sortBy}</label>
-              <select id="sort" className="select" value={sort} onChange={(e) => setSort(e.target.value as Sort)}>
+              <select
+                id="sort"
+                className="select"
+                value={state.sort}
+                onChange={(e) => go({ sort: e.target.value as CatSort })}
+              >
                 <option value="relevance">{t.catalogue.sortRelevance}</option>
+                <option value="newest">{t.home.newest}</option>
                 <option value="az">{t.catalogue.sortTitle}</option>
                 <option value="author">{t.catalogue.sortAuthor}</option>
               </select>
@@ -186,23 +193,23 @@ export default function CatalogueClient({
 
           {hasFilters && (
             <div className="active-filters">
-              {q && (
-                <button type="button" className="chip" onClick={() => setQ("")}>
-                  « {q} » <Icon d={I.close} size={14} />
+              {state.q && (
+                <button type="button" className="chip" onClick={() => { setQ(""); go({ q: "" }); }}>
+                  « {state.q} » <Icon d={I.close} size={14} />
                 </button>
               )}
-              {cats.map((c) => (
-                <button key={c} type="button" className="chip" onClick={() => toggle(cats, c, setCats)}>
-                  {catLabel(c)} <Icon d={I.close} size={14} />
+              {state.cats.map((c) => (
+                <button key={c} type="button" className="chip" onClick={() => go({ cats: toggle(state.cats, c) })}>
+                  {catLabelOf(c)} <Icon d={I.close} size={14} />
                 </button>
               ))}
-              {langs.map((l) => (
-                <button key={l} type="button" className="chip" onClick={() => toggle(langs, l, setLangs)}>
+              {state.langs.map((l) => (
+                <button key={l} type="button" className="chip" onClick={() => go({ langs: toggle(state.langs, l) })}>
                   {languageLabel(l)} <Icon d={I.close} size={14} />
                 </button>
               ))}
-              {audio && (
-                <button type="button" className="chip" onClick={() => setAudio(false)}>
+              {state.audio && (
+                <button type="button" className="chip" onClick={() => go({ audio: false })}>
                   {t.common.audio} <Icon d={I.close} size={14} />
                 </button>
               )}
@@ -212,7 +219,7 @@ export default function CatalogueClient({
             </div>
           )}
 
-          {results.length === 0 ? (
+          {books.length === 0 ? (
             <div className="empty">
               <h3>{t.catalogue.noResults}</h3>
               <p>{t.catalogue.noResultsHint}</p>
@@ -222,38 +229,31 @@ export default function CatalogueClient({
             </div>
           ) : view === "grid" ? (
             <div className="grid-books">
-              {results.slice(0, shown).map((b) => (
+              {books.map((b) => (
                 <BookCard key={b.slug} book={b} />
               ))}
             </div>
           ) : (
             <div className="list-books">
-              {results.slice(0, shown).map((b) => (
-                <Link key={b.slug} href={`/livre/${b.slug}`} className="list-row">
-                  <BookCover book={b} mini />
-                  <span className="list-row-text">
-                    <span className="list-row-title" dir="auto">
-                      {b.title}
+              {books.map((b) => {
+                const c0 = b.categories?.[0]?.category;
+                return (
+                  <Link key={b.slug} href={`/livre/${b.slug}`} className="list-row">
+                    <BookCover book={b} mini />
+                    <span className="list-row-text">
+                      <span className="list-row-title" dir="auto">{b.title}</span>
+                      <span className="book-author" dir="auto">{formatAuthorName(b.author)}</span>
                     </span>
-                    <span className="book-author" dir="auto">
-                      {formatAuthorName(b.author)}
-                    </span>
-                  </span>
-                  {hasAudio(b) && <span className="pill-audio">{t.common.audio}</span>}
-                  {catNames(b)[0] && <span className="cat">{catLabel(catNames(b)[0])}</span>}
-                  <Icon d={I.arrow} />
-                </Link>
-              ))}
+                    {hasAudio(b) && <span className="pill-audio">{t.common.audio}</span>}
+                    {c0 && <span className="cat">{categoryLabel(t, c0)}</span>}
+                    <Icon d={I.arrow} />
+                  </Link>
+                );
+              })}
             </div>
           )}
 
-          {results.length > shown && (
-            <div className="load-more">
-              <button type="button" className="btn btn-outline" onClick={() => setShown(shown + PAGE)}>
-                {t.common.showMore}
-              </button>
-            </div>
-          )}
+          {pager}
         </div>
       </div>
     </div>

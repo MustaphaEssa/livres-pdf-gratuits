@@ -111,6 +111,7 @@ export const en: PublicMessages = {
     empty: "No books in this category", seeCatalogue: "See the whole catalogue", booksOf: "{name} books",
   },
   book: {
+    autoDesc: "“{title}” by {author}. A public-domain book to read online or download for free ({formats}).",
     readOnline: "Read online", by: "by", language: "Language", duration: "Duration", pages: "Pages", downloads: "Downloads",
     downloadPdf: "Download PDF", listen: "Listen", about: "About", listenOnline: "Listen online", theAuthor: "The author",
     allTheirBooks: "See all their books", sameAuthor: "By the same author", moreOf: "More {genre}", reviews: "Reviews & ratings",

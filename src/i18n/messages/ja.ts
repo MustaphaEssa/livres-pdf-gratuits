@@ -103,6 +103,7 @@ export const ja: DeepPartial<PublicMessages> = {
     empty: "このカテゴリに本はありません", seeCatalogue: "カタログをすべて見る", booksOf: "{name}の本",
   },
   book: {
+    autoDesc: "『{title}』（{author}）。パブリックドメインの本です。オンラインで読むか、無料でダウンロードできます（{formats}）。",
     readOnline: "オンラインで読む", by: "著者：", language: "言語", duration: "再生時間", pages: "ページ数", downloads: "ダウンロード数",
     downloadPdf: "PDF をダウンロード", listen: "聴く", about: "あらすじ", listenOnline: "オンラインで聴く", theAuthor: "著者について",
     allTheirBooks: "この著者の本をすべて見る", sameAuthor: "同じ著者の本", moreOf: "{genre}をもっと見る", reviews: "レビューと評価",

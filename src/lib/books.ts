@@ -614,3 +614,104 @@ export async function getLanguagesWithCounts(): Promise<{ code: string; count: n
     .filter((r) => !!r.language)
     .map((r) => ({ code: r.language as string, count: r._count._all }));
 }
+
+/* ---------------------------------------------------------------------------
+ * Catalogue public : recherche, filtres et pagination CÔTÉ SERVEUR.
+ * (Avant : les ~10 000 livres étaient envoyés au navigateur, 3,7 Mo de HTML, et
+ * Google ne voyait que les 24 premiers.)
+ * ------------------------------------------------------------------------- */
+
+export const CATALOGUE_PAGE_SIZE = 24;
+export type CatalogueSort = "relevance" | "az" | "author" | "newest";
+
+export interface CatalogueParams {
+  q?: string;
+  categories?: string[]; // slugs
+  languages?: string[]; // codes
+  audio?: boolean;
+  sort?: CatalogueSort;
+  page?: number;
+}
+
+const hasAudioWhere: Prisma.BookWhereInput = {
+  OR: [{ mediaType: "AUDIO" }, { audioSourceId: { not: null } }, { audioTracks: { not: null } }],
+};
+
+const catalogueSelect = {
+  slug: true,
+  title: true,
+  author: true,
+  coverImage: true,
+  language: true,
+  mediaType: true,
+  audioSourceId: true,
+  categories: { select: { category: { select: { name: true, slug: true } } } },
+} satisfies Prisma.BookSelect;
+
+export async function searchCatalogue(params: CatalogueParams) {
+  const { q = "", categories = [], languages = [], audio = false, sort = "relevance" } = params;
+  const and: Prisma.BookWhereInput[] = [{ isPublished: true }];
+  const term = q.trim();
+  if (term) {
+    and.push({
+      OR: [
+        { title: { contains: term, mode: "insensitive" } },
+        { author: { contains: term, mode: "insensitive" } },
+        { categories: { some: { category: { name: { contains: term, mode: "insensitive" } } } } },
+      ],
+    });
+  }
+  if (categories.length) and.push({ categories: { some: { category: { slug: { in: categories } } } } });
+  if (languages.length) and.push({ language: { in: languages } });
+  if (audio) and.push(hasAudioWhere);
+  const where: Prisma.BookWhereInput = { AND: and };
+
+  const orderBy: Prisma.BookOrderByWithRelationInput[] =
+    sort === "az"
+      ? [{ title: "asc" }]
+      : sort === "author"
+        ? [{ author: "asc" }, { title: "asc" }]
+        : sort === "newest"
+          ? [{ createdAt: "desc" }]
+          : [{ downloadCount: "desc" }, { viewCount: "desc" }, { id: "asc" }];
+
+  const total = await prisma.book.count({ where });
+  const totalPages = Math.max(1, Math.ceil(total / CATALOGUE_PAGE_SIZE));
+  const page = Math.min(Math.max(1, params.page ?? 1), totalPages);
+  const books = await prisma.book.findMany({
+    where,
+    select: catalogueSelect,
+    orderBy,
+    skip: (page - 1) * CATALOGUE_PAGE_SIZE,
+    take: CATALOGUE_PAGE_SIZE,
+  });
+  return { books, total, page, totalPages };
+}
+
+/** Compteurs des filtres (sur tout le catalogue publié). */
+export async function getCatalogueFacets() {
+  const [langRows, cats, audioCount] = await Promise.all([
+    prisma.book.groupBy({
+      by: ["language"],
+      where: { isPublished: true },
+      _count: { _all: true },
+    }),
+    prisma.category.findMany({
+      where: { type: "BOOK" },
+      orderBy: { name: "asc" },
+      select: {
+        name: true,
+        slug: true,
+        _count: { select: { books: { where: { book: { isPublished: true } } } } },
+      },
+    }),
+    prisma.book.count({ where: { isPublished: true, ...hasAudioWhere } }),
+  ]);
+  return {
+    languages: langRows
+      .filter((r) => r.language)
+      .map((r) => ({ code: r.language, count: (r._count as { _all: number })._all })),
+    categories: cats.map((c) => ({ name: c.name, slug: c.slug, count: c._count.books })),
+    audioCount,
+  };
+}

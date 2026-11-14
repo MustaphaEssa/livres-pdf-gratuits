@@ -102,6 +102,7 @@ export const tr: DeepPartial<PublicMessages> = {
     empty: "Bu kategoride kitap yok", seeCatalogue: "Tüm kataloğu gör", booksOf: "{name} kitapları",
   },
   book: {
+    autoDesc: "“{title}”, {author}. Çevrimiçi okunabilen veya ücretsiz indirilebilen kamu malı bir kitap ({formats}).",
     readOnline: "Çevrimiçi oku", by: "yazar:", language: "Dil", duration: "Süre", pages: "Sayfa", downloads: "İndirme",
     downloadPdf: "PDF indir", listen: "Dinle", about: "Kitap hakkında", listenOnline: "Çevrimiçi dinle", theAuthor: "Yazar",
     allTheirBooks: "Tüm kitaplarını gör", sameAuthor: "Aynı yazardan", moreOf: "Daha fazla {genre}", reviews: "Yorumlar ve puanlar",
