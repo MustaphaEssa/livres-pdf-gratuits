@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
+import Link from "@/i18n/navigation";
 import { User, Mail, Calendar, BookOpen, Heart, Download } from "lucide-react";
 import DesignShell from "@/components/design/shell";
 import BookCard from "@/components/design/book-card";
@@ -9,9 +9,13 @@ import { getUserSession } from "@/lib/user-server";
 import { getUserDownloads } from "@/lib/books";
 import { getServerI18n } from "@/i18n/server";
 import prisma from "@/lib/db";
-import { formatDate } from "@/lib/utils";
+import { formatDateLocale } from "@/i18n/format";
+import { localizePath } from "@/i18n/config";
 
-export const metadata = { title: "Mon compte" };
+export async function generateMetadata() {
+  const { t } = await getServerI18n();
+  return { title: t.meta.account, robots: { index: false } };
+}
 
 const cardStyle = {
   background: "#fff",
@@ -22,15 +26,15 @@ const cardStyle = {
 
 export default async function ComptePage() {
   const session = await getUserSession();
-  if (!session) redirect("/auth/connexion?from=/compte");
+  const { locale, t } = await getServerI18n();
+  const loginUrl = localizePath(locale, `/auth/connexion?from=${localizePath(locale, "/compte")}`);
+  if (!session) redirect(loginUrl);
 
   const user = await prisma.user.findUnique({
     where: { id: session.sub },
     select: { name: true, email: true, createdAt: true },
   });
-  if (!user) redirect("/auth/connexion?from=/compte");
-
-  const { t } = await getServerI18n();
+  if (!user) redirect(loginUrl);
   const [favorites, downloads] = await Promise.all([
     prisma.favorite.findMany({
       where: { userId: session.sub },
@@ -50,7 +54,7 @@ export default async function ComptePage() {
   const infoRows = [
     { Icon: User, label: t.compte.fullName, value: user.name },
     { Icon: Mail, label: t.compte.email, value: user.email },
-    { Icon: Calendar, label: t.compte.memberSince, value: formatDate(user.createdAt) },
+    { Icon: Calendar, label: t.compte.memberSince, value: formatDateLocale(locale, user.createdAt) },
   ];
 
   return (

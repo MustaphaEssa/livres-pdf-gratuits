@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import Link, { useLocaleRouter, useLocalizedHref } from "@/i18n/navigation";
+import { useI18n } from "@/components/i18n-provider";
+import { fmt } from "@/i18n/format";
 import Icon, { I } from "./icon";
 import BookCover, { type CoverBook } from "./book-cover";
 import { formatAuthorName } from "@/lib/utils";
 
-const EXAMPLES = ["Victor Hugo", "Jules Verne", "Poésie", "Philosophie"];
 
 /**
  * Recherche de l'accueil : sans JavaScript, le formulaire envoie vers /catalogue.
@@ -15,7 +15,9 @@ const EXAMPLES = ["Victor Hugo", "Jules Verne", "Poésie", "Philosophie"];
  * (combobox ARIA : flèches, Entrée, Échap).
  */
 export default function HeroSearch() {
-  const router = useRouter();
+  const router = useLocaleRouter();
+  const localHref = useLocalizedHref();
+  const { t } = useI18n();
   const listId = useId();
   const [mode, setMode] = useState<"title" | "desc">("title");
   const [q, setQ] = useState("");
@@ -87,19 +89,19 @@ export default function HeroSearch() {
 
   return (
     <div className="search-stack">
-      <div className="seg" role="tablist" aria-label="Mode de recherche">
+      <div className="seg" role="tablist" aria-label={t.search.modeLabel}>
         <button type="button" role="tab" aria-selected={mode === "title"} onClick={() => setMode("title")}>
-          Titre ou auteur
+          {t.search.modeTitle}
         </button>
         <button type="button" role="tab" aria-selected={mode === "desc"} onClick={() => setMode("desc")}>
-          Décrire un livre
+          {t.search.modeDesc}
         </button>
       </div>
       <div className="search-wrap" ref={boxRef}>
-        <form className="search-box" action="/catalogue" role="search" onSubmit={() => setOpen(false)}>
+        <form className="search-box" action={localHref("/catalogue")} role="search" onSubmit={() => setOpen(false)}>
           <Icon d={I.search} size={22} />
           <label className="sr-only" htmlFor="hero-q">
-            Rechercher
+            {t.search.label}
           </label>
           <input
             id="hero-q"
@@ -120,19 +122,19 @@ export default function HeroSearch() {
             aria-activedescendant={showList && active >= 0 ? `${listId}-${active}` : undefined}
             placeholder={
               mode === "title"
-                ? "Titre, auteur, genre…"
-                : "Ex. : un roman sur la vie des mineurs au XIXᵉ siècle"
+                ? t.search.placeholder
+                : t.search.descPlaceholder
             }
           />
           <button className="btn btn-primary" type="submit">
-            Rechercher
+            {t.search.button}
           </button>
         </form>
         {showList && (
-          <ul className="suggest" id={listId} role="listbox" aria-label="Suggestions">
+          <ul className="suggest" id={listId} role="listbox" aria-label={t.search.suggestions}>
             {results.length === 0 ? (
               <li className="suggest-empty" role="presentation">
-                Aucun titre ni auteur pour « {term} ». Essayez le catalogue complet.
+                {fmt(t.search.noMatch, { q: term })}
               </li>
             ) : (
               results.map((b, i) => (
@@ -170,21 +172,21 @@ export default function HeroSearch() {
                 onMouseEnter={() => setActive(results.length)}
                 onClick={() => setOpen(false)}
               >
-                Tous les résultats pour « {term} » <Icon d={I.arrow} size={18} />
+                {fmt(t.search.allResults, { q: term })} <Icon d={I.arrow} size={18} />
               </Link>
             </li>
           </ul>
         )}
       </div>
       <div className="chips">
-        <span className="chips-label">Essayez :</span>
-        {EXAMPLES.map((e) => (
+        <span className="chips-label">{t.search.tryLabel}</span>
+        {t.search.examples.map((e) => (
           <Link key={e} className="chip" href={`/catalogue?q=${encodeURIComponent(e)}`}>
             {e}
           </Link>
         ))}
-        <a className="chip chip-surprise" href="/livre-au-hasard" rel="nofollow">
-          <Icon d={I.shuffle} size={17} /> Surprenez-moi
+        <a className="chip chip-surprise" href={localHref("/livre-au-hasard")} rel="nofollow">
+          <Icon d={I.shuffle} size={17} /> {t.search.surprise}
         </a>
       </div>
     </div>

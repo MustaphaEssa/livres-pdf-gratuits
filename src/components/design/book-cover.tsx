@@ -1,4 +1,8 @@
+"use client";
+
 import { formatAuthorName } from "@/lib/utils";
+import { useI18n } from "@/components/i18n-provider";
+import { fmt } from "@/i18n/format";
 import { RTL_LANGS } from "@/lib/languages";
 
 const PALETTE = [
@@ -34,6 +38,7 @@ export default function BookCover({
   mini?: boolean;
   className?: string;
 }) {
+  const { t } = useI18n();
   const rtl = !!book.language && RTL_LANGS.has(book.language);
   const cls = `cover ${mini ? "cover-mini" : ""} ${rtl ? "is-rtl" : ""} ${className}`.trim();
 
@@ -43,7 +48,7 @@ export default function BookCover({
       <div className={cls}>
         <img
           src={book.coverImage}
-          alt={`Couverture de ${book.title}`}
+          alt={fmt(t.common.coverOf, { title: book.title })}
           loading="lazy"
           decoding="async"
         />
@@ -57,7 +62,7 @@ export default function BookCover({
       className={cls}
       style={{ background: p.bg, color: p.fg }}
       role="img"
-      aria-label={`Couverture de ${book.title}, ${book.author}`}
+      aria-label={fmt(t.common.coverOfBy, { title: book.title, author: book.author })}
     >
       <div className="cover-spine" />
       {mini ? (

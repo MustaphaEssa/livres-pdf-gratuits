@@ -2,19 +2,16 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth-server";
 import prisma from "@/lib/db";
 import { fetchArchiveDownloads, publicFileSize, deleteBookFiles } from "@/lib/cleanup";
+import { titleKey, authorKey } from "@/lib/text-key";
 
 export const runtime = "nodejs";
 
-// Normalise un texte pour comparer titres/auteurs (minuscules, sans accents ni
-// ponctuation, espaces compactés). Sert à repérer les doublons.
-function norm(s: string): string {
-  return s
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
+// Clé de doublon : titre + auteur, insensibles à la casse, aux accents, à la
+// ponctuation et à l'ordre « Nom, Prénom » (voir lib/text-key.ts).
+const dupKeyOf = (title: string, author: string) => {
+  const t = titleKey(title, author);
+  return t ? `${t}|${authorKey(author)}` : null;
+};
 
 // Cache en mémoire des téléchargements Internet Archive (une seule instance de
 // l'app). Évite de réinterroger archive.org à chaque analyse et garantit que la
@@ -72,6 +69,14 @@ export async function GET(request: Request) {
 
   const refresh = new URL(request.url).searchParams.get("refresh") === "1";
 
+  // Livres ajoutés à la main (sans sourceId) : jamais supprimables par cet outil,
+  // mais pris en compte pour les doublons (une copie importée d'un livre déjà
+  // présent à la main est un doublon, et c'est la copie manuelle qu'on garde).
+  const manual = await prisma.book.findMany({
+    where: { sourceId: null },
+    select: { id: true, title: true, author: true },
+  });
+
   const books = await prisma.book.findMany({
     where: { sourceId: { not: null } },
     select: {
@@ -118,28 +123,31 @@ export async function GET(request: Request) {
   // autres comme doublons supprimables.
   const groups = new Map<string, typeof rows>();
   for (const r of rows) {
-    const key = `${norm(r.title)}|${norm(r.author)}`;
-    if (!norm(r.title)) continue; // titre vide → pas de regroupement fiable
+    const key = dupKeyOf(r.title, r.author);
+    if (!key) continue; // titre vide → pas de regroupement fiable
     const g = groups.get(key);
     if (g) g.push(r);
     else groups.set(key, [r]);
   }
+  const manualKeys = new Set(manual.map((m) => dupKeyOf(m.title, m.author)).filter(Boolean) as string[]);
   type Row = (typeof rows)[number] & { dupKey: string | null; dupIsKeeper: boolean };
   const tagged: Row[] = rows.map((r) => ({ ...r, dupKey: null, dupIsKeeper: false }));
   const byId = new Map(tagged.map((r) => [r.id, r]));
   let dupGroups = 0;
   for (const [key, g] of groups) {
-    if (g.length < 2) continue;
+    const hasManual = manualKeys.has(key);
+    if (g.length < 2 && !hasManual) continue;
     dupGroups++;
-    // meilleur = plus de téléchargements IA, puis plus gros fichier
-    const keeper = [...g].sort(
+    // Copie manuelle présente → c'est elle qu'on garde : toutes les copies importées sont des doublons.
+    // Sinon : meilleur = plus de téléchargements IA, puis plus gros fichier
+    const keeper = hasManual ? null : [...g].sort(
       (a, b) =>
         (b.downloads ?? -1) - (a.downloads ?? -1) || b.sizeBytes - a.sizeBytes
     )[0];
     for (const r of g) {
       const t = byId.get(r.id)!;
       t.dupKey = key;
-      t.dupIsKeeper = r.id === keeper.id;
+      t.dupIsKeeper = keeper !== null && r.id === keeper.id;
     }
   }
 

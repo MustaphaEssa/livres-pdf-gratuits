@@ -5,9 +5,9 @@ import { I18nProvider } from "@/components/i18n-provider";
 import { SettingsProvider } from "@/components/settings-provider";
 import { AuthProvider } from "@/components/auth/auth-modal";
 import { Analytics } from "@/components/analytics";
-import { getLocale } from "@/i18n/server";
+import { getLocale, getServerI18n } from "@/i18n/server";
 import { getSiteSettings } from "@/lib/settings";
-import { isRtl } from "@/i18n/config";
+import { isRtl, LOCALES, LOCALE_INFO } from "@/i18n/config";
 import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 import "./design.css";
@@ -44,30 +44,27 @@ const amiri = Amiri({
 });
 
 export async function generateMetadata(): Promise<Metadata> {
-  const settings = await getSiteSettings();
-  const defaultTitle = `${settings.siteName} | Téléchargez des milliers de livres gratuits`;
+  const [settings, { locale, t }] = await Promise.all([getSiteSettings(), getServerI18n()]);
+  const defaultTitle = `${settings.siteName} | ${t.meta.defaultTitle}`;
+  // La description réglée dans l'admin est en français : on l'utilise pour le FR uniquement.
+  const description = locale === "fr" ? settings.siteDescription || t.meta.description : t.meta.description;
   return {
     metadataBase: new URL(SITE_URL),
     title: {
       default: defaultTitle,
       template: `%s | ${settings.siteName}`,
     },
-    description: settings.siteDescription,
-    keywords: [
-      "livre pdf gratuit",
-      "télécharger pdf",
-      "livres gratuits",
-      "bibliothèque numérique",
-      "ebook gratuit",
-    ],
+    description,
+    keywords: t.meta.keywords,
     authors: [{ name: settings.siteName }],
     openGraph: {
       type: "website",
-      locale: "fr_FR",
+      locale: LOCALE_INFO[locale].og,
+      alternateLocale: LOCALES.filter((l) => l !== locale).map((l) => LOCALE_INFO[l].og),
       url: SITE_URL,
       siteName: settings.siteName,
       title: defaultTitle,
-      description: settings.siteDescription,
+      description,
       images: [
         { url: "/og-image.png", width: 1200, height: 630, alt: settings.siteName },
       ],
@@ -75,7 +72,7 @@ export async function generateMetadata(): Promise<Metadata> {
     twitter: {
       card: "summary_large_image",
       title: settings.siteName,
-      description: settings.siteDescription,
+      description,
       images: ["/og-image.png"],
     },
     robots: {

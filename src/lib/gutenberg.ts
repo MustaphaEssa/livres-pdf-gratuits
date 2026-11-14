@@ -3,6 +3,7 @@ import { writeFile, mkdir, readFile, stat } from "fs/promises";
 import path from "path";
 import prisma from "@/lib/db";
 import { slugify } from "@/lib/utils";
+import { titleKey } from "@/lib/text-key";
 import {
   formatAuthorName,
   findAudioForWork,
@@ -497,7 +498,7 @@ export async function importGutenbergBook(
   const title = (row.title || `Gutenberg ${row.id}`).replace(/\s+/g, " ").trim().slice(0, 250);
   const authorName = formatAuthorName(fallbackAuthor).slice(0, 200);
   const authorSlug = slugify(authorName);
-  const normTitle = norm(title);
+  const normTitle = titleKey(title, authorName);
 
   // Anti-doublon par titre + auteur (évite les variantes IA déjà présentes).
   // Mais si le doublon existant est une version Internet Archive (scan, souvent
@@ -508,7 +509,7 @@ export async function importGutenbergBook(
       where: { authorSlug },
       select: { id: true, slug: true, title: true, sourceId: true, pdfSize: true, mediaType: true },
     });
-    const match = sameAuthor.find((e) => norm(e.title) === normTitle);
+    const match = sameAuthor.find((e) => titleKey(e.title, authorName) === normTitle);
     if (match) {
       const isIa = match.mediaType !== "AUDIO" && !(match.sourceId ?? "").startsWith("gutenberg:");
       if (isIa) {
@@ -612,11 +613,11 @@ export async function reimportFromGutenberg(bookId: string): Promise<ReimportRes
 
   // 1) Gutenberg : texte → PDF léger (+ EPUB) si plus léger que l'actuel
   const rows = await searchGutenbergAuthor(book.author, 80, toGutenbergLang(book.language));
-  const nt = norm(book.title);
+  const nt = titleKey(book.title, book.author);
   const gMatch =
-    rows.find((r) => norm(r.title) === nt) ??
+    rows.find((r) => titleKey(r.title, book.author) === nt) ??
     rows.find((r) => {
-      const t = norm(r.title);
+      const t = titleKey(r.title, book.author);
       return t.length > 6 && (t.includes(nt) || nt.includes(t));
     });
   if (gMatch) {

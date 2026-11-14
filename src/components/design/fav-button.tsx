@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Icon, { I } from "./icon";
 import { useAuth } from "@/components/auth/auth-modal";
+import { useI18n } from "@/components/i18n-provider";
+import { fmt } from "@/i18n/format";
 
 /** Favori lié au compte (API /api/favoris), stylé à la charte. */
 export default function FavButton({
@@ -17,6 +19,7 @@ export default function FavButton({
   isLoggedIn: boolean;
 }) {
   const { openAuth } = useAuth();
+  const { t } = useI18n();
   const [fav, setFav] = useState(initialFavorited);
   const [loading, setLoading] = useState(false);
 
@@ -38,8 +41,8 @@ export default function FavButton({
     if (!isLoggedIn) {
       openAuth({
         reason: title
-          ? `Connectez-vous pour enregistrer « ${title} » dans vos favoris.`
-          : "Connectez-vous pour enregistrer ce livre dans vos favoris.",
+          ? fmt(t.book.favReason, { title })
+          : t.book.favReasonGeneric,
         onSuccess: addFavorite,
       });
       return;
@@ -56,7 +59,7 @@ export default function FavButton({
       onClick={toggle}
     >
       <Icon d={I.bookmark} fill={fav ? "currentColor" : "none"} />
-      {fav ? "Dans mes favoris" : "Ajouter aux favoris"}
+      {fav ? t.book.favIn : t.book.favAdd}
     </button>
   );
 }

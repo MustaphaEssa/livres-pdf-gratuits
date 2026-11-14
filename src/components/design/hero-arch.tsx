@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
+import Link from "@/i18n/navigation";
+import { useI18n } from "@/components/i18n-provider";
+import { fmt } from "@/i18n/format";
 import BookCover, { type CoverBook } from "./book-cover";
 import Icon, { I } from "./icon";
 import { formatAuthorName } from "@/lib/utils";
@@ -18,6 +20,7 @@ const ROTATE_MS = 5500;
  * l'amène devant ; le panneau donne l'accès direct : lire en ligne, PDF, fiche.
  */
 export default function HeroArch({ books }: { books: ArchBook[] }) {
+  const { t } = useI18n();
   const n = books.length;
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -55,8 +58,8 @@ export default function HeroArch({ books }: { books: ArchBook[] }) {
     <div
       className="arch-carousel"
       role="region"
-      aria-roledescription="carrousel"
-      aria-label="Livres à la une"
+      aria-roledescription={t.arch.roledesc}
+      aria-label={t.arch.label}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
@@ -72,7 +75,7 @@ export default function HeroArch({ books }: { books: ArchBook[] }) {
               key={b.slug}
               href={`/livre/${b.slug}`}
               className={`arch-cover ${pos}`}
-              aria-label={`${b.title} — voir la fiche`}
+              aria-label={fmt(t.common.seeBookOf, { title: b.title })}
             >
               <BookCover book={b} />
             </Link>
@@ -84,7 +87,7 @@ export default function HeroArch({ books }: { books: ArchBook[] }) {
               onClick={() => go(i)}
               tabIndex={pos === "is-hidden" ? -1 : 0}
               aria-hidden={pos === "is-hidden" ? true : undefined}
-              aria-label={`Afficher ${b.title}`}
+              aria-label={fmt(t.arch.show, { title: b.title })}
             >
               <BookCover book={b} />
             </button>
@@ -97,7 +100,7 @@ export default function HeroArch({ books }: { books: ArchBook[] }) {
           <BookCover book={book} mini />
         </span>
         <div className="arch-panel-text">
-          <span className="arch-kicker">À la une · {active + 1}/{n}</span>
+          <span className="arch-kicker">{t.arch.kicker} · {active + 1}/{n}</span>
           <Link href={`/livre/${book.slug}`} className="arch-title" dir="auto">
             {book.title}
           </Link>
@@ -109,7 +112,7 @@ export default function HeroArch({ books }: { books: ArchBook[] }) {
           {book.hasPdf ? (
             <>
               <Link className="btn btn-gold" href={`/livre/${book.slug}/lire`}>
-                <Icon d={I.book} size={18} /> Lire
+                <Icon d={I.book} size={18} /> {t.arch.read}
               </Link>
               <a className="btn btn-ghost-light" href={`/livre/${book.slug}/telecharger`}>
                 <Icon d={I.download} size={18} /> PDF
@@ -117,13 +120,13 @@ export default function HeroArch({ books }: { books: ArchBook[] }) {
             </>
           ) : (
             <Link className="btn btn-gold" href={`/livre/${book.slug}`}>
-              Voir la fiche <Icon d={I.arrow} size={18} />
+              {t.common.seeBook} <Icon d={I.arrow} size={18} />
             </Link>
           )}
         </div>
         {n > 1 && (
           <div className="arch-nav">
-            <button type="button" className="arch-step" onClick={() => go(active - 1)} aria-label="Livre précédent">
+            <button type="button" className="arch-step" onClick={() => go(active - 1)} aria-label={t.arch.prevBook}>
               <Icon d={I.chevL} size={18} />
             </button>
             <div className="arch-dots">
@@ -132,7 +135,7 @@ export default function HeroArch({ books }: { books: ArchBook[] }) {
                   key={b.slug}
                   type="button"
                   className="arch-dot"
-                  aria-label={`Livre ${i + 1} : ${b.title}`}
+                  aria-label={fmt(t.arch.bookN, { n: i + 1, title: b.title })}
                   aria-current={i === active ? "true" : undefined}
                   onClick={() => go(i)}
                 >
@@ -142,7 +145,7 @@ export default function HeroArch({ books }: { books: ArchBook[] }) {
                 </button>
               ))}
             </div>
-            <button type="button" className="arch-step" onClick={() => go(active + 1)} aria-label="Livre suivant">
+            <button type="button" className="arch-step" onClick={() => go(active + 1)} aria-label={t.arch.nextBook}>
               <Icon d={I.chevR} size={18} />
             </button>
           </div>

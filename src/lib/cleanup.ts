@@ -11,9 +11,24 @@ const UA = "livrespdfgratuits.com (contact@livrespdfgratuits.com)";
 export async function fetchArchiveDownloads(ids: string[]): Promise<Map<string, number>> {
   const out = new Map<string, number>();
   const CHUNK = 50;
-  for (let i = 0; i < ids.length; i += CHUNK) {
-    const chunk = ids.slice(i, i + CHUNK);
-    const q = `identifier:(${chunk.join(" OR ")})`;
+  const chunks: string[][] = [];
+  for (let i = 0; i < ids.length; i += CHUNK) chunks.push(ids.slice(i, i + CHUNK));
+
+  // Plusieurs lots en parallèle (6 à la fois) : avec des milliers de livres, des
+  // lots séquentiels dépassaient le délai du proxy (nginx → erreur à l'analyse).
+  const CONCURRENCY = 6;
+  let next = 0;
+  const worker = async () => {
+    while (next < chunks.length) await fetchChunk(chunks[next++], out);
+  };
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, chunks.length) }, worker));
+  return out;
+}
+
+async function fetchChunk(chunk: string[], out: Map<string, number>): Promise<void> {
+  {
+    // Identifiants entre guillemets : un caractère spécial (« : », « - »…) ne casse plus la requête
+    const q = `identifier:(${chunk.map((id) => `"${id.replace(/"/g, "")}"`).join(" OR ")})`;
     const url =
       "https://archive.org/advancedsearch.php?q=" +
       encodeURIComponent(q) +
@@ -22,10 +37,10 @@ export async function fetchArchiveDownloads(ids: string[]): Promise<Map<string, 
       "&page=1&output=json";
     try {
       const ctrl = new AbortController();
-      const t = setTimeout(() => ctrl.abort(), 30000);
+      const t = setTimeout(() => ctrl.abort(), 20000);
       const res = await fetch(url, { signal: ctrl.signal, headers: { "User-Agent": UA } });
       clearTimeout(t);
-      if (!res.ok) continue;
+      if (!res.ok) return;
       const data = (await res.json()) as {
         response?: { docs?: { identifier: string; downloads?: number }[] };
       };
@@ -36,7 +51,6 @@ export async function fetchArchiveDownloads(ids: string[]): Promise<Map<string, 
       /* lot ignoré : ces livres restent "inconnus" donc non supprimables */
     }
   }
-  return out;
 }
 
 // Taille réelle d'un fichier du dossier public (ex: "/uploads/books/x.pdf").

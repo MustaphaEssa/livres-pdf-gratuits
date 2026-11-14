@@ -1,11 +1,18 @@
 import DesignShell from "@/components/design/shell";
+import FrenchOnlyNotice from "@/components/design/french-only";
+import { getServerI18n } from "@/i18n/server";
+import { frenchOnlyAlternates } from "@/i18n/seo";
 import { getSiteSettings } from "@/lib/settings";
 import { SITE_URL } from "@/lib/site";
 
-export const metadata = {
-  title: "Conditions d'utilisation",
-  description: "Les règles d'utilisation du site et de ses services.",
-};
+export async function generateMetadata() {
+  const { t } = await getServerI18n();
+  return {
+    title: t.meta.terms,
+    description: "Les règles d'utilisation du site et de ses services.",
+    alternates: frenchOnlyAlternates("/conditions"),
+  };
+}
 
 export default async function TermsPage() {
   const settings = await getSiteSettings();
@@ -15,7 +22,8 @@ export default async function TermsPage() {
 
   return (
     <DesignShell>
-      <div className="wrap">
+      <div className="wrap" lang="fr">
+        <FrenchOnlyNotice />
         <div className="container mx-auto px-4 py-12 max-w-3xl">
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
             Conditions d&apos;utilisation

@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n } from "@/components/i18n-provider";
+import { fmt as fmtMsg } from "@/i18n/format";
 import { useRef, useState } from "react";
 import { Play, Pause, Headphones } from "lucide-react";
 
@@ -29,6 +31,7 @@ export function AudioPlayer({
   tracks: AudioTrack[];
   totalDuration?: number;
 }) {
+  const { t } = useI18n();
   const audioRef = useRef<HTMLAudioElement>(null);
   const [current, setCurrent] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -36,7 +39,7 @@ export function AudioPlayer({
   if (!tracks.length) {
     return (
       <p className="text-slate-500">
-        Les chapitres de ce livre audio ne sont pas disponibles pour le moment.
+        {t.book.audioUnavailable}
       </p>
     );
   }
@@ -78,7 +81,7 @@ export function AudioPlayer({
         </button>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400 font-medium mb-0.5">
-            <Headphones className="h-3.5 w-3.5" /> Chapitre {current + 1} / {tracks.length}
+            <Headphones className="h-3.5 w-3.5" /> {fmtMsg(t.book.chapter, { current: current + 1, total: tracks.length })}
           </div>
           <div className="truncate font-medium text-slate-900 dark:text-white">
             {tracks[current].title}
@@ -125,7 +128,7 @@ export function AudioPlayer({
 
       {totalDuration ? (
         <div className="px-4 py-2 text-xs text-slate-400 border-t border-slate-100 dark:border-slate-700/60">
-          Durée totale : {fmt(totalDuration)}
+          {fmtMsg(t.book.totalDuration, { d: fmt(totalDuration) })}
         </div>
       ) : null}
     </div>

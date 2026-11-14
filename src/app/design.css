@@ -893,3 +893,20 @@
     .pager-num { min-width: 36px; height: 36px; }
   }
 }
+
+/* ---------- Sélecteur de langue (i18n) ---------- */
+.ma {
+  .lang-switch { position: relative; }
+  .lang-btn { width: auto; gap: 6px; padding: 0 10px; }
+  .lang-code { font: 600 13px var(--font-sans); letter-spacing: .04em; }
+  .lang-menu { position: absolute; inset-inline-end: 0; top: calc(100% + 8px); z-index: 60; display: grid; grid-template-columns: repeat(2, minmax(130px, 1fr)); gap: 2px; padding: 8px; background: #fff; border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow-lg, 0 18px 40px rgba(20, 33, 61, .18)); }
+  .lang-item { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 12px; border-radius: 10px; color: var(--ink); text-decoration: none; font: 500 14px var(--font-sans); white-space: nowrap; }
+  .lang-item:hover { background: var(--paper); }
+  .lang-item[aria-current="true"] { background: var(--accent); color: #fff; }
+  .lang-list { display: flex; flex-wrap: wrap; gap: 4px; padding-top: 12px; margin-top: 8px; border-top: 1px solid var(--line); }
+  .lang-list .lang-item { min-height: 36px; padding: 0 10px; border: 1px solid var(--line); }
+  @media (max-width: 760px) {
+    .lang-code { display: none; }
+    .lang-btn { width: 44px; padding: 0; }
+  }
+}

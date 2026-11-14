@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/components/i18n-provider";
 import { useState } from "react";
 import { Share2, Link2, Check } from "lucide-react";
 
@@ -16,6 +17,7 @@ export function ShareButtons({
   title: string;
   className?: string;
 }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -56,8 +58,8 @@ export function ShareButtons({
         type="button"
         className="btn btn-light btn-lg"
         onClick={nativeShare}
-        aria-label="Partager"
-        title="Partager"
+        aria-label={t.common.share}
+        title={t.common.share}
       >
         <Share2 width={20} height={20} />
       </button>
@@ -87,11 +89,11 @@ export function ShareButtons({
             <button type="button" onClick={copy}>
               {copied ? (
                 <>
-                  <Check width={16} height={16} style={{ color: "var(--accent)" }} /> Lien copié !
+                  <Check width={16} height={16} style={{ color: "var(--accent)" }} /> {t.common.linkCopied}
                 </>
               ) : (
                 <>
-                  <Link2 width={16} height={16} /> Copier le lien
+                  <Link2 width={16} height={16} /> {t.common.copyLink}
                 </>
               )}
             </button>

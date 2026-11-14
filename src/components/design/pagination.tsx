@@ -1,4 +1,6 @@
-import Link from "next/link";
+import Link from "@/i18n/navigation";
+import { getServerI18n } from "@/i18n/server";
+import { fmt } from "@/i18n/format";
 import Icon, { I } from "./icon";
 
 // Numéros de page à afficher, avec ellipses (…)
@@ -15,7 +17,7 @@ function pageItems(current: number, total: number): (number | "…")[] {
 }
 
 /** Pagination en liens simples (indexable, fonctionne sans JavaScript). */
-export default function Pagination({
+export default async function Pagination({
   current,
   total,
   makeHref,
@@ -25,15 +27,16 @@ export default function Pagination({
   makeHref: (page: number) => string;
 }) {
   if (total <= 1) return null;
+  const { t } = await getServerI18n();
   return (
-    <nav className="pager" aria-label="Pagination">
+    <nav className="pager" aria-label={t.common.pagination}>
       {current > 1 ? (
         <Link className="pager-step" href={makeHref(current - 1)} rel="prev">
-          <Icon d={I.chevL} size={18} /> <span>Précédent</span>
+          <Icon d={I.chevL} size={18} /> <span>{t.common.previous}</span>
         </Link>
       ) : (
         <span className="pager-step is-disabled" aria-hidden="true">
-          <Icon d={I.chevL} size={18} /> <span>Précédent</span>
+          <Icon d={I.chevL} size={18} /> <span>{t.common.previous}</span>
         </span>
       )}
       <ol className="pager-pages">
@@ -48,7 +51,7 @@ export default function Pagination({
                 className="pager-num"
                 href={makeHref(it)}
                 aria-current={it === current ? "page" : undefined}
-                aria-label={`Page ${it}`}
+                aria-label={fmt(t.common.page, { n: it })}
               >
                 {it}
               </Link>
@@ -58,11 +61,11 @@ export default function Pagination({
       </ol>
       {current < total ? (
         <Link className="pager-step" href={makeHref(current + 1)} rel="next">
-          <span>Suivant</span> <Icon d={I.chevR} size={18} />
+          <span>{t.common.next}</span> <Icon d={I.chevR} size={18} />
         </Link>
       ) : (
         <span className="pager-step is-disabled" aria-hidden="true">
-          <span>Suivant</span> <Icon d={I.chevR} size={18} />
+          <span>{t.common.next}</span> <Icon d={I.chevR} size={18} />
         </span>
       )}
     </nav>

@@ -1,4 +1,6 @@
-import Link from "next/link";
+"use client";
+
+import Link from "@/i18n/navigation";
 import BookCover, { type CoverBook } from "./book-cover";
 
 export default function BookMini({ book }: { book: CoverBook }) {

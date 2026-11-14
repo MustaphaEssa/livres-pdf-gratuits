@@ -2,21 +2,26 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
+import { useLocaleRouter as useRouter } from "@/i18n/navigation";
+import { useI18n } from "@/components/i18n-provider";
 import { Loader2 } from "lucide-react";
 
 const PdfViewer = dynamic(
   () => import("@/components/books/pdf-viewer").then((m) => m.PdfViewer),
   {
     ssr: false,
-    loading: () => (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center gap-2 bg-[#faf6ef] text-[#5d584f]">
-        <Loader2 className="h-5 w-5 animate-spin" />
-        Ouverture du lecteur…
-      </div>
-    ),
+    loading: () => <Opening />,
   }
 );
+
+function Opening() {
+  const { t } = useI18n();
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center gap-2 bg-[#faf6ef] text-[#5d584f]">
+      <Loader2 className="h-5 w-5 animate-spin" /> {t.reader.opening}
+    </div>
+  );
+}
 
 /**
  * Lecteur PDF en page dédiée (/livre/[slug]/lire).
@@ -80,11 +85,7 @@ export function ReaderClient({
   }, [router, slug]);
 
   if (initialPage === null) {
-    return (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center gap-2 bg-[#faf6ef] text-[#5d584f]">
-        <Loader2 className="h-5 w-5 animate-spin" /> Ouverture du lecteur…
-      </div>
-    );
+    return <Opening />;
   }
 
   return (

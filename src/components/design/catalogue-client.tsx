@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
+import Link from "@/i18n/navigation";
+import { useI18n } from "@/components/i18n-provider";
+import { categoryLabel, plural } from "@/i18n/format";
 import BookCard, { type CardBook } from "./book-card";
 import BookCover from "./book-cover";
 import Icon, { I } from "./icon";
@@ -25,9 +27,14 @@ export default function CatalogueClient({
   initial,
 }: {
   books: CatBook[];
-  categories: string[];
+  categories: { name: string; slug: string }[];
   initial: { q: string; cats: string[]; langs: string[]; audio: boolean };
 }) {
+  const { t, locale } = useI18n();
+  const catLabel = (name: string) => {
+    const c = categories.find((x) => x.name === name);
+    return c ? categoryLabel(t, c) : name;
+  };
   const [q, setQ] = useState(initial.q);
   const [cats, setCats] = useState<string[]>(initial.cats);
   const [langs, setLangs] = useState<string[]>(initial.langs);
@@ -76,20 +83,20 @@ export default function CatalogueClient({
 
   return (
     <div className="wrap">
-      <nav className="breadcrumb" aria-label="Fil d'Ariane">
-        <Link href="/">Accueil</Link>
+      <nav className="breadcrumb" aria-label={t.common.breadcrumb}>
+        <Link href="/">{t.nav.home}</Link>
         <span aria-hidden="true">/</span>
-        <span aria-current="page">Catalogue</span>
+        <span aria-current="page">{t.catalogue.title}</span>
       </nav>
       <div className="page-head">
         <div className="page-head-row">
           <div>
-            <h1>Catalogue</h1>
-            <p>Parcourez la bibliothèque et ouvrez la fiche d&apos;un livre pour le lire ou le télécharger.</p>
+            <h1>{t.catalogue.title}</h1>
+            <p>{t.catalogue.intro}</p>
           </div>
           <form className="search-compact" role="search" onSubmit={(e) => e.preventDefault()}>
             <Icon d={I.search} />
-            <label className="sr-only" htmlFor="cat-q">Rechercher dans le catalogue</label>
+            <label className="sr-only" htmlFor="cat-q">{t.catalogue.searchLabel}</label>
             <input
               id="cat-q"
               type="search"
@@ -98,27 +105,27 @@ export default function CatalogueClient({
                 setQ(e.target.value);
                 setShown(PAGE);
               }}
-              placeholder="Titre, auteur, genre…"
+              placeholder={t.search.placeholder}
             />
           </form>
         </div>
-        <div className="chips-scroll" role="group" aria-label="Genres">
+        <div className="chips-scroll" role="group" aria-label={t.catalogue.genres}>
           <button type="button" className="chip" aria-pressed={!cats.length} onClick={() => setCats([])}>
-            Tous
+            {t.common.all}
           </button>
-          {categories.map((c) => (
+          {categories.map(({ name: c }) => (
             <button key={c} type="button" className="chip" aria-pressed={cats.includes(c)} onClick={() => toggle(cats, c, setCats)}>
-              {c}
+              {catLabel(c)}
             </button>
           ))}
         </div>
       </div>
 
       <div className="catalogue-layout">
-        <aside className="filters" aria-label="Filtres">
+        <aside className="filters" aria-label={t.catalogue.filters}>
           {langsAvailable.length > 0 && (
             <fieldset>
-              <legend>Langue</legend>
+              <legend>{t.catalogue.language}</legend>
               {langsAvailable.map((l) => (
                 <label key={l} className="check">
                   <span>
@@ -131,23 +138,23 @@ export default function CatalogueClient({
             </fieldset>
           )}
           <fieldset>
-            <legend>Genre</legend>
-            {categories.map((c) => (
+            <legend>{t.catalogue.genre}</legend>
+            {categories.map(({ name: c }) => (
               <label key={c} className="check">
                 <span>
                   <input type="checkbox" checked={cats.includes(c)} onChange={() => toggle(cats, c, setCats)} />
-                  {c}
+                  {catLabel(c)}
                 </span>
                 <small>{count((b) => catNames(b).includes(c))}</small>
               </label>
             ))}
           </fieldset>
           <fieldset>
-            <legend>Format</legend>
+            <legend>{t.catalogue.format}</legend>
             <label className="check">
               <span>
                 <input type="checkbox" checked={audio} onChange={() => setAudio(!audio)} />
-                Avec version audio
+                {t.catalogue.withAudio}
               </span>
               <small>{count(hasAudio)}</small>
             </label>
@@ -157,20 +164,20 @@ export default function CatalogueClient({
         <div className="results">
           <div className="results-bar">
             <strong aria-live="polite">
-              {results.length} livre{results.length > 1 ? "s" : ""}
+              {plural(locale, t.common.books, results.length)}
             </strong>
             <div className="results-tools">
-              <label className="sr-only" htmlFor="sort">Trier par</label>
+              <label className="sr-only" htmlFor="sort">{t.catalogue.sortBy}</label>
               <select id="sort" className="select" value={sort} onChange={(e) => setSort(e.target.value as Sort)}>
-                <option value="relevance">Pertinence</option>
-                <option value="az">Titre A–Z</option>
-                <option value="author">Auteur A–Z</option>
+                <option value="relevance">{t.catalogue.sortRelevance}</option>
+                <option value="az">{t.catalogue.sortTitle}</option>
+                <option value="author">{t.catalogue.sortAuthor}</option>
               </select>
-              <div className="view-toggle" role="group" aria-label="Affichage">
-                <button type="button" aria-pressed={view === "grid"} aria-label="Grille" onClick={() => setView("grid")}>
+              <div className="view-toggle" role="group" aria-label={t.catalogue.view}>
+                <button type="button" aria-pressed={view === "grid"} aria-label={t.catalogue.grid} onClick={() => setView("grid")}>
                   <Icon d={I.grid} />
                 </button>
-                <button type="button" aria-pressed={view === "list"} aria-label="Liste" onClick={() => setView("list")}>
+                <button type="button" aria-pressed={view === "list"} aria-label={t.catalogue.list} onClick={() => setView("list")}>
                   <Icon d={I.list} />
                 </button>
               </div>
@@ -186,7 +193,7 @@ export default function CatalogueClient({
               )}
               {cats.map((c) => (
                 <button key={c} type="button" className="chip" onClick={() => toggle(cats, c, setCats)}>
-                  {c} <Icon d={I.close} size={14} />
+                  {catLabel(c)} <Icon d={I.close} size={14} />
                 </button>
               ))}
               {langs.map((l) => (
@@ -196,21 +203,21 @@ export default function CatalogueClient({
               ))}
               {audio && (
                 <button type="button" className="chip" onClick={() => setAudio(false)}>
-                  Audio <Icon d={I.close} size={14} />
+                  {t.common.audio} <Icon d={I.close} size={14} />
                 </button>
               )}
               <button type="button" className="link-btn" onClick={reset}>
-                Tout effacer
+                {t.common.clearAll}
               </button>
             </div>
           )}
 
           {results.length === 0 ? (
             <div className="empty">
-              <h3>Aucun livre trouvé</h3>
-              <p>Essayez un autre mot-clé ou retirez un filtre.</p>
+              <h3>{t.catalogue.noResults}</h3>
+              <p>{t.catalogue.noResultsHint}</p>
               <button type="button" className="btn btn-primary" onClick={reset}>
-                Réinitialiser
+                {t.common.reset}
               </button>
             </div>
           ) : view === "grid" ? (
@@ -232,8 +239,8 @@ export default function CatalogueClient({
                       {formatAuthorName(b.author)}
                     </span>
                   </span>
-                  {hasAudio(b) && <span className="pill-audio">Audio</span>}
-                  {catNames(b)[0] && <span className="cat">{catNames(b)[0]}</span>}
+                  {hasAudio(b) && <span className="pill-audio">{t.common.audio}</span>}
+                  {catNames(b)[0] && <span className="cat">{catLabel(catNames(b)[0])}</span>}
                   <Icon d={I.arrow} />
                 </Link>
               ))}
@@ -243,7 +250,7 @@ export default function CatalogueClient({
           {results.length > shown && (
             <div className="load-more">
               <button type="button" className="btn btn-outline" onClick={() => setShown(shown + PAGE)}>
-                Afficher plus
+                {t.common.showMore}
               </button>
             </div>
           )}

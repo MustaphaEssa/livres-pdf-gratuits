@@ -3,6 +3,7 @@ import { writeFile, mkdir, statfs } from "fs/promises";
 import path from "path";
 import prisma from "@/lib/db";
 import { slugify } from "@/lib/utils";
+import { titleKey } from "@/lib/text-key";
 
 // Espace disque libre (en Mo) du volume contenant `dir`. null si indisponible.
 // Sert à stopper un gros import avant de saturer le VPS.
@@ -287,13 +288,13 @@ export async function importBook(
   // deux fois la même œuvre pour le même auteur (comparaison sur le titre
   // normalisé, accents et ponctuation ignorés). Fait AVANT le téléchargement.
   const dedupAuthorSlug = slugify(formatAuthorName(fallbackAuthor));
-  const normTitle = norm(title);
+  const normTitle = titleKey(title, fallbackAuthor);
   if (dedupAuthorSlug && normTitle) {
     const sameAuthor = await prisma.book.findMany({
       where: { authorSlug: dedupAuthorSlug },
       select: { title: true },
     });
-    if (sameAuthor.some((e) => norm(e.title) === normTitle)) {
+    if (sameAuthor.some((e) => titleKey(e.title, fallbackAuthor) === normTitle)) {
       return { status: "duplicate", title };
     }
   }

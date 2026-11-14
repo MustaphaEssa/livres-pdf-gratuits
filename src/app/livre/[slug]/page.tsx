@@ -1,5 +1,5 @@
 import { languageLabel } from "@/lib/languages";
-import Link from "next/link";
+import Link from "@/i18n/navigation";
 import { notFound } from "next/navigation";
 import DesignHeader from "@/components/design/header";
 import DesignFooter from "@/components/design/footer";
@@ -30,6 +30,9 @@ import { SITE_URL, SITE_NAME } from "@/lib/site";
 import { headers } from "next/headers";
 import { shouldCountView } from "@/lib/view-throttle";
 import { getServerI18n } from "@/i18n/server";
+import { i18nAlternates } from "@/i18n/seo";
+import { localizePath } from "@/i18n/config";
+import { categoryLabel, fmt, formatNumber } from "@/i18n/format";
 
 interface BookPageProps {
   params: Promise<{ slug: string }>;
@@ -37,8 +40,8 @@ interface BookPageProps {
 
 export async function generateMetadata({ params }: BookPageProps) {
   const { slug } = await params;
-  const book = await getBookBySlug(slug);
-  if (!book) return { title: "Livre non trouvé" };
+  const [book, { locale, t }] = await Promise.all([getBookBySlug(slug), getServerI18n()]);
+  if (!book) return { title: t.meta.bookNotFound };
   const image = book.coverImage
     ? book.coverImage.startsWith("http")
       ? book.coverImage
@@ -47,12 +50,12 @@ export async function generateMetadata({ params }: BookPageProps) {
   return {
     title: book.title,
     description: book.description ?? undefined,
-    alternates: { canonical: `/livre/${slug}` },
+    alternates: i18nAlternates(locale, `/livre/${slug}`),
     openGraph: {
       title: book.title,
       description: book.description ?? undefined,
       type: "book",
-      url: `${SITE_URL}/livre/${book.slug}`,
+      url: `${SITE_URL}${localizePath(locale, `/livre/${book.slug}`)}`,
       authors: [book.author],
       images: [{ url: image }],
     },
@@ -73,7 +76,7 @@ export default async function BookPage({ params }: BookPageProps) {
 
   const bookMediaType = book.mediaType === "AUDIO" ? "AUDIO" : "PDF";
   const genreSlug = book.categories[0]?.category.slug;
-  const [hdrs, , relatedBooks, sameAuthorBooks, genreBooks, authorProfile, settings, session] =
+  const [hdrs, { locale, t }, relatedBooks, sameAuthorBooks, genreBooks, authorProfile, settings, session] =
     await Promise.all([
       headers(),
       getServerI18n(),
@@ -105,16 +108,16 @@ export default async function BookPage({ params }: BookPageProps) {
   const hasPdf = !!book.pdfUrl;
   const langLabel = languageLabel(book.language);
   const reportEmail = settings.email || "contact@livrespdfgratuits.com";
+  const bookUrl = `${SITE_URL}${localizePath(locale, `/livre/${book.slug}`)}`;
   const reportHref = `mailto:${reportEmail}?subject=${encodeURIComponent(
-    `Signalement : ${book.title}`
-  )}&body=${encodeURIComponent(
-    `Bonjour,\n\nJe souhaite signaler ce livre :\n${book.title}\n${SITE_URL}/livre/${book.slug}\n\nMotif du signalement :\n`
-  )}`;
+    fmt(t.book.reportSubject, { title: book.title })
+  )}&body=${encodeURIComponent(fmt(t.book.reportBody, { title: book.title, url: bookUrl }))}`;
+  const primaryCategoryLabel = primaryCategory ? categoryLabel(t, primaryCategory) : "";
   const fmtDuration = (sec?: number | null) => {
     if (!sec || sec <= 0) return "—";
     const h = Math.floor(sec / 3600);
     const m = Math.round((sec % 3600) / 60);
-    return h ? `${h} h ${String(m).padStart(2, "0")}` : `${m} min`;
+    return h ? fmt(t.book.hoursMinutes, { h, m: String(m).padStart(2, "0") }) : fmt(t.book.minutes, { m });
   };
 
   const jsonLd = {
@@ -123,7 +126,7 @@ export default async function BookPage({ params }: BookPageProps) {
     name: book.title,
     author: { "@type": "Person", name: book.author },
     inLanguage: book.language,
-    url: `${SITE_URL}/livre/${book.slug}`,
+    url: bookUrl,
     ...(book.description ? { description: book.description } : {}),
     ...(book.pageCount ? { numberOfPages: book.pageCount } : {}),
     ...(book.publishedYear ? { datePublished: String(book.publishedYear) } : {}),
@@ -142,12 +145,12 @@ export default async function BookPage({ params }: BookPageProps) {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Accueil", item: SITE_URL },
-      { "@type": "ListItem", position: 2, name: "Catalogue", item: `${SITE_URL}/catalogue` },
+      { "@type": "ListItem", position: 1, name: t.nav.home, item: `${SITE_URL}${localizePath(locale, "/")}` },
+      { "@type": "ListItem", position: 2, name: t.nav.catalogue, item: `${SITE_URL}${localizePath(locale, "/catalogue")}` },
       ...(primaryCategory
-        ? [{ "@type": "ListItem", position: 3, name: primaryCategory.name, item: `${SITE_URL}/catalogue?category=${primaryCategory.slug}` }]
+        ? [{ "@type": "ListItem", position: 3, name: primaryCategoryLabel, item: `${SITE_URL}${localizePath(locale, `/catalogue?category=${primaryCategory.slug}`)}` }]
         : []),
-      { "@type": "ListItem", position: primaryCategory ? 4 : 3, name: book.title, item: `${SITE_URL}/livre/${book.slug}` },
+      { "@type": "ListItem", position: primaryCategory ? 4 : 3, name: book.title, item: bookUrl },
     ],
   };
 
@@ -159,14 +162,14 @@ export default async function BookPage({ params }: BookPageProps) {
 
       <main className="page-main" id="contenu">
         <div className="wrap book-page">
-          <nav className="breadcrumb" aria-label="Fil d'Ariane">
-            <Link href="/">Accueil</Link>
+          <nav className="breadcrumb" aria-label={t.common.breadcrumb}>
+            <Link href="/">{t.nav.home}</Link>
             <span aria-hidden="true">/</span>
-            <Link href="/catalogue">Catalogue</Link>
+            <Link href="/catalogue">{t.nav.catalogue}</Link>
             {primaryCategory && (
               <>
                 <span aria-hidden="true">/</span>
-                <Link href={`/catalogue?category=${primaryCategory.slug}`}>{primaryCategory.name}</Link>
+                <Link href={`/catalogue?category=${primaryCategory.slug}`}>{primaryCategoryLabel}</Link>
               </>
             )}
             <span aria-hidden="true">/</span>
@@ -185,17 +188,17 @@ export default async function BookPage({ params }: BookPageProps) {
               <div className="badges">
                 {primaryCategory && (
                   <Link className="badge badge-genre" href={`/catalogue?category=${primaryCategory.slug}`}>
-                    {primaryCategory.name}
+                    {primaryCategoryLabel}
                   </Link>
                 )}
                 {hasPdf && <span className="badge badge-pdf">PDF</span>}
                 {book.epubUrl && <span className="badge badge-pdf">EPUB</span>}
-                {hasPdf && <span className="badge badge-read">Lire en ligne</span>}
-                {hasAudio && <span className="badge badge-audio-tag">Audio</span>}
+                {hasPdf && <span className="badge badge-read">{t.book.readOnline}</span>}
+                {hasAudio && <span className="badge badge-audio-tag">{t.common.audio}</span>}
               </div>
               <h1 dir="auto">{book.title}</h1>
               <div className="byline">
-                <span>de</span>
+                <span>{t.book.by}</span>
                 <Link
                   className="author"
                   href={book.authorSlug ? `/auteur/${book.authorSlug}` : `/catalogue?q=${encodeURIComponent(book.author)}`}
@@ -207,43 +210,43 @@ export default async function BookPage({ params }: BookPageProps) {
               </div>
               <dl className="tile-list">
                 <div className="tile">
-                  <dt>Langue</dt>
+                  <dt>{t.book.language}</dt>
                   <dd>{langLabel}</dd>
                 </div>
                 {hasAudio ? (
                   <div className="tile">
-                    <dt>Durée</dt>
+                    <dt>{t.book.duration}</dt>
                     <dd>{fmtDuration(book.audioDuration)}</dd>
                   </div>
                 ) : (
                   <div className="tile">
-                    <dt>Pages</dt>
+                    <dt>{t.book.pages}</dt>
                     <dd>{book.pageCount ?? "—"}</dd>
                   </div>
                 )}
                 <div className="tile">
-                  <dt>Téléchargements</dt>
-                  <dd>{book.downloadCount}</dd>
+                  <dt>{t.book.downloads}</dt>
+                  <dd>{formatNumber(locale, book.downloadCount)}</dd>
                 </div>
               </dl>
               <div className="actions">
                 {hasPdf && (
                   <a className="btn btn-primary btn-lg" href={downloadHref}>
-                    <Icon d={I.download} /> Télécharger le PDF
+                    <Icon d={I.download} /> {t.book.downloadPdf}
                   </a>
                 )}
                 {hasPdf && (
                   <Link className="btn btn-outline btn-lg" href={readerHref}>
-                    <Icon d={I.book} /> Lire en ligne
+                    <Icon d={I.book} /> {t.book.readOnline}
                   </Link>
                 )}
                 {hasAudio && (
                   <a className="btn btn-outline btn-lg" href="#ecouter">
-                    <Icon d={I.headphones} /> Écouter
+                    <Icon d={I.headphones} /> {t.book.listen}
                   </a>
                 )}
                 <FavButton bookId={book.id} title={book.title} initialFavorited={isFavorited} isLoggedIn={isLoggedIn} />
-                <ShareButtons url={`${SITE_URL}/livre/${book.slug}`} title={book.title} />
+                <ShareButtons url={bookUrl} title={book.title} />
               </div>
             </div>
           </section>
@@ -252,7 +255,7 @@ export default async function BookPage({ params }: BookPageProps) {
             <div className="detail-main">
               {book.description && (
                 <section aria-labelledby="about">
-                  <h2 id="about">À propos</h2>
+                  <h2 id="about">{t.book.about}</h2>
                   <p className="prose" dir="auto">
                     {book.description}
                   </p>
@@ -261,14 +264,14 @@ export default async function BookPage({ params }: BookPageProps) {
 
               {hasAudio && (
                 <section id="ecouter" aria-labelledby="listen" style={{ scrollMarginTop: 90 }}>
-                  <h2 id="listen">Écouter en ligne</h2>
+                  <h2 id="listen">{t.book.listenOnline}</h2>
                   <AudioPlayer tracks={audioTracks} totalDuration={book.audioDuration ?? undefined} />
                 </section>
               )}
 
               {authorProfile && (authorProfile.bio || authorProfile.image) && (
                 <section aria-labelledby="author">
-                  <h2 id="author">L&apos;auteur</h2>
+                  <h2 id="author">{t.book.theAuthor}</h2>
                   <div className="author-card">
                     {authorProfile.image ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -288,7 +291,7 @@ export default async function BookPage({ params }: BookPageProps) {
                       {authorProfile.bio && <p>{authorProfile.bio}</p>}
                       {book.authorSlug && (
                         <Link href={`/auteur/${book.authorSlug}`} className="link-arrow" style={{ marginTop: 8 }}>
-                          Voir tous ses livres <Icon d={I.arrow} />
+                          {t.book.allTheirBooks} <Icon d={I.arrow} />
                         </Link>
                       )}
                     </div>
@@ -298,7 +301,7 @@ export default async function BookPage({ params }: BookPageProps) {
 
               {sameAuthorBooks.length > 0 && (
                 <section aria-labelledby="same-author">
-                  <h2 id="same-author">Du même auteur</h2>
+                  <h2 id="same-author">{t.book.sameAuthor}</h2>
                   <div className="mini-grid">
                     {sameAuthorBooks.map((b) => (
                       <BookMini key={b.slug} book={b} />
@@ -309,7 +312,7 @@ export default async function BookPage({ params }: BookPageProps) {
 
               {genreBooks.length > 0 && primaryCategory && (
                 <section aria-labelledby="genre">
-                  <h2 id="genre">Plus de {primaryCategory.name.toLowerCase()}</h2>
+                  <h2 id="genre">{fmt(t.book.moreOf, { genre: primaryCategoryLabel.toLocaleLowerCase(locale) })}</h2>
                   <div className="mini-grid">
                     {genreBooks.map((b) => (
                       <BookMini key={b.slug} book={b} />
@@ -319,30 +322,27 @@ export default async function BookPage({ params }: BookPageProps) {
               )}
 
               <section aria-labelledby="reviews">
-                <h2 id="reviews">Avis & notes</h2>
+                <h2 id="reviews">{t.book.reviews}</h2>
                 <Reviews bookId={book.id} isLoggedIn={isLoggedIn} />
               </section>
             </div>
 
-            <aside className="detail-aside" aria-label="Lire ou télécharger">
+            <aside className="detail-aside" aria-label={t.book.readOrDownload}>
               <div className="download-card">
-                <h2>Lire ou télécharger</h2>
+                <h2>{t.book.readOrDownload}</h2>
                 <div className="notice">
                   <Icon d={I.shield} size={22} />
-                  <span>
-                    Ce livre est dans le domaine public : vous pouvez le lire, le télécharger et
-                    le partager librement.
-                  </span>
+                  <span>{t.book.publicDomainNotice}</span>
                 </div>
 
                 {hasPdf && (
                   <Link className="btn btn-ink btn-xl" href={readerHref}>
-                    <Icon d={I.book} /> Ouvrir le lecteur
+                    <Icon d={I.book} /> {t.book.openReader}
                   </Link>
                 )}
                 {hasAudio && (
                   <a className="btn btn-ink btn-xl" href="#ecouter">
-                    <Icon d={I.headphones} /> Écouter en ligne
+                    <Icon d={I.headphones} /> {t.book.listenOnline}
                   </a>
                 )}
 
@@ -354,9 +354,9 @@ export default async function BookPage({ params }: BookPageProps) {
                         <strong>PDF</strong>
                         <span>{book.pdfSize ? formatFileSize(book.pdfSize) : ""}</span>
                       </div>
-                      <p>Lisible hors ligne sur tous vos appareils.</p>
+                      <p>{t.book.pdfOffline}</p>
                       <a className="btn btn-primary btn-xl" href={downloadHref}>
-                        <Icon d={I.download} /> Télécharger le PDF
+                        <Icon d={I.download} /> {t.book.downloadPdf}
                       </a>
                     </div>
                   </>
@@ -368,11 +368,11 @@ export default async function BookPage({ params }: BookPageProps) {
                     <div className="dl-block">
                       <div className="row">
                         <strong>EPUB</strong>
-                        <span>liseuse / mobile</span>
+                        <span>{t.book.epubDevice}</span>
                       </div>
-                      <p>Idéal pour liseuses, Kindle et téléphones.</p>
+                      <p>{t.book.epubIdeal}</p>
                       <a className="btn btn-outline btn-xl" href={book.epubUrl} target="_blank" rel="noopener noreferrer">
-                        <Icon d={I.download} /> Télécharger l&apos;EPUB
+                        <Icon d={I.download} /> {t.book.downloadEpub}
                       </a>
                       <a
                         className="btn btn-outline btn-xl"
@@ -380,65 +380,65 @@ export default async function BookPage({ params }: BookPageProps) {
                         target="_blank"
                         rel="noopener noreferrer"
                       >
-                        <Icon d={I.external} /> Envoyer vers Kindle
+                        <Icon d={I.external} /> {t.book.sendKindle}
                       </a>
                     </div>
                   </>
                 )}
 
                 <p className="small-note">
-                  Un souci pour ouvrir le fichier ? <Link href="/contact">Contactez-nous</Link>.
+                  {t.book.problem} <Link href="/contact">{t.book.contactUs}</Link>.
                 </p>
                 <a className="report" href={reportHref}>
-                  <Icon d={I.flag} size={16} /> Signaler ce livre
+                  <Icon d={I.flag} size={16} /> {t.book.report}
                 </a>{" "}
                 <Link className="small-note" href="/dmca">
-                  (politique DMCA)
+                  {t.book.dmcaPolicy}
                 </Link>
               </div>
 
               <div className="facts-card">
-                <h2>Fiche du livre</h2>
+                <h2>{t.book.facts}</h2>
                 <dl className="facts">
                   <div>
-                    <dt>Titre</dt>
+                    <dt>{t.book.title}</dt>
                     <dd dir="auto">{book.title}</dd>
                   </div>
                   <div>
-                    <dt>Auteur</dt>
+                    <dt>{t.book.author}</dt>
                     <dd dir="auto">{formatAuthorName(book.author)}</dd>
                   </div>
                   {primaryCategory && (
                     <div>
-                      <dt>Genre</dt>
-                      <dd>{primaryCategory.name}</dd>
+                      <dt>{t.book.genre}</dt>
+                      <dd>{primaryCategoryLabel}</dd>
                     </div>
                   )}
                   <div>
-                    <dt>Langue</dt>
+                    <dt>{t.book.language}</dt>
                     <dd>{langLabel}</dd>
                   </div>
                   {book.pageCount && (
                     <div>
-                      <dt>Pages</dt>
+                      <dt>{t.book.pages}</dt>
                       <dd>{book.pageCount}</dd>
                     </div>
                   )}
                   {book.publishedYear && (
                     <div>
-                      <dt>Publication</dt>
+                      <dt>{t.book.publication}</dt>
                       <dd>{book.publishedYear}</dd>
                     </div>
                   )}
                   <div>
-                    <dt>Formats</dt>
+                    <dt>{t.book.formats}</dt>
                     <dd>
-                      {[hasPdf && "PDF", book.epubUrl && "EPUB", hasAudio && "Audio"].filter(Boolean).join(" · ") || "—"}
+                      {[hasPdf && "PDF", book.epubUrl && "EPUB", hasAudio && t.common.audio].filter(Boolean).join(" · ") || "—"}
                     </dd>
                   </div>
                   <div>
-                    <dt>Licence</dt>
-                    <dd>Domaine public</dd>
+                    <dt>{t.book.license}</dt>
+                    <dd>{t.common.publicDomain}</dd>
                   </div>
                 </dl>
               </div>
@@ -449,7 +449,7 @@ export default async function BookPage({ params }: BookPageProps) {
             <div className="like-band" style={{ marginInline: "calc(50% - 50vw)" }}>
               <div className="like-inner">
                 <div className="section-head">
-                  <h2>Des livres comme celui-ci</h2>
+                  <h2>{t.book.similar}</h2>
                 </div>
                 <div className="like-grid">
                   {relatedBooks.map((b) => (

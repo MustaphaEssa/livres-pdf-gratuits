@@ -1,4 +1,7 @@
-import Link from "next/link";
+import Link from "@/i18n/navigation";
+import { getServerI18n } from "@/i18n/server";
+import { i18nAlternates } from "@/i18n/seo";
+import { categoryLabel, fmt, plural } from "@/i18n/format";
 import { notFound } from "next/navigation";
 import DesignShell from "@/components/design/shell";
 import BookCard from "@/components/design/book-card";
@@ -13,21 +16,23 @@ interface Props {
   searchParams: Promise<{ page?: string }>;
 }
 
-export async function generateStaticParams() {
-  const cats = await prisma.category.findMany({ where: { type: "BOOK" }, select: { slug: true } });
-  return cats.map((c) => ({ slug: c.slug }));
-}
+// Rendu à la demande : la langue vient de l'URL (/en/categorie/…) via le middleware,
+// une page pré-rendue au build serait servie en français pour toutes les langues.
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
-  const category = await prisma.category.findUnique({ where: { slug } });
-  if (!category) return { title: "Catégorie introuvable" };
+  const [category, { locale, t }] = await Promise.all([
+    prisma.category.findUnique({ where: { slug } }),
+    getServerI18n(),
+  ]);
+  if (!category) return { title: t.meta.categoryNotFound };
+  const name = categoryLabel(t, category);
   return {
-    title: `Livres ${category.name} gratuits en PDF`,
+    title: fmt(t.meta.categoryTitle, { name }),
     description:
-      category.description ||
-      `Téléchargez gratuitement des livres de la catégorie ${category.name} au format PDF sur ${SITE_NAME}.`,
-    alternates: { canonical: `/categorie/${slug}` },
+      (locale === "fr" && category.description) || fmt(t.meta.categoryDesc, { name, site: SITE_NAME }),
+    alternates: i18nAlternates(locale, `/categorie/${slug}`),
   };
 }
 
@@ -38,6 +43,8 @@ export default async function CategoryPage({ params, searchParams }: Props) {
 
   const category = await prisma.category.findUnique({ where: { slug } });
   if (!category) notFound();
+  const { locale, t } = await getServerI18n();
+  const name = categoryLabel(t, category);
 
   const { books, total, totalPages } = await searchBooks({ category: slug, page, sort: "popular" });
 
@@ -46,27 +53,27 @@ export default async function CategoryPage({ params, searchParams }: Props) {
       <JsonLd
         data={[
           breadcrumbLd([
-            { name: "Accueil", url: "/" },
-            { name: "Catalogue", url: "/catalogue" },
-            { name: category.name, url: `/categorie/${slug}` },
-          ]),
-          ...(books.length > 0 ? [itemListLd(books, `Livres ${category.name}`)] : []),
+            { name: t.nav.home, url: "/" },
+            { name: t.nav.catalogue, url: "/catalogue" },
+            { name, url: `/categorie/${slug}` },
+          ], locale),
+          ...(books.length > 0 ? [itemListLd(books, fmt(t.category.booksOf, { name }), locale)] : []),
         ]}
       />
       <div className="wrap">
-        <nav className="breadcrumb" aria-label="Fil d'Ariane" style={{ paddingTop: 16 }}>
-          <Link href="/">Accueil</Link>
+        <nav className="breadcrumb" aria-label={t.common.breadcrumb} style={{ paddingTop: 16 }}>
+          <Link href="/">{t.nav.home}</Link>
           <span aria-hidden="true">/</span>
-          <Link href="/catalogue">Catalogue</Link>
+          <Link href="/catalogue">{t.nav.catalogue}</Link>
           <span aria-hidden="true">/</span>
-          <span aria-current="page">{category.name}</span>
+          <span aria-current="page">{name}</span>
         </nav>
         <div className="page-head">
           <div>
-            <h1>{category.name}</h1>
+            <h1>{name}</h1>
             <p>
-              {total} livre{total > 1 ? "s" : ""} gratuit{total > 1 ? "s" : ""} en PDF
-              {category.description ? ` — ${category.description}` : ""}
+              {plural(locale, t.category.freeBooks, total)}
+              {locale === "fr" && category.description ? ` — ${category.description}` : ""}
             </p>
           </div>
         </div>
@@ -79,9 +86,9 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           </div>
         ) : (
           <div className="empty">
-            <h3>Aucun livre dans cette catégorie</h3>
+            <h3>{t.category.empty}</h3>
             <Link href="/catalogue" className="btn btn-primary">
-              Voir tout le catalogue
+              {t.category.seeCatalogue}
             </Link>
           </div>
         )}
@@ -90,15 +97,15 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           <div className="load-more" style={{ gap: 12 }}>
             {page > 1 && (
               <Link className="btn btn-outline" href={page - 1 === 1 ? `/categorie/${slug}` : `/categorie/${slug}?page=${page - 1}`}>
-                <Icon d={I.arrow} /> Précédent
+                <Icon d={I.chevL} /> {t.common.previous}
               </Link>
             )}
             <span style={{ alignSelf: "center", color: "var(--muted)" }}>
-              Page {page} / {totalPages}
+              {fmt(t.common.pageOf, { page, total: totalPages })}
             </span>
             {page < totalPages && (
               <Link className="btn btn-outline" href={`/categorie/${slug}?page=${page + 1}`}>
-                Suivant <Icon d={I.arrow} />
+                {t.common.next} <Icon d={I.chevR} />
               </Link>
             )}
           </div>

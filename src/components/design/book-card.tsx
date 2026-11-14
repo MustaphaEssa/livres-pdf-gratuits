@@ -1,4 +1,8 @@
-import Link from "next/link";
+"use client";
+
+import Link from "@/i18n/navigation";
+import { useI18n } from "@/components/i18n-provider";
+import { categoryLabel, fmt } from "@/i18n/format";
 import { formatAuthorName } from "@/lib/utils";
 import BookCover, { type CoverBook } from "./book-cover";
 
@@ -10,14 +14,16 @@ export interface CardBook extends CoverBook {
 
 /** Carte de liste : lien vers la fiche uniquement (pas de téléchargement direct). */
 export default function BookCard({ book }: { book: CardBook }) {
+  const { t } = useI18n();
   const href = `/livre/${book.slug}`;
   const hasTracks = !!book.audioTracks && book.audioTracks !== "[]";
   const isAudio = book.mediaType === "AUDIO" || hasTracks;
-  const audioLabel = book.mediaType === "AUDIO" ? "Audio" : "PDF + audio";
-  const cat = book.categories?.[0]?.category.name;
+  const audioLabel = book.mediaType === "AUDIO" ? t.common.audio : t.common.pdfAudio;
+  const c0 = book.categories?.[0]?.category;
+  const cat = c0 ? categoryLabel(t, c0) : null;
   return (
     <article className="book-card">
-      <Link href={href} className="book-card-cover" aria-label={`${book.title} — voir la fiche`}>
+      <Link href={href} className="book-card-cover" aria-label={fmt(t.common.seeBookOf, { title: book.title })}>
         {isAudio && <span className="badge-audio">{audioLabel}</span>}
         <BookCover book={book} />
       </Link>

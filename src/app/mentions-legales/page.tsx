@@ -1,11 +1,18 @@
 import DesignShell from "@/components/design/shell";
+import FrenchOnlyNotice from "@/components/design/french-only";
+import { getServerI18n } from "@/i18n/server";
+import { frenchOnlyAlternates } from "@/i18n/seo";
 import { getSiteSettings } from "@/lib/settings";
 import { SITE_URL } from "@/lib/site";
 
-export const metadata = {
-  title: "Mentions légales",
-  description: "Informations légales relatives à l'éditeur et à l'hébergeur du site.",
-};
+export async function generateMetadata() {
+  const { t } = await getServerI18n();
+  return {
+    title: t.meta.legal,
+    description: "Informations légales relatives à l'éditeur et à l'hébergeur du site.",
+    alternates: frenchOnlyAlternates("/mentions-legales"),
+  };
+}
 
 export default async function LegalNoticePage() {
   const settings = await getSiteSettings();
@@ -15,7 +22,8 @@ export default async function LegalNoticePage() {
 
   return (
     <DesignShell>
-      <div className="wrap">
+      <div className="wrap" lang="fr">
+        <FrenchOnlyNotice />
         <div className="container mx-auto px-4 py-12 max-w-3xl">
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
             Mentions légales

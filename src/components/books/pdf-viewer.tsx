@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n } from "@/components/i18n-provider";
+import { fmt } from "@/i18n/format";
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Document, Page, Outline, Thumbnail, pdfjs } from "react-pdf";
 import HTMLFlipBook from "react-pageflip";
@@ -106,6 +108,7 @@ function LazyThumb({
 // Lecteur PDF immersif : barre latérale (miniatures + sommaire), vue simple ou
 // double-page, zoom/ajustement, slider de progression, plein écran, téléchargement.
 export function PdfViewer({ pdfUrl, title, onClose, initialPage = 1, onPageChange }: PdfViewerProps) {
+  const { t } = useI18n();
   const rootRef = useRef<HTMLDivElement>(null);
   const areaRef = useRef<HTMLDivElement>(null);
   const [numPages, setNumPages] = useState(0);
@@ -295,7 +298,7 @@ export function PdfViewer({ pdfUrl, title, onClose, initialPage = 1, onPageChang
 
   const pageLoader = (
     <div className="flex items-center gap-2 py-24 text-[#5d584f]">
-      <Loader2 className="h-5 w-5 animate-spin" /> Chargement…
+      <Loader2 className="h-5 w-5 animate-spin" /> {t.reader.loading}
     </div>
   );
   const iconBtn =
@@ -326,7 +329,7 @@ export function PdfViewer({ pdfUrl, title, onClose, initialPage = 1, onPageChang
         <button
           type="button"
           onClick={() => setSidebar((v) => !v)}
-          title="Miniatures / sommaire"
+          title={t.reader.thumbnails}
           className={`${iconBtn} ${sidebar ? activeBtn : ""}`}
         >
           <PanelLeft className="h-5 w-5" />
@@ -354,7 +357,7 @@ export function PdfViewer({ pdfUrl, title, onClose, initialPage = 1, onPageChang
                 }
               }}
               className="h-8 w-12 rounded-lg border border-[#e6dfd2] bg-white text-center outline-none focus:border-[#2d3fa6]"
-              aria-label="Numéro de page"
+              aria-label={t.reader.pageNumber}
             />
             <span className="text-[#5d584f]">/ {numPages || "…"}</span>
           </div>
@@ -362,18 +365,18 @@ export function PdfViewer({ pdfUrl, title, onClose, initialPage = 1, onPageChang
           <button
             type="button"
             onClick={() => setFitMode((m) => (m === "width" ? "page" : "width"))}
-            title={fitMode === "width" ? "Ajuster à la page" : "Ajuster à la largeur"}
+            title={fitMode === "width" ? t.reader.fitPage : t.reader.fitWidth}
             className={iconBtn}
           >
             <span className="text-[11px] font-semibold">
               {fitMode === "width" ? "↔" : "⤢"}
             </span>
           </button>
-          <button type="button" onClick={() => setZoom((s) => Math.max(0.5, +(s - 0.15).toFixed(2)))} title="Dézoomer" className={iconBtn}>
+          <button type="button" onClick={() => setZoom((s) => Math.max(0.5, +(s - 0.15).toFixed(2)))} title={t.reader.zoomOut} className={iconBtn}>
             <ZoomOut className="h-4 w-4" />
           </button>
           <span className="w-10 text-center text-xs text-[#5d584f]">{Math.round(zoom * 100)}%</span>
-          <button type="button" onClick={() => setZoom((s) => Math.min(3, +(s + 0.15).toFixed(2)))} title="Zoomer" className={iconBtn}>
+          <button type="button" onClick={() => setZoom((s) => Math.min(3, +(s + 0.15).toFixed(2)))} title={t.reader.zoomIn} className={iconBtn}>
             <ZoomIn className="h-4 w-4" />
           </button>
 
@@ -383,7 +386,7 @@ export function PdfViewer({ pdfUrl, title, onClose, initialPage = 1, onPageChang
               setFlipCur(Math.max(0, pageNumber - 1));
               setFlip((v) => !v);
             }}
-            title="Mode livre animé (Flip Book)"
+            title={t.reader.flipBook}
             className={`ml-1 inline-flex h-9 items-center gap-1.5 rounded-lg border px-2.5 text-sm font-medium transition-colors ${
               flip
                 ? "border-[#2d3fa6] bg-[#e8ebf8] text-[#2d3fa6]"
@@ -397,7 +400,7 @@ export function PdfViewer({ pdfUrl, title, onClose, initialPage = 1, onPageChang
           <button
             type="button"
             onClick={() => setSpread((v) => !v)}
-            title={spread ? "Page simple" : "Double page"}
+            title={spread ? t.reader.single : t.reader.double}
             className={`${iconBtn} hidden md:inline-flex ${spread ? activeBtn : ""}`}
             disabled={flip}
           >
@@ -406,24 +409,24 @@ export function PdfViewer({ pdfUrl, title, onClose, initialPage = 1, onPageChang
           <button
             type="button"
             onClick={() => setShowText((v) => !v)}
-            title="Sélection de texte"
+            title={t.reader.textSelect}
             className={`${iconBtn} hidden md:inline-flex ${showText ? activeBtn : ""}`}
           >
             <TextCursor className="h-4 w-4" />
           </button>
-          <button type="button" onClick={toggleFullscreen} title="Plein écran" className={iconBtn}>
+          <button type="button" onClick={toggleFullscreen} title={t.reader.fullscreen} className={iconBtn}>
             {fullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
           </button>
           <a
             href={pdfUrl}
             download
-            title="Télécharger le PDF"
+            title={t.reader.download}
             className="ml-1 inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#2d3fa6] px-3 text-sm font-semibold text-white hover:bg-[#25348a]"
           >
             <Download className="h-4 w-4" />
             <span className="hidden sm:inline">PDF</span>
           </a>
-          <button type="button" onClick={onClose} title="Fermer (Échap)" className={iconBtn}>
+          <button type="button" onClick={onClose} title={t.reader.close} className={iconBtn}>
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -449,7 +452,7 @@ export function PdfViewer({ pdfUrl, title, onClose, initialPage = 1, onPageChang
         loading={<div className="flex flex-1 items-center justify-center">{pageLoader}</div>}
         error={
           <div className="flex flex-1 items-center justify-center py-24 text-center text-[#5d584f]">
-            Impossible d&apos;afficher ce PDF.
+            {t.reader.cannotDisplay}
           </div>
         }
         className="flex min-h-0 flex-1"
@@ -465,7 +468,7 @@ export function PdfViewer({ pdfUrl, title, onClose, initialPage = 1, onPageChang
                   tab === "pages" ? "border-b-2 border-[#2d3fa6] font-semibold text-[#2d3fa6]" : "text-[#5d584f]"
                 }`}
               >
-                <Images className="h-4 w-4" /> Pages
+                <Images className="h-4 w-4" /> {t.reader.pagesTab}
               </button>
               <button
                 type="button"
@@ -474,7 +477,7 @@ export function PdfViewer({ pdfUrl, title, onClose, initialPage = 1, onPageChang
                   tab === "outline" ? "border-b-2 border-[#2d3fa6] font-semibold text-[#2d3fa6]" : "text-[#5d584f]"
                 }`}
               >
-                <List className="h-4 w-4" /> Sommaire
+                <List className="h-4 w-4" /> {t.reader.outlineTab}
               </button>
             </div>
             <div data-thumb-scroll className="min-h-0 flex-1 overflow-y-auto p-2">
@@ -500,7 +503,7 @@ export function PdfViewer({ pdfUrl, title, onClose, initialPage = 1, onPageChang
                   />
                 </div>
               ) : (
-                <p className="p-3 text-sm text-[#5d584f]">Pas de sommaire dans ce PDF.</p>
+                <p className="p-3 text-sm text-[#5d584f]">{t.reader.noOutline}</p>
               )}
             </div>
           </aside>
@@ -510,7 +513,7 @@ export function PdfViewer({ pdfUrl, title, onClose, initialPage = 1, onPageChang
         <div ref={setAreaNode} className="flex min-h-0 flex-1 items-start justify-center overflow-auto p-6">
           {error ? (
             <div className="py-24 text-center text-[#5d584f]">
-              <p className="mb-2">Impossible d&apos;afficher ce PDF.</p>
+              <p className="mb-2">{t.reader.cannotDisplay}</p>
               <p className="text-sm">{error}</p>
             </div>
           ) : flip && area.w > 0 && numPages > 0 ? (
@@ -548,7 +551,7 @@ export function PdfViewer({ pdfUrl, title, onClose, initialPage = 1, onPageChang
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={pageImgs[n]}
-                        alt={`Page ${n}`}
+                        alt={fmt(t.common.page, { n })}
                         draggable={false}
                         style={{ width: flipSize.w, height: flipSize.h, display: "block" }}
                       />
@@ -579,7 +582,7 @@ export function PdfViewer({ pdfUrl, title, onClose, initialPage = 1, onPageChang
 
       {/* Barre inférieure : navigation + slider de progression */}
       <footer className="flex items-center gap-3 border-t border-[#e6dfd2] bg-white px-4 py-2.5">
-        <button type="button" onClick={goPrev} disabled={pageNumber <= 1} className={iconBtn} title="Précédent (←)">
+        <button type="button" onClick={goPrev} disabled={pageNumber <= 1} className={iconBtn} title={t.reader.prevKey}>
           <ChevronLeft className="h-5 w-5" />
         </button>
         <span className="shrink-0 text-sm tabular-nums text-[#1c1b19]">
@@ -592,7 +595,7 @@ export function PdfViewer({ pdfUrl, title, onClose, initialPage = 1, onPageChang
           value={pageNumber}
           onChange={(e) => goTo(Number(e.target.value))}
           className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-[#e6dfd2] accent-[#2d3fa6]"
-          aria-label="Progression"
+          aria-label={t.reader.progress}
         />
         <span className="w-10 shrink-0 text-right text-sm tabular-nums text-[#5d584f]">
           {Math.round(progress)}%
@@ -602,7 +605,7 @@ export function PdfViewer({ pdfUrl, title, onClose, initialPage = 1, onPageChang
           onClick={goNext}
           disabled={numPages > 0 && pageNumber >= numPages}
           className={iconBtn}
-          title="Suivant (→)"
+          title={t.reader.nextKey}
         >
           <ChevronRight className="h-5 w-5" />
         </button>

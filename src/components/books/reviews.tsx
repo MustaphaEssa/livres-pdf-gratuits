@@ -83,7 +83,7 @@ export function Reviews({
       setName("");
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur");
+      setError(err instanceof Error ? err.message : t.auth.genericError);
     } finally {
       setSubmitting(false);
     }

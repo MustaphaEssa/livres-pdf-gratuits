@@ -1,26 +1,26 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import Link, { useLocalePathname } from "@/i18n/navigation";
+import { useI18n } from "@/components/i18n-provider";
 import Icon, { I } from "./icon";
 
-const TABS = [
-  { href: "/", label: "Accueil", d: I.home },
-  { href: "/catalogue", label: "Catalogue", d: I.book },
-  { href: "/livres-audio", label: "Audio", d: I.headphones },
-  { href: "/collections", label: "Collections", d: I.library },
-];
-
 export default function MobileTabbar() {
-  const path = usePathname();
+  const path = useLocalePathname();
+  const { t } = useI18n();
+  const TABS = [
+    { href: "/", label: t.nav.home, d: I.home },
+    { href: "/catalogue", label: t.nav.catalogue, d: I.book },
+    { href: "/livres-audio", label: t.nav.audioShort, d: I.headphones },
+    { href: "/collections", label: t.nav.collections, d: I.library },
+  ];
   return (
-    <nav className="tabbar" aria-label="Navigation mobile">
-      {TABS.map((t) => {
-        const current = t.href === "/" ? path === "/" : path.startsWith(t.href);
+    <nav className="tabbar" aria-label={t.nav.mobile}>
+      {TABS.map((tab) => {
+        const current = tab.href === "/" ? path === "/" : path.startsWith(tab.href);
         return (
-          <Link key={t.label} href={t.href} aria-current={current ? "page" : undefined}>
-            <Icon d={t.d} size={22} />
-            {t.label}
+          <Link key={tab.href} href={tab.href} aria-current={current ? "page" : undefined}>
+            <Icon d={tab.d} size={22} />
+            {tab.label}
           </Link>
         );
       })}

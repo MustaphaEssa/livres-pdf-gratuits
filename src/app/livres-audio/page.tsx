@@ -1,4 +1,7 @@
-import Link from "next/link";
+import Link from "@/i18n/navigation";
+import { getServerI18n } from "@/i18n/server";
+import { i18nAlternates } from "@/i18n/seo";
+import { fmt, plural } from "@/i18n/format";
 import DesignHeader from "@/components/design/header";
 import DesignFooter from "@/components/design/footer";
 import MobileTabbar from "@/components/design/mobile-tabbar";
@@ -21,16 +24,17 @@ const pageHref = (p: number) => (p > 1 ? `/livres-audio?page=${p}` : "/livres-au
 
 export async function generateMetadata({ searchParams }: Props) {
   const page = pageFrom((await searchParams).page);
+  const { locale, t } = await getServerI18n();
   return {
-    title: page > 1 ? `Livres audio gratuits — page ${page}` : "Livres audio gratuits",
-    description:
-      "Écoutez gratuitement des livres audio du domaine public (LibriVox) en streaming : romans, classiques, essais, lus par des bénévoles. Sans inscription.",
-    alternates: { canonical: pageHref(page) },
+    title: page > 1 ? fmt(t.meta.audioTitlePage, { n: page }) : t.meta.audioTitle,
+    description: t.meta.audioDesc,
+    alternates: i18nAlternates(locale, pageHref(page)),
   };
 }
 
 export default async function LivresAudioPage({ searchParams }: Props) {
   const requested = pageFrom((await searchParams).page);
+  const { locale, t } = await getServerI18n();
   const [{ books, total, page, totalPages }, categories] = await Promise.all([
     getAudiobooks(requested, PAGE_SIZE, "newest"),
     getCategoriesWithCounts(),
@@ -41,23 +45,21 @@ export default async function LivresAudioPage({ searchParams }: Props) {
       <DesignHeader />
       <main className="page-main" id="contenu">
         <div className="wrap">
-          <nav className="breadcrumb" aria-label="Fil d'Ariane" style={{ paddingTop: 16 }}>
-            <Link href="/">Accueil</Link>
+          <nav className="breadcrumb" aria-label={t.common.breadcrumb} style={{ paddingTop: 16 }}>
+            <Link href="/">{t.nav.home}</Link>
             <span aria-hidden="true">/</span>
-            <span aria-current="page">Livres audio</span>
+            <span aria-current="page">{t.nav.audiobooks}</span>
           </nav>
           <div className="page-head">
             <div className="page-head-row">
               <div>
                 <div className="eyebrow">
-                  <Icon d={I.headphones} size={16} /> Audio
+                  <Icon d={I.headphones} size={16} /> {t.audio.eyebrow}
                 </div>
-                <h1>Livres audio gratuits</h1>
+                <h1>{t.audio.title}</h1>
                 <p>
-                  Écoutez gratuitement des œuvres du domaine public, lues par des bénévoles
-                  (LibriVox), en streaming et sans inscription. Les livres marqués « PDF + audio »
-                  se lisent aussi en PDF.
-                  {total > 0 && ` ${total} titre${total > 1 ? "s" : ""} disponible${total > 1 ? "s" : ""}.`}
+                  {t.audio.intro}
+                  {total > 0 && ` ${plural(locale, t.audio.titles, total)}`}
                 </p>
               </div>
             </div>
@@ -74,20 +76,18 @@ export default async function LivresAudioPage({ searchParams }: Props) {
             </>
           ) : total > 0 ? (
             <div className="empty">
-              <h3>Cette page n&apos;existe pas</h3>
-              <p>
-                Il y a {totalPages} page{totalPages > 1 ? "s" : ""} de livres audio.
-              </p>
+              <h3>{t.audio.noPage}</h3>
+              <p>{plural(locale, t.audio.pagesCount, totalPages)}</p>
               <Link href="/livres-audio" className="btn btn-primary">
-                Revenir à la première page
+                {t.audio.firstPage}
               </Link>
             </div>
           ) : (
             <div className="empty">
-              <h3>Aucun livre audio pour le moment</h3>
-              <p>Revenez bientôt, ou parcourez les livres à lire.</p>
+              <h3>{t.audio.empty}</h3>
+              <p>{t.audio.emptyHint}</p>
               <Link href="/catalogue" className="btn btn-primary">
-                Parcourir le catalogue
+                {t.audio.browse}
               </Link>
             </div>
           )}

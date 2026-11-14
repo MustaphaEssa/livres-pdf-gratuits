@@ -58,7 +58,19 @@ export default function AdminNettoyagePage() {
     setConfirm(false);
     try {
       const res = await fetch(`/api/admin/nettoyage${refresh ? "?refresh=1" : ""}`);
-      const data = await res.json();
+      // Si le proxy coupe une analyse trop longue (502/504), la réponse est une page
+      // HTML et non du JSON : on affiche un message compréhensible.
+      const text = await res.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error(
+          res.status === 502 || res.status === 504
+            ? "L'analyse a dépassé le délai du serveur. Relancez-la dans une minute : les chiffres d'Internet Archive déjà récupérés sont gardés en cache, la suivante sera plus rapide."
+            : `Réponse inattendue du serveur (HTTP ${res.status}).`
+        );
+      }
       if (!res.ok) throw new Error(data.error || "Échec de l'analyse");
       setAnalysis(data as Analysis);
       // Pré-sélectionne les livres supprimables sous le seuil courant

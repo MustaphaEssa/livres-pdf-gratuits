@@ -1,7 +1,11 @@
 import DesignShell from "@/components/design/shell";
 import { getServerI18n } from "@/i18n/server";
+import { i18nAlternates } from "@/i18n/seo";
 
-export const metadata = { title: "À propos" };
+export async function generateMetadata() {
+  const { locale, t } = await getServerI18n();
+  return { title: t.meta.about, alternates: i18nAlternates(locale, "/a-propos") };
+}
 
 export default async function AboutPage() {
   const { t } = await getServerI18n();
@@ -18,7 +22,7 @@ export default async function AboutPage() {
       <div className="wrap">
         <div className="page-head">
           <div>
-            <div className="eyebrow">À propos</div>
+            <div className="eyebrow">{t.about.eyebrow}</div>
             <h1>{t.about.heroTitle}</h1>
             <p>{t.about.heroSubtitle}</p>
           </div>

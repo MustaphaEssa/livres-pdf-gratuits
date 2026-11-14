@@ -1,18 +1,20 @@
-import Link from "next/link";
+import Link from "@/i18n/navigation";
+import { getServerI18n } from "@/i18n/server";
+import { i18nAlternates } from "@/i18n/seo";
+import { formatDateLocale } from "@/i18n/format";
 import DesignHeader from "@/components/design/header";
 import DesignFooter from "@/components/design/footer";
 import MobileTabbar from "@/components/design/mobile-tabbar";
 import { getPublishedPosts } from "@/lib/posts";
 import { getCategoriesWithCounts } from "@/lib/books";
-import { formatDate } from "@/lib/utils";
 
-export const metadata = {
-  title: "Blog",
-  description: "Actualités, conseils et réflexions sur le monde du livre et de la lecture.",
-  alternates: { canonical: "/blog" },
-};
+export async function generateMetadata() {
+  const { locale, t } = await getServerI18n();
+  return { title: t.meta.blogTitle, description: t.meta.blogDesc, alternates: i18nAlternates(locale, "/blog") };
+}
 
 export default async function BlogPage() {
+  const { locale, t } = await getServerI18n();
   const [posts, categories] = await Promise.all([
     getPublishedPosts(),
     getCategoriesWithCounts(),
@@ -23,22 +25,22 @@ export default async function BlogPage() {
       <DesignHeader />
       <main className="page-main" id="contenu">
         <div className="wrap">
-          <nav className="breadcrumb" aria-label="Fil d'Ariane" style={{ paddingTop: 16 }}>
-            <Link href="/">Accueil</Link>
+          <nav className="breadcrumb" aria-label={t.common.breadcrumb} style={{ paddingTop: 16 }}>
+            <Link href="/">{t.nav.home}</Link>
             <span aria-hidden="true">/</span>
-            <span aria-current="page">Blog</span>
+            <span aria-current="page">{t.nav.blog}</span>
           </nav>
           <div className="page-head">
             <div>
-              <div className="eyebrow">Le journal</div>
-              <h1>Blog</h1>
-              <p>Actualités, conseils et réflexions sur le monde du livre et de la lecture.</p>
+              <div className="eyebrow">{t.blog.eyebrow}</div>
+              <h1>{t.blog.title}</h1>
+              <p>{t.blog.subtitle}</p>
             </div>
           </div>
 
           {posts.length === 0 ? (
             <div className="empty">
-              <h3>Aucun article pour le moment</h3>
+              <h3>{t.blog.empty}</h3>
             </div>
           ) : (
             <div className="genre-grid">
@@ -57,7 +59,7 @@ export default async function BlogPage() {
                   {post.excerpt && <p>{post.excerpt}</p>}
                   <span className="opens">
                     {post.author ? `${post.author} · ` : ""}
-                    {formatDate(post.publishedAt ?? post.createdAt)}
+                    {formatDateLocale(locale, post.publishedAt ?? post.createdAt)}
                   </span>
                 </Link>
               ))}

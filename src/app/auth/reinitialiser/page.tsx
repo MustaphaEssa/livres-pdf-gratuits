@@ -1,8 +1,8 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import Link, { useLocaleRouter } from "@/i18n/navigation";
+import { useSearchParams } from "next/navigation";
 import { BookOpen, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +16,7 @@ import {
 import { useI18n } from "@/components/i18n-provider";
 
 function ResetForm() {
-  const router = useRouter();
+  const router = useLocaleRouter();
   const { t } = useI18n();
   const token = useSearchParams().get("token") || "";
   const [password, setPassword] = useState("");
@@ -48,7 +48,7 @@ function ResetForm() {
       setDone(true);
       setTimeout(() => router.push("/auth/connexion"), 1800);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur");
+      setError(err instanceof Error ? err.message : t.auth.genericError);
     } finally {
       setLoading(false);
     }

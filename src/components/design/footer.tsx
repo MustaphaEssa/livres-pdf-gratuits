@@ -1,4 +1,8 @@
-import Link from "next/link";
+"use client";
+
+import Link from "@/i18n/navigation";
+import { useI18n } from "@/components/i18n-provider";
+import { categoryLabel } from "@/i18n/format";
 import Logo from "./logo";
 
 export default function DesignFooter({
@@ -6,46 +10,45 @@ export default function DesignFooter({
 }: {
   categories?: { name: string; slug: string }[];
 }) {
+  const { t } = useI18n();
   return (
     <footer className="site-footer">
       <div className="footer-inner">
         <div className="footer-col brand">
           <Logo />
-          <p>
-            Une bibliothèque numérique libre : des livres du domaine public à télécharger en PDF,
-            à lire en ligne ou à écouter, dans plusieurs langues.
-          </p>
+          <p>{t.footer.tagline}</p>
         </div>
         <div className="footer-col">
-          <h2>Explorer</h2>
-          <Link href="/catalogue">Catalogue</Link>
-          <Link href="/livres-audio">Livres audio</Link>
-          <Link href="/collections">Collections</Link>
-          <Link href="/auteurs">Auteurs</Link>
-          <Link href="/blog">Blog</Link>
+          <h2>{t.footer.explore}</h2>
+          <Link href="/catalogue">{t.nav.catalogue}</Link>
+          <Link href="/livres-audio">{t.nav.audiobooks}</Link>
+          <Link href="/collections">{t.nav.collections}</Link>
+          <Link href="/auteurs">{t.nav.authors}</Link>
+          <Link href="/blog">{t.nav.blog}</Link>
         </div>
         <div className="footer-col">
-          <h2>Genres</h2>
+          <h2>{t.footer.genres}</h2>
           {categories.slice(0, 5).map((c) => (
             <Link key={c.slug} href={`/catalogue?category=${c.slug}`}>
-              {c.name}
+              {categoryLabel(t, c)}
             </Link>
           ))}
         </div>
         <div className="footer-col">
-          <h2>Infos</h2>
-          <Link href="/contact">Contact</Link>
-          <Link href="/dmca">DMCA / droits d&apos;auteur</Link>
-          <Link href="/mentions-legales">Mentions légales</Link>
-          <Link href="/confidentialite">Confidentialité</Link>
+          <h2>{t.footer.info}</h2>
+          <Link href="/a-propos">{t.nav.about}</Link>
+          <Link href="/contact">{t.footer.contact}</Link>
+          <Link href="/dmca">{t.footer.dmca}</Link>
+          <Link href="/mentions-legales">{t.footer.legalNotice}</Link>
+          <Link href="/confidentialite">{t.footer.privacy}</Link>
         </div>
       </div>
       <div className="footer-bottom">
         <span>© {new Date().getFullYear()} livrespdfgratuits.com</span>
         <div>
-          <Link href="/mentions-legales">Mentions légales</Link>
-          <Link href="/confidentialite">Confidentialité</Link>
-          <Link href="/conditions">Conditions</Link>
+          <Link href="/mentions-legales">{t.footer.legalNotice}</Link>
+          <Link href="/confidentialite">{t.footer.privacy}</Link>
+          <Link href="/conditions">{t.footer.terms}</Link>
         </div>
       </div>
     </footer>

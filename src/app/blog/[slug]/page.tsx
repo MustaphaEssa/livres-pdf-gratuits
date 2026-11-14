@@ -1,4 +1,7 @@
-import Link from "next/link";
+import Link from "@/i18n/navigation";
+import { getServerI18n } from "@/i18n/server";
+import { frenchOnlyAlternates } from "@/i18n/seo";
+import { formatDateLocale } from "@/i18n/format";
 import { notFound } from "next/navigation";
 import DesignHeader from "@/components/design/header";
 import DesignFooter from "@/components/design/footer";
@@ -9,7 +12,6 @@ import { FacebookComments } from "@/components/blog/facebook-comments";
 import { getPublishedPostBySlug } from "@/lib/posts";
 import { getCategoriesWithCounts } from "@/lib/books";
 import { getUserSession } from "@/lib/user-server";
-import { formatDate } from "@/lib/utils";
 import { SITE_URL, SITE_NAME } from "@/lib/site";
 import JsonLd, { breadcrumbLd } from "@/components/seo/json-ld";
 
@@ -19,8 +21,8 @@ interface Props {
 
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
-  const post = await getPublishedPostBySlug(slug);
-  if (!post) return { title: "Article introuvable" };
+  const [post, { t }] = await Promise.all([getPublishedPostBySlug(slug), getServerI18n()]);
+  if (!post) return { title: t.meta.postNotFound };
   const title = post.metaTitle || post.title;
   const description = post.metaDescription || post.excerpt || undefined;
   const image = post.coverImage
@@ -31,7 +33,7 @@ export async function generateMetadata({ params }: Props) {
   return {
     title,
     description,
-    alternates: { canonical: `/blog/${slug}` },
+    alternates: frenchOnlyAlternates(`/blog/${slug}`),
     openGraph: {
       title,
       description,
@@ -53,7 +55,11 @@ export default async function PostPage({ params }: Props) {
   const post = await getPublishedPostBySlug(slug);
   if (!post) notFound();
 
-  const [session, categories] = await Promise.all([getUserSession(), getCategoriesWithCounts()]);
+  const [session, categories, { locale, t }] = await Promise.all([
+    getUserSession(),
+    getCategoriesWithCounts(),
+    getServerI18n(),
+  ]);
   const paragraphs = post.content.split(/\n\s*\n/).filter(Boolean);
   const shareUrl = `${SITE_URL}/blog/${slug}`;
   const postImage = post.coverImage
@@ -84,8 +90,8 @@ export default async function PostPage({ params }: Props) {
       <JsonLd
         data={[
           breadcrumbLd([
-            { name: "Accueil", url: "/" },
-            { name: "Blog", url: "/blog" },
+            { name: t.nav.home, url: "/" },
+            { name: t.nav.blog, url: "/blog" },
             { name: post.title, url: `/blog/${slug}` },
           ]),
           articleLd,
@@ -93,11 +99,11 @@ export default async function PostPage({ params }: Props) {
       />
       <DesignHeader />
       <main className="page-main" id="contenu">
-        <article className="wrap" style={{ maxWidth: 820 }}>
-          <nav className="breadcrumb" aria-label="Fil d'Ariane" style={{ paddingTop: 16 }}>
-            <Link href="/">Accueil</Link>
+        <article className="wrap" style={{ maxWidth: 820 }} lang="fr">
+          <nav className="breadcrumb" aria-label={t.common.breadcrumb} style={{ paddingTop: 16 }}>
+            <Link href="/">{t.nav.home}</Link>
             <span aria-hidden="true">/</span>
-            <Link href="/blog">Blog</Link>
+            <Link href="/blog">{t.nav.blog}</Link>
             <span aria-hidden="true">/</span>
             <span aria-current="page">{post.title}</span>
           </nav>
@@ -108,7 +114,7 @@ export default async function PostPage({ params }: Props) {
               <h1>{post.title}</h1>
               <p style={{ color: "var(--muted)", marginTop: 10 }}>
                 {post.author ? `${post.author} · ` : ""}
-                {formatDate(post.publishedAt ?? post.createdAt)}
+                {formatDateLocale(locale, post.publishedAt ?? post.createdAt)}
                 {"  "}
                 <a
                   href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`}
@@ -116,7 +122,7 @@ export default async function PostPage({ params }: Props) {
                   rel="noopener noreferrer"
                   style={{ color: "var(--accent)", fontWeight: 600, marginLeft: 8 }}
                 >
-                  Partager
+                  {t.common.share}
                 </a>
               </p>
             </div>
@@ -146,7 +152,7 @@ export default async function PostPage({ params }: Props) {
 
           <p style={{ marginTop: 32 }}>
             <Link href="/blog" className="link-arrow">
-              <Icon d={I.arrow} /> Retour au blog
+              <Icon d={I.chevL} /> {t.blog.backToBlog}
             </Link>
           </p>
         </article>

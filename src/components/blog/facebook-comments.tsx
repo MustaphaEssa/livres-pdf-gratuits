@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n } from "@/components/i18n-provider";
+import { LOCALE_INFO } from "@/i18n/config";
 import { useEffect } from "react";
 import { MessageCircle } from "lucide-react";
 
@@ -20,6 +22,8 @@ declare global {
  */
 export function FacebookComments({ url }: { url: string }) {
   const appId = process.env.NEXT_PUBLIC_FACEBOOK_APP_ID;
+  const { t, locale } = useI18n();
+  const fbLocale = LOCALE_INFO[locale].og;
 
   useEffect(() => {
     // Sans App ID, on ne charge pas le SDK Facebook.
@@ -37,10 +41,10 @@ export function FacebookComments({ url }: { url: string }) {
     script.defer = true;
     script.crossOrigin = "anonymous";
     script.src =
-      "https://connect.facebook.net/fr_FR/sdk.js#xfbml=1&version=v21.0" +
+      `https://connect.facebook.net/${fbLocale}/sdk.js#xfbml=1&version=v21.0` +
       (appId ? `&appId=${appId}` : "");
     document.body.appendChild(script);
-  }, [url, appId]);
+  }, [url, appId, fbLocale]);
 
   // Sans App ID, le plugin ne peut pas fonctionner : on n'affiche rien.
   if (!appId) return null;
@@ -49,7 +53,7 @@ export function FacebookComments({ url }: { url: string }) {
     <div className="mt-12">
       <h2 className="flex items-center gap-2 text-xl font-semibold text-slate-900 dark:text-white mb-4">
         <MessageCircle className="h-5 w-5 text-[#1877F2]" />
-        Rejoignez la discussion
+        {t.blog.joinDiscussion}
       </h2>
       <div id="fb-root" />
       <div

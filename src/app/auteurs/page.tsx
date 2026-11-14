@@ -1,17 +1,24 @@
-import Link from "next/link";
+import Link from "@/i18n/navigation";
+import { getServerI18n } from "@/i18n/server";
+import { i18nAlternates } from "@/i18n/seo";
+import { plural } from "@/i18n/format";
 import DesignHeader from "@/components/design/header";
 import DesignFooter from "@/components/design/footer";
 import MobileTabbar from "@/components/design/mobile-tabbar";
 import Icon, { I } from "@/components/design/icon";
 import { getAuthorsWithCounts, getCategoriesWithCounts } from "@/lib/books";
 
-export const metadata = {
-  title: "Auteurs",
-  description: "Parcourez les auteurs du domaine public et découvrez tous leurs livres gratuits.",
-  alternates: { canonical: "/auteurs" },
-};
+export async function generateMetadata() {
+  const { locale, t } = await getServerI18n();
+  return {
+    title: t.meta.authorsTitle,
+    description: t.meta.authorsDesc,
+    alternates: i18nAlternates(locale, "/auteurs"),
+  };
+}
 
 export default async function AuthorsPage() {
+  const { locale, t } = await getServerI18n();
   const [authors, categories] = await Promise.all([
     getAuthorsWithCounts(),
     getCategoriesWithCounts(),
@@ -22,23 +29,21 @@ export default async function AuthorsPage() {
       <DesignHeader />
       <main className="page-main" id="contenu">
         <div className="wrap">
-          <nav className="breadcrumb" aria-label="Fil d'Ariane" style={{ paddingTop: 16 }}>
-            <Link href="/">Accueil</Link>
+          <nav className="breadcrumb" aria-label={t.common.breadcrumb} style={{ paddingTop: 16 }}>
+            <Link href="/">{t.nav.home}</Link>
             <span aria-hidden="true">/</span>
-            <span aria-current="page">Auteurs</span>
+            <span aria-current="page">{t.nav.authors}</span>
           </nav>
           <div className="page-head">
             <div>
-              <h1>Auteurs</h1>
-              <p>
-                {authors.length} auteur{authors.length > 1 ? "s" : ""} dans la bibliothèque.
-              </p>
+              <h1>{t.authors.title}</h1>
+              <p>{plural(locale, t.authors.count, authors.length)}</p>
             </div>
           </div>
 
           {authors.length === 0 ? (
             <div className="empty">
-              <h3>Aucun auteur pour le moment</h3>
+              <h3>{t.authors.empty}</h3>
             </div>
           ) : (
             <div className="mini-grid">
@@ -65,7 +70,7 @@ export default async function AuthorsPage() {
                       {a.name}
                     </span>
                     <span className="book-author">
-                      {a.count} livre{a.count > 1 ? "s" : ""}
+                      {plural(locale, t.common.books, a.count)}
                     </span>
                   </span>
                   <Icon d={I.arrow} />

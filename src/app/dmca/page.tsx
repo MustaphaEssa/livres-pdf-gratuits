@@ -1,12 +1,18 @@
 import DesignShell from "@/components/design/shell";
+import FrenchOnlyNotice from "@/components/design/french-only";
+import { getServerI18n } from "@/i18n/server";
+import { frenchOnlyAlternates } from "@/i18n/seo";
 import { getSiteSettings } from "@/lib/settings";
 
-export const metadata = {
-  title: "Politique DMCA / Droits d'auteur",
-  description:
-    "Notre politique de signalement et de retrait (DMCA). Comment signaler un contenu qui porterait atteinte à des droits d'auteur sur livrespdfgratuits.com.",
-  alternates: { canonical: "/dmca" },
-};
+export async function generateMetadata() {
+  const { t } = await getServerI18n();
+  return {
+    title: t.meta.dmca,
+    description:
+      "Notre politique de signalement et de retrait (DMCA). Comment signaler un contenu qui porterait atteinte à des droits d'auteur sur livrespdfgratuits.com.",
+    alternates: frenchOnlyAlternates("/dmca"),
+  };
+}
 
 export default async function DmcaPage() {
   const settings = await getSiteSettings();
@@ -14,7 +20,8 @@ export default async function DmcaPage() {
 
   return (
     <DesignShell>
-      <div className="wrap" style={{ maxWidth: 820, paddingTop: 16 }}>
+      <div className="wrap" style={{ maxWidth: 820, paddingTop: 16 }} lang="fr">
+        <FrenchOnlyNotice />
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-6">
             Politique relative aux droits d&apos;auteur (DMCA)
           </h1>

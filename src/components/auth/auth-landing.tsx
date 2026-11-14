@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { useLocaleRouter as useRouter } from "@/i18n/navigation";
+import { useI18n } from "@/components/i18n-provider";
 import { useAuth } from "@/components/auth/auth-modal";
 
 /**
@@ -11,6 +13,7 @@ import { useAuth } from "@/components/auth/auth-modal";
  */
 export default function AuthLanding({ mode }: { mode: "signin" | "signup" }) {
   const router = useRouter();
+  const { t } = useI18n();
   const params = useSearchParams();
   const { user, loadingUser, openAuth } = useAuth();
   const opened = useRef(false);
@@ -37,15 +40,15 @@ export default function AuthLanding({ mode }: { mode: "signin" | "signup" }) {
   return (
     <div className="wrap" style={{ padding: "64px 32px", textAlign: "center" }}>
       <h1 style={{ fontSize: 30, marginBottom: 12 }}>
-        {mode === "signin" ? "Connexion" : "Créer un compte"}
+        {mode === "signin" ? t.auth.loginTitle : t.auth.registerTitle}
       </h1>
       <p style={{ color: "var(--muted)", marginBottom: 24 }}>
         {mode === "signin"
-          ? "Connectez-vous pour accéder à vos livres et vos favoris."
-          : "Créez un compte gratuit pour garder vos livres et vos favoris."}
+          ? t.auth.landingSigninLead
+          : t.auth.signupLead}
       </p>
       <button type="button" className="btn btn-primary btn-lg" onClick={open}>
-        {mode === "signin" ? "Se connecter" : "Créer un compte"}
+        {mode === "signin" ? t.auth.signIn : t.auth.registerTitle}
       </button>
     </div>
   );

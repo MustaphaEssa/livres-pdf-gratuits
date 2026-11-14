@@ -1,10 +1,14 @@
-import Link from "next/link";
+"use client";
+
+import Link from "@/i18n/navigation";
+import { useI18n } from "@/components/i18n-provider";
 
 // Marque « Livres PDF Gratuits » — carré navy, livre ouvert (page blanche + page
 // orange avec flèche de téléchargement). Reprend l'identité de mark.svg.
 export default function Logo() {
+  const { t } = useI18n();
   return (
-    <Link href="/" className="logo" aria-label="Livres PDF Gratuits — accueil">
+    <Link href="/" className="logo" aria-label={`Livres PDF Gratuits — ${t.nav.home}`}>
       <svg width="38" height="38" viewBox="0 0 120 120" aria-hidden="true">
         <rect width="120" height="120" rx="28" fill="#14213D" />
         <path d="M18 36 Q38 28 58 36 V90 Q38 82 18 90 Z" fill="#FFFFFF" />

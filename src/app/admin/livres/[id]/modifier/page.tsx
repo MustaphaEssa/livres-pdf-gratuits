@@ -252,7 +252,7 @@ export default function EditBookPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">{t.bookPage.pages}</label>
+                    <label className="block text-sm font-medium mb-1">Pages</label>
                     <Input
                       type="number"
                       value={form.pageCount}

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/i18n/navigation";
+import { useI18n } from "@/components/i18n-provider";
 import BookCard, { type CardBook } from "./book-card";
 import Icon, { I } from "./icon";
 
@@ -12,22 +13,23 @@ export interface LangShelfTab {
 }
 
 export default function LangShelf({ newest, langs }: { newest: CardBook[]; langs: LangShelfTab[] }) {
+  const { t } = useI18n();
   const [tab, setTab] = useState<string>("new");
   const current = langs.find((l) => l.code === tab);
   const list = current ? current.books : newest;
   const href = current ? `/catalogue?language=${current.code}` : "/catalogue";
 
   // N'affiche que les langues qui ont des livres (en plus de « Nouveautés »)
-  const tabs = [{ code: "new", label: "Nouveautés" }, ...langs.filter((l) => l.books.length > 0)];
+  const tabs = [{ code: "new", label: t.home.newest }, ...langs.filter((l) => l.books.length > 0)];
 
   return (
     <section className="section wrap" aria-labelledby="shelf-title">
       <div className="section-head">
         <div>
-          <div className="eyebrow">Sélection</div>
-          <h2 id="shelf-title">Commencer par un classique</h2>
+          <div className="eyebrow">{t.home.shelfEyebrow}</div>
+          <h2 id="shelf-title">{t.home.shelfTitle}</h2>
         </div>
-        <div className="tabs" role="tablist" aria-label="Langue">
+        <div className="tabs" role="tablist" aria-label={t.nav.language}>
           {tabs.map((t) => (
             <button
               key={t.code}
@@ -50,7 +52,7 @@ export default function LangShelf({ newest, langs }: { newest: CardBook[]; langs
       </div>
       <div className="shelf-cta">
         <Link href={href} className="btn btn-outline btn-lg">
-          Voir tout le catalogue <Icon d={I.arrow} />
+          {t.home.seeAllCatalogue} <Icon d={I.arrow} />
         </Link>
       </div>
     </section>

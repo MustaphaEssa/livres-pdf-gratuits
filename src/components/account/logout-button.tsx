@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useLocaleRouter as useRouter } from "@/i18n/navigation";
 import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { userLogout } from "@/lib/user-client";

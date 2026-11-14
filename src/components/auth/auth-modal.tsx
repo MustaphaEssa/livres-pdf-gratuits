@@ -9,7 +9,8 @@ import {
   useState,
 } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import Link from "@/i18n/navigation";
+import { useI18n } from "@/components/i18n-provider";
 import { fetchCurrentUser, userLogout, type CurrentUser } from "@/lib/user-client";
 
 /* -------------------------------------------------------------------------
@@ -162,6 +163,7 @@ function AuthDialog({
   onClose: () => void;
   onSuccess: () => void;
 }) {
+  const { t, locale } = useI18n();
   const [mode, setMode] = useState<Mode>(initialMode);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -207,11 +209,11 @@ function AuthDialog({
                 onSuccess();
               } else {
                 const d = await r.json().catch(() => ({}));
-                setError(d.error || "La connexion Google a échoué.");
+                setError(d.error || t.auth.googleFailed);
                 setLoading(false);
               }
             } catch {
-              setError("La connexion Google a échoué.");
+              setError(t.auth.googleFailed);
               setLoading(false);
             }
           },
@@ -225,6 +227,7 @@ function AuthDialog({
           shape: "rectangular",
           logo_alignment: "center",
           width: 360,
+          locale,
         });
       })
       .catch(() => {
@@ -241,12 +244,12 @@ function AuthDialog({
     setError("");
 
     if (!email || !password || (mode === "signup" && !name)) {
-      setError("Merci de remplir tous les champs.");
+      setError(t.auth.fillAll);
       setLoading(false);
       return;
     }
     if (mode === "signup" && password.length < 6) {
-      setError("Le mot de passe doit contenir au moins 6 caractères.");
+      setError(t.auth.passwordTooShort);
       setLoading(false);
       return;
     }
@@ -264,20 +267,20 @@ function AuthDialog({
         onSuccess();
       } else {
         const d = await r.json().catch(() => ({}));
-        setError(d.error || "Une erreur est survenue.");
+        setError(d.error || t.auth.genericError);
         setLoading(false);
       }
     } catch {
-      setError("Une erreur est survenue. Réessayez.");
+      setError(t.auth.genericError);
       setLoading(false);
     }
   };
 
-  const title = mode === "signin" ? "Content de vous revoir" : "Créez votre compte";
+  const title = mode === "signin" ? t.auth.welcomeBack : t.auth.createYours;
   const defaultReason =
     mode === "signin"
-      ? "Connectez-vous pour retrouver vos livres et vos favoris."
-      : "Créez un compte gratuit pour garder vos livres et vos favoris.";
+      ? t.auth.signinLead
+      : t.auth.signupLead;
 
   return (
     <div
@@ -296,7 +299,7 @@ function AuthDialog({
         <button
           type="button"
           className="auth-close"
-          aria-label="Fermer"
+          aria-label={t.common.close}
           onClick={onClose}
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -313,7 +316,7 @@ function AuthDialog({
             className={`auth-tab ${mode === "signin" ? "is-active" : ""}`}
             onClick={() => { setMode("signin"); setError(""); }}
           >
-            Se connecter
+            {t.auth.signIn}
           </button>
           <button
             type="button"
@@ -322,7 +325,7 @@ function AuthDialog({
             className={`auth-tab ${mode === "signup" ? "is-active" : ""}`}
             onClick={() => { setMode("signup"); setError(""); }}
           >
-            Créer un compte
+            {t.auth.registerTitle}
           </button>
         </div>
 
@@ -335,42 +338,42 @@ function AuthDialog({
           <>
             <div className="auth-google" ref={googleBoxRef} aria-busy={loading} />
             <p className="auth-legal">
-              En continuant avec Google, vous acceptez nos{" "}
-              <Link href="/conditions" target="_blank">conditions d&apos;utilisation</Link>{" "}
-              et notre{" "}
-              <Link href="/confidentialite" target="_blank">politique de confidentialité</Link>.
+              {t.auth.consentPrefix}{" "}
+              <Link href="/conditions" target="_blank">{t.auth.terms}</Link>{" "}
+              {t.auth.andOur}{" "}
+              <Link href="/confidentialite" target="_blank">{t.auth.privacy}</Link>.
             </p>
-            <div className="auth-sep"><span>ou avec votre email</span></div>
+            <div className="auth-sep"><span>{t.auth.orEmail}</span></div>
           </>
         )}
 
         <form onSubmit={submit} className="auth-form">
           {mode === "signup" && (
             <label className="auth-field">
-              <span>Nom</span>
+              <span>{t.auth.name}</span>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Votre nom"
+                placeholder={t.auth.yourName}
                 autoComplete="name"
                 required
               />
             </label>
           )}
           <label className="auth-field">
-            <span>Email</span>
+            <span>{t.auth.email}</span>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="votre@email.com"
+              placeholder={t.auth.emailPlaceholder}
               autoComplete="email"
               required
             />
           </label>
           <label className="auth-field">
-            <span>Mot de passe</span>
+            <span>{t.auth.password}</span>
             <div className="auth-pw">
               <input
                 type={showPw ? "text" : "password"}
@@ -383,34 +386,34 @@ function AuthDialog({
               <button
                 type="button"
                 className="auth-pw-toggle"
-                aria-label={showPw ? "Masquer" : "Afficher"}
+                aria-label={showPw ? t.auth.hide : t.auth.show}
                 onClick={() => setShowPw(!showPw)}
               >
-                {showPw ? "Masquer" : "Afficher"}
+                {showPw ? t.auth.hide : t.auth.show}
               </button>
             </div>
           </label>
 
           <button type="submit" className="btn btn-primary btn-xl" disabled={loading}>
             {loading
-              ? "Veuillez patienter…"
+              ? t.auth.wait
               : mode === "signin"
-                ? "Se connecter"
-                : "Créer mon compte"}
+                ? t.auth.signIn
+                : t.auth.createMine}
           </button>
         </form>
 
         <p className="auth-switch">
           {mode === "signin" ? (
-            <>Pas encore de compte ?{" "}
+            <>{t.auth.noAccount}{" "}
               <button type="button" onClick={() => { setMode("signup"); setError(""); }}>
-                Créer un compte
+                {t.auth.createOne}
               </button>
             </>
           ) : (
-            <>Déjà inscrit ?{" "}
+            <>{t.auth.hasAccount}{" "}
               <button type="button" onClick={() => { setMode("signin"); setError(""); }}>
-                Se connecter
+                {t.auth.signInLink}
               </button>
             </>
           )}

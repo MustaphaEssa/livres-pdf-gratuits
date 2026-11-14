@@ -1,6 +1,17 @@
 import type { MetadataRoute } from "next";
 import prisma from "@/lib/db";
 import { SITE_URL } from "@/lib/site";
+import { LOCALES, X_DEFAULT_LOCALE, localizePath } from "@/i18n/config";
+
+// hreflang : chaque page traduite pointe vers ses 12 versions linguistiques.
+// (Articles de blog et pages légales : français uniquement, pas d'alternatives.)
+function i18n(path: string) {
+  const abs = (p: string) => (p === "/" ? SITE_URL : `${SITE_URL}${p}`);
+  const languages: Record<string, string> = {};
+  for (const l of LOCALES) languages[l] = abs(localizePath(l, path));
+  languages["x-default"] = abs(localizePath(X_DEFAULT_LOCALE, path));
+  return { url: abs(path), alternates: { languages } };
+}
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Données dynamiques : en cas d'erreur (base indisponible ou schéma pas
@@ -51,7 +62,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { p: "/a-propos", priority: 0.5, freq: "monthly" as const },
     { p: "/contact", priority: 0.5, freq: "monthly" as const },
   ].map(({ p, priority, freq }) => ({
-    url: `${SITE_URL}${p}`,
+    ...i18n(p || "/"),
     lastModified: new Date(),
     changeFrequency: freq,
     priority,
@@ -70,7 +81,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   const categoryRoutes: MetadataRoute.Sitemap = categories.map((c) => ({
-    url: `${SITE_URL}/categorie/${c.slug}`,
+    ...i18n(`/categorie/${c.slug}`),
     changeFrequency: "weekly",
     priority: 0.6,
   }));
@@ -78,13 +89,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const authorRoutes: MetadataRoute.Sitemap = authors
     .filter((a) => a.authorSlug)
     .map((a) => ({
-      url: `${SITE_URL}/auteur/${a.authorSlug}`,
+      ...i18n(`/auteur/${a.authorSlug}`),
       changeFrequency: "weekly",
       priority: 0.6,
     }));
 
   const bookRoutes: MetadataRoute.Sitemap = books.map((b) => ({
-    url: `${SITE_URL}/livre/${b.slug}`,
+    ...i18n(`/livre/${b.slug}`),
     lastModified: b.updatedAt,
     changeFrequency: "monthly",
     priority: 0.8,
@@ -98,7 +109,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   const collectionRoutes: MetadataRoute.Sitemap = collections.map((c) => ({
-    url: `${SITE_URL}/collections/${c.slug}`,
+    ...i18n(`/collections/${c.slug}`),
     lastModified: c.updatedAt,
     changeFrequency: "weekly",
     priority: 0.6,

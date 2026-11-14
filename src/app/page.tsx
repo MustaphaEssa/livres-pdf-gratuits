@@ -1,4 +1,7 @@
-import Link from "next/link";
+import Link from "@/i18n/navigation";
+import { getServerI18n } from "@/i18n/server";
+import { i18nAlternates } from "@/i18n/seo";
+import { categoryLabel, fmt, formatDateLocale, plural } from "@/i18n/format";
 import DesignHeader from "@/components/design/header";
 import DesignFooter from "@/components/design/footer";
 import MobileTabbar from "@/components/design/mobile-tabbar";
@@ -21,7 +24,6 @@ import {
 } from "@/lib/books";
 import { getHomeCollections } from "@/lib/collections";
 import { getLatestPosts } from "@/lib/posts";
-import { formatDate } from "@/lib/utils";
 import { languageLabel, sortLanguages } from "@/lib/languages";
 
 // Icônes (tracés SVG) par catégorie
@@ -36,7 +38,13 @@ const CAT_ICON: Record<string, string> = {
   informatique: "M8 8l-5 4 5 4 M16 8l5 4-5 4 M14 5l-4 14",
 };
 
+export async function generateMetadata() {
+  const { locale } = await getServerI18n();
+  return { alternates: i18nAlternates(locale, "/") };
+}
+
 export default async function HomePage() {
+  const { locale, t } = await getServerI18n();
   // Étagère par langue : les 5 premières langues présentes (FR, EN, ES, AR… selon le catalogue)
   const shelfLangs = sortLanguages(await getLanguagesWithCounts()).slice(0, 5);
 
@@ -66,9 +74,9 @@ export default async function HomePage() {
     <div className="ma">
       <JsonLd
         data={[
-          websiteLd(),
+          websiteLd(locale),
           organizationLd(),
-          itemListLd(featured, "Les livres les plus consultés"),
+          itemListLd(featured, t.home.featuredTitle, locale),
         ]}
       />
       <DesignHeader />
@@ -78,14 +86,13 @@ export default async function HomePage() {
           <ZelligePattern id="z-hero" className="fade" />
           <section className="hero">
             <div className="hero-copy">
-              <span className="pill-label">Bibliothèque libre · domaine public</span>
+              <span className="pill-label">{t.home.pill}</span>
               <h1>
-                Des milliers de livres, <em>gratuits</em> et sans compte.
+                {t.home.heroBefore}
+                <em>{t.home.heroEm}</em>
+                {t.home.heroAfter}
               </h1>
-              <p className="lead">
-                Trouvez un classique en français, en anglais, en espagnol, en arabe… Ouvrez sa fiche, puis
-                lisez-le en ligne, téléchargez-le en PDF/EPUB ou écoutez-le.
-              </p>
+              <p className="lead">{t.home.heroLead}</p>
               <HeroSearch />
             </div>
             <div className="hero-visual">
@@ -106,11 +113,11 @@ export default async function HomePage() {
           <section className="section wrap" aria-labelledby="lists-title">
             <div className="section-head">
               <div>
-                <div className="eyebrow">Listes de lecture</div>
-                <h2 id="lists-title">Des collections pour vous guider</h2>
+                <div className="eyebrow">{t.home.listsEyebrow}</div>
+                <h2 id="lists-title">{t.home.listsTitle}</h2>
               </div>
               <Link href="/collections" className="link-arrow">
-                Toutes les collections <Icon d={I.arrow} />
+                {t.home.allCollections} <Icon d={I.arrow} />
               </Link>
             </div>
             <div className="list-grid">
@@ -127,7 +134,7 @@ export default async function HomePage() {
                     <span className="list-card-title">{c.title}</span>
                     {c.description && <span className="list-card-desc">{c.description}</span>}
                     <span className="list-card-count">
-                      {c._count.books} livre{c._count.books > 1 ? "s" : ""}
+                      {plural(locale, t.common.books, c._count.books)}
                     </span>
                   </span>
                 </Link>
@@ -139,11 +146,11 @@ export default async function HomePage() {
         <section className="section wrap" aria-labelledby="genres-title">
           <div className="section-head">
             <div>
-              <div className="eyebrow">Explorer</div>
-              <h2 id="genres-title">Parcourir par genre</h2>
+              <div className="eyebrow">{t.home.exploreEyebrow}</div>
+              <h2 id="genres-title">{t.home.genresTitle}</h2>
             </div>
             <Link href="/catalogue" className="link-arrow">
-              Tout le catalogue <Icon d={I.arrow} />
+              {t.home.allCatalogue} <Icon d={I.arrow} />
             </Link>
           </div>
           <div className="genre-grid">
@@ -158,8 +165,8 @@ export default async function HomePage() {
                 </span>
                 <span className="genre-foot">
                   <span>
-                    <span className="genre-name">{c.name}</span>
-                    <span className="genre-count">{c.count} livres</span>
+                    <span className="genre-name">{categoryLabel(t, c)}</span>
+                    <span className="genre-count">{plural(locale, t.common.books, c.count)}</span>
                   </span>
                   <span className="genre-arrow">
                     <Icon d={I.arrow} />
@@ -174,11 +181,11 @@ export default async function HomePage() {
           <section className="section wrap" aria-labelledby="authors-title">
             <div className="section-head">
               <div>
-                <div className="eyebrow">Auteurs</div>
-                <h2 id="authors-title">Les auteurs à découvrir</h2>
+                <div className="eyebrow">{t.home.authorsEyebrow}</div>
+                <h2 id="authors-title">{t.home.authorsTitle}</h2>
               </div>
               <Link href="/auteurs" className="link-arrow">
-                Tous les auteurs <Icon d={I.arrow} />
+                {t.home.allAuthors} <Icon d={I.arrow} />
               </Link>
             </div>
             <ul className="author-rail">
@@ -197,7 +204,7 @@ export default async function HomePage() {
                       {a.name}
                     </span>
                     <span className="author-count">
-                      {a.count} livre{a.count > 1 ? "s" : ""}
+                      {plural(locale, t.common.books, a.count)}
                     </span>
                   </Link>
                 </li>
@@ -209,14 +216,11 @@ export default async function HomePage() {
         <div className="band">
           <div className="band-inner">
             <div className="band-copy">
-              <div className="eyebrow">À la une</div>
-              <h2>Les livres les plus consultés</h2>
-              <p>
-                Une sélection mise à jour régulièrement. Chaque livre ouvre sa fiche, avec la
-                lecture en ligne, le PDF et l&apos;audio quand il existe.
-              </p>
+              <div className="eyebrow">{t.home.featuredEyebrow}</div>
+              <h2>{t.home.featuredTitle}</h2>
+              <p>{t.home.featuredText}</p>
               <Link href="/catalogue" className="btn btn-ink">
-                Voir le catalogue
+                {t.home.seeCatalogue}
               </Link>
             </div>
             <ol className="featured-list">
@@ -230,7 +234,7 @@ export default async function HomePage() {
                     </Link>
                     <span dir="auto">{b.author}</span>
                   </span>
-                  <Link href={`/livre/${b.slug}`} className="round-link" aria-label={`Voir la fiche de ${b.title}`}>
+                  <Link href={`/livre/${b.slug}`} className="round-link" aria-label={fmt(t.home.seeBookOf, { title: b.title })}>
                     <Icon d={I.arrow} />
                   </Link>
                 </li>
@@ -243,11 +247,11 @@ export default async function HomePage() {
           <section className="section wrap" aria-labelledby="audio-title">
             <div className="section-head">
               <div>
-                <div className="eyebrow">À écouter</div>
-                <h2 id="audio-title">Livres audio gratuits</h2>
+                <div className="eyebrow">{t.home.audioEyebrow}</div>
+                <h2 id="audio-title">{t.home.audioTitle}</h2>
               </div>
               <Link href="/livres-audio" className="link-arrow">
-                Tous les livres audio <Icon d={I.arrow} />
+                {t.home.allAudio} <Icon d={I.arrow} />
               </Link>
             </div>
             <div className="shelf">
@@ -261,36 +265,36 @@ export default async function HomePage() {
         <section className="section wrap" aria-labelledby="help-title">
           <div className="help-strip">
             <div className="help-copy">
-              <div className="eyebrow">Aide</div>
-              <h2 id="help-title">Trois façons de lire, aucune application à installer</h2>
-              <p>Lisez dans votre navigateur, gardez le PDF/EPUB pour hors ligne, ou écoutez.</p>
+              <div className="eyebrow">{t.home.helpEyebrow}</div>
+              <h2 id="help-title">{t.home.helpTitle}</h2>
+              <p>{t.home.helpText}</p>
               <Link href="/blog" className="link-arrow">
-                Guides de lecture <Icon d={I.arrow} />
+                {t.home.readingGuides} <Icon d={I.arrow} />
               </Link>
             </div>
             <ol className="format-cards">
               <li className="format-card">
                 <span className="format-num" aria-hidden="true">1</span>
-                <span className="tag tag-read">Lire en ligne</span>
-                <p>Ouvrez le livre dans le lecteur, sans rien télécharger.</p>
+                <span className="tag tag-read">{t.home.f1Tag}</span>
+                <p>{t.home.f1Text}</p>
                 <p className="opens">
-                  Fonctionne sur : <strong>tout navigateur</strong>
+                  {t.home.f1Label} <strong>{t.home.f1Value}</strong>
                 </p>
               </li>
               <li className="format-card">
                 <span className="format-num" aria-hidden="true">2</span>
-                <span className="tag tag-pdf">PDF / EPUB</span>
-                <p>Un fichier à conserver, lisible hors ligne, même sur liseuse.</p>
+                <span className="tag tag-pdf">{t.home.f2Tag}</span>
+                <p>{t.home.f2Text}</p>
                 <p className="opens">
-                  S&apos;ouvre avec : <strong>Aperçu, Acrobat, Kindle</strong>
+                  {t.home.f2Label} <strong>{t.home.f2Value}</strong>
                 </p>
               </li>
               <li className="format-card">
                 <span className="format-num" aria-hidden="true">3</span>
-                <span className="tag tag-audio">Écouter</span>
-                <p>Des livres lus à voix haute, à écouter en ligne quand la version audio existe.</p>
+                <span className="tag tag-audio">{t.home.f3Tag}</span>
+                <p>{t.home.f3Text}</p>
                 <p className="opens">
-                  Où : <Link href="/livres-audio">Livres audio</Link>
+                  {t.home.f3Label} <Link href="/livres-audio">{t.nav.audiobooks}</Link>
                 </p>
               </li>
             </ol>
@@ -301,11 +305,11 @@ export default async function HomePage() {
           <section className="section wrap" aria-labelledby="posts-title">
             <div className="section-head">
               <div>
-                <div className="eyebrow">Le journal</div>
-                <h2 id="posts-title">Guides et articles</h2>
+                <div className="eyebrow">{t.home.postsEyebrow}</div>
+                <h2 id="posts-title">{t.home.postsTitle}</h2>
               </div>
               <Link href="/blog" className="link-arrow">
-                Tout le blog <Icon d={I.arrow} />
+                {t.home.allBlog} <Icon d={I.arrow} />
               </Link>
             </div>
             <div className="post-grid">
@@ -329,7 +333,7 @@ export default async function HomePage() {
                     )}
                     <span className="post-title">{post.title}</span>
                     {post.excerpt && <span className="post-excerpt">{post.excerpt}</span>}
-                    <span className="post-meta">{formatDate(post.publishedAt ?? post.createdAt)}</span>
+                    <span className="post-meta">{formatDateLocale(locale, post.publishedAt ?? post.createdAt)}</span>
                   </span>
                 </Link>
               ))}

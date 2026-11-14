@@ -6,13 +6,17 @@ import { getCategoriesWithCounts } from "@/lib/books";
 import prisma from "@/lib/db";
 import JsonLd, { breadcrumbLd } from "@/components/seo/json-ld";
 import { isLangCode } from "@/lib/languages";
+import { getServerI18n } from "@/i18n/server";
+import { i18nAlternates } from "@/i18n/seo";
 
-export const metadata = {
-  title: "Catalogue",
-  description:
-    "Parcourez des milliers de livres gratuits du domaine public : romans, histoire, poésie, philosophie… À lire en ligne, en PDF, EPUB ou en audio.",
-  alternates: { canonical: "/catalogue" },
-};
+export async function generateMetadata() {
+  const { locale, t } = await getServerI18n();
+  return {
+    title: t.meta.catalogueTitle,
+    description: t.meta.catalogueDesc,
+    alternates: i18nAlternates(locale, "/catalogue"),
+  };
+}
 
 interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -21,6 +25,7 @@ const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) 
 
 export default async function CataloguePage({ searchParams }: Props) {
   const sp = await searchParams;
+  const { locale, t } = await getServerI18n();
 
   const [books, categories] = await Promise.all([
     prisma.book.findMany({
@@ -40,7 +45,7 @@ export default async function CataloguePage({ searchParams }: Props) {
     getCategoriesWithCounts(),
   ]);
 
-  const catNames = categories.map((c) => c.name);
+  const catList = categories.map((c) => ({ name: c.name, slug: c.slug }));
   const catSlug = one(sp.category) || one(sp.cat);
   const initialCatName = categories.find((c) => c.slug === catSlug)?.name;
   const lang = one(sp.language) || one(sp.lang);
@@ -49,15 +54,15 @@ export default async function CataloguePage({ searchParams }: Props) {
     <div className="ma">
       <JsonLd
         data={breadcrumbLd([
-          { name: "Accueil", url: "/" },
-          { name: "Catalogue", url: "/catalogue" },
-        ])}
+          { name: t.nav.home, url: "/" },
+          { name: t.nav.catalogue, url: "/catalogue" },
+        ], locale)}
       />
       <DesignHeader />
       <main className="page-main" id="contenu">
         <CatalogueClient
           books={books as CatBook[]}
-          categories={catNames}
+          categories={catList}
           initial={{
             q: one(sp.q),
             cats: initialCatName ? [initialCatName] : [],

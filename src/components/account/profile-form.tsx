@@ -47,7 +47,7 @@ export function ProfileForm({ initialName }: { initialName: string }) {
     } catch (err) {
       setMsg({
         type: "err",
-        text: err instanceof Error ? err.message : "Erreur",
+        text: err instanceof Error ? err.message : t.auth.genericError,
       });
     } finally {
       setLoading(false);

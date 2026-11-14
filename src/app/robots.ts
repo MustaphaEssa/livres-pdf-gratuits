@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/site";
+import { allPublicSegments } from "@/i18n/segments";
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -12,7 +13,11 @@ export default function robots(): MetadataRoute.Robots {
           "/api",
           "/compte",
           "/auth",
-          "/*/telecharger", // routes de téléchargement PDF (évite le gaspillage de crawl)
+          // Mêmes pages dans les autres langues (/en/account, /de/konto…)
+          ...allPublicSegments("compte").map((s) => `/*/${s}`),
+          "/*/auth",
+          // Routes de téléchargement PDF, toutes langues (évite le gaspillage de crawl)
+          ...allPublicSegments("telecharger").map((s) => `/*/${s}`),
         ],
       },
     ],

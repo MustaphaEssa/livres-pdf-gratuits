@@ -2,6 +2,7 @@ import "server-only";
 import { unlink } from "fs/promises";
 import path from "path";
 import prisma from "@/lib/db";
+import { titleKey, authorKey } from "@/lib/text-key";
 
 /**
  * Fusion des livres d'une même œuvre présents en plusieurs exemplaires/formats.
@@ -25,10 +26,13 @@ function norm(s: string): string {
 
 // Retire les mentions de tome/volume pour regrouper une œuvre, SANS fusionner
 // deux tomes différents (on garde le numéro comme discriminant).
-function workKey(title: string, authorSlug: string | null, author: string): string {
-  const t = norm(title);
-  const who = (authorSlug && authorSlug.trim()) || norm(author);
-  return `${who}##${t}`;
+// Clé insensible à la casse / aux accents / à la ponctuation, toutes écritures
+// (avant : les titres non latins devenaient vides et tous les livres arabes ou
+// russes d'un même auteur tombaient dans un seul groupe).
+function workKey(title: string, _authorSlug: string | null, author: string): string | null {
+  const t = titleKey(title, author);
+  if (!t) return null;
+  return `${authorKey(author)}##${t}`;
 }
 
 type BookLite = {
@@ -82,6 +86,7 @@ export async function findMergeGroups(): Promise<MergeGroup[]> {
   const groups = new Map<string, BookLite[]>();
   for (const b of books) {
     const k = workKey(b.title, b.authorSlug, b.author);
+    if (!k) continue;
     if (!groups.get(k)) groups.set(k, []);
     groups.get(k)!.push(b);
   }

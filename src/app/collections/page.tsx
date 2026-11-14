@@ -1,20 +1,25 @@
-import Link from "next/link";
+import Link from "@/i18n/navigation";
+import { getServerI18n } from "@/i18n/server";
+import { i18nAlternates } from "@/i18n/seo";
+import { plural } from "@/i18n/format";
 import DesignHeader from "@/components/design/header";
 import DesignFooter from "@/components/design/footer";
 import MobileTabbar from "@/components/design/mobile-tabbar";
 import Icon, { I } from "@/components/design/icon";
 import { getPublishedCollections } from "@/lib/collections";
 import { getCategoriesWithCounts } from "@/lib/books";
-import { SITE_URL } from "@/lib/site";
 
-export const metadata = {
-  title: "Collections de livres",
-  description:
-    "Des sélections thématiques de livres gratuits : classiques à lire en un week-end, romans d'aventure, et plus. Choisies pour vous.",
-  alternates: { canonical: "/collections" },
-};
+export async function generateMetadata() {
+  const { locale, t } = await getServerI18n();
+  return {
+    title: t.meta.collectionsTitle,
+    description: t.meta.collectionsDesc,
+    alternates: i18nAlternates(locale, "/collections"),
+  };
+}
 
 export default async function CollectionsPage() {
+  const { locale, t } = await getServerI18n();
   const [collections, categories] = await Promise.all([
     getPublishedCollections(),
     getCategoriesWithCounts(),
@@ -25,25 +30,25 @@ export default async function CollectionsPage() {
       <DesignHeader />
       <main className="page-main" id="contenu">
         <div className="wrap">
-          <nav className="breadcrumb" aria-label="Fil d'Ariane" style={{ paddingTop: 16 }}>
-            <Link href="/">Accueil</Link>
+          <nav className="breadcrumb" aria-label={t.common.breadcrumb} style={{ paddingTop: 16 }}>
+            <Link href="/">{t.nav.home}</Link>
             <span aria-hidden="true">/</span>
-            <span aria-current="page">Collections</span>
+            <span aria-current="page">{t.nav.collections}</span>
           </nav>
           <div className="page-head">
             <div>
               <div className="eyebrow">
-                <Icon d={I.library} size={16} /> Collections
+                <Icon d={I.library} size={16} /> {t.collections.eyebrow}
               </div>
-              <h1>Collections de livres</h1>
-              <p>Des sélections thématiques, réunies autour d&apos;une idée, pour trouver votre prochaine lecture.</p>
+              <h1>{t.collections.title}</h1>
+              <p>{t.collections.intro}</p>
             </div>
           </div>
 
           {collections.length === 0 ? (
             <div className="empty">
-              <h3>Aucune collection pour le moment</h3>
-              <p>Revenez bientôt pour découvrir nos sélections.</p>
+              <h3>{t.collections.empty}</h3>
+              <p>{t.collections.emptyHint}</p>
             </div>
           ) : (
             <div className="genre-grid">
@@ -63,7 +68,7 @@ export default async function CollectionsPage() {
                   )}
                   <h2 style={{ fontSize: 22 }}>{c.title}</h2>
                   {c.description && <p>{c.description}</p>}
-                  <span className="book-cat">{c._count.books} livre{c._count.books > 1 ? "s" : ""}</span>
+                  <span className="book-cat">{plural(locale, t.common.books, c._count.books)}</span>
                 </Link>
               ))}
             </div>
