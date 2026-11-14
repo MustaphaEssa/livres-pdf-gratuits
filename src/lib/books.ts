@@ -322,13 +322,23 @@ export async function getCategoriesWithCounts() {
 
 // ==================== LIVRES AUDIO ====================
 
-// Livres audio publiés (paginés) pour la page /livres-audio
+// Tout ce qui s'écoute : les livres audio et les livres PDF qui ont une version audio
+// (playlist non vide).
+const LISTENABLE: Prisma.BookWhereInput = {
+  isPublished: true,
+  OR: [
+    { mediaType: "AUDIO" },
+    { AND: [{ audioTracks: { not: null } }, { NOT: { audioTracks: { in: ["", "[]"] } } }] },
+  ],
+};
+
+// Livres audio publiés (paginés) pour la page /livres-audio, y compris les PDF avec version audio
 export async function getAudiobooks(
   page = 1,
   pageSize = PAGE_SIZE,
   sort: SortOption = "newest"
 ): Promise<SearchBooksResult> {
-  const where: Prisma.BookWhereInput = { isPublished: true, mediaType: "AUDIO" };
+  const where = LISTENABLE;
   const currentPage = Math.max(1, page);
 
   const [total, books] = await Promise.all([
@@ -351,10 +361,10 @@ export async function getAudiobooks(
   };
 }
 
-// Quelques livres audio récents (accueil, encarts…)
+// Quelques livres audio récents (accueil, encarts…), y compris les PDF avec version audio
 export async function getLatestAudiobooks(limit = 6): Promise<BookWithCategories[]> {
   return prisma.book.findMany({
-    where: { isPublished: true, mediaType: "AUDIO" },
+    where: LISTENABLE,
     include: bookWithCategories.include,
     orderBy: { createdAt: "desc" },
     take: limit,

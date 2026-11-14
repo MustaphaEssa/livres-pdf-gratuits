@@ -39,7 +39,8 @@ export default async function LivresAudioPage() {
                 <h1>Livres audio gratuits</h1>
                 <p>
                   Écoutez gratuitement des œuvres du domaine public, lues par des bénévoles
-                  (LibriVox), en streaming et sans inscription.
+                  (LibriVox), en streaming et sans inscription. Les livres marqués « PDF + audio »
+                  se lisent aussi en PDF.
                   {total > 0 && ` ${total} titre${total > 1 ? "s" : ""} disponible${total > 1 ? "s" : ""}.`}
                 </p>
               </div>
