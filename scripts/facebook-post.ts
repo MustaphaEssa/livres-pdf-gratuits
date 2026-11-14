@@ -1,14 +1,17 @@
 /**
  * Publie automatiquement un contenu sur la page Facebook :
  *   - en priorité un ARTICLE de blog pas encore partagé
- *   - sinon un LIVRE pas encore partagé
- * Poste 1 élément par exécution (à lancer via cron, ex. 1-2x/jour).
+ *   - sinon le LIVRE le plus populaire (téléchargements, puis vues) pas encore partagé
+ * Poste 1 élément par exécution, au plus FACEBOOK_BOOKS_PER_DAY livres/jour (défaut 4).
+ * Cron conseillé (4 posts étalés) :
+ *   0 9,13,17,21 * * * cd /chemin/du/site && ./node_modules/.bin/tsx scripts/facebook-post.ts
  *
  * Requiert dans .env :
  *   FACEBOOK_PAGE_ID=...        (ID de la page)
  *   FACEBOOK_PAGE_TOKEN=...     (jeton de page permanent)
  *   NEXT_PUBLIC_SITE_URL=https://livrespdfgratuits.com
  *   (optionnel) FACEBOOK_GRAPH_VERSION=v21.0
+ *   (optionnel) FACEBOOK_BOOKS_PER_DAY=4
  *
  * Lancer : ./node_modules/.bin/tsx scripts/facebook-post.ts
  */
@@ -23,6 +26,8 @@ const GRAPH = process.env.FACEBOOK_GRAPH_VERSION || "v21.0";
 // Quoi partager : "books" (livres seulement), "posts" (articles seulement),
 // "all" (articles prioritaires puis livres). Défaut : all.
 const SHARE = (process.env.FACEBOOK_SHARE || "all").toLowerCase();
+// Nombre max de livres partagés par jour (les plus populaires d'abord).
+const BOOKS_PER_DAY = Math.max(1, Number(process.env.FACEBOOK_BOOKS_PER_DAY) || 4);
 
 // Transforme un chemin de couverture en URL absolue publique (requis par Facebook).
 function absoluteUrl(path?: string | null): string | null {
@@ -101,11 +106,20 @@ async function main() {
     }
   }
 
-  // 2. Un livre non encore partagé (les plus anciens d'abord) — sauf en mode "posts"
+  // 2. Le livre le PLUS POPULAIRE pas encore partagé — sauf en mode "posts".
+  //    Plafond de BOOKS_PER_DAY livres par jour (cron conseillé : 4 passages/jour).
   if (SHARE !== "posts") {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const sharedToday = await prisma.book.count({ where: { fbPostedAt: { gte: startOfDay } } });
+    if (sharedToday >= BOOKS_PER_DAY) {
+      console.log(`Quota atteint : ${sharedToday}/${BOOKS_PER_DAY} livres déjà partagés aujourd'hui.`);
+      return;
+    }
+
     const book = await prisma.book.findFirst({
       where: { isPublished: true, fbPostedAt: null },
-      orderBy: { createdAt: "asc" },
+      orderBy: [{ downloadCount: "desc" }, { viewCount: "desc" }, { createdAt: "asc" }],
       select: { id: true, slug: true, title: true, author: true, coverImage: true },
     });
     if (book) {
@@ -113,7 +127,9 @@ async function main() {
       const msg = `📖 ${book.title}\n\npar ${formatAuthorName(book.author)} — livre gratuit à télécharger en PDF et à lire en ligne 👇`;
       const fbId = await share(msg, link, book.coverImage);
       await prisma.book.update({ where: { id: book.id }, data: { fbPostedAt: new Date() } });
-      console.log(`✅ Livre partagé : « ${book.title} » (post Facebook ${fbId})`);
+      console.log(
+        `✅ Livre partagé (${sharedToday + 1}/${BOOKS_PER_DAY} aujourd'hui) : « ${book.title} » (post Facebook ${fbId})`
+      );
       return;
     }
   }
