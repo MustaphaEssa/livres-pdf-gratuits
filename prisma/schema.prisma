@@ -106,6 +106,8 @@ model Author {
   name      String
   image     String?  // chemin local (ex: /uploads/authors/victor-hugo.jpg)
   bio       String?
+  // Bios traduites (Wikipédia de chaque langue) : { en: "…", de: "…" }. Le FR reste dans `bio`.
+  bioI18n   Json?
   birthYear Int?
   deathYear Int?
   // Vrai quand un import complet n'a plus rien de nouveau à télécharger pour

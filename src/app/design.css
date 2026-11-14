@@ -489,7 +489,12 @@
   .like-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(160px, 100%), 1fr)); gap: 36px 22px; }
 
   /* ---------- Responsive ---------- */
-  @media (max-width: 1060px) {
+  /* Menu compact entre 1181 et 1280 px : 5 liens + logo traduits tiennent sur une ligne (langues longues : de, tr…) */
+  @media (max-width: 1280px) {
+    .header-inner { flex-wrap: nowrap; gap: 10px; }
+    .nav a { padding: 10px 9px; font-size: 14px; }
+  }
+  @media (max-width: 1180px) {
     .nav, .header-actions .signin { display: none; }
     .menu-btn { display: inline-flex; }
   }

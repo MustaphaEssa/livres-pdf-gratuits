@@ -38,7 +38,7 @@ export const it: DeepPartial<PublicMessages> = {
     close: "Chiudi", share: "Condividi", copyLink: "Copia il link", linkCopied: "Link copiato!",
     books: { one: "{n} libro", other: "{n} libri" },
     seeBook: "Vedi la scheda", seeBookOf: "{title} — vedi la scheda", coverOf: "Copertina di {title}", coverOfBy: "Copertina di {title}, {author}",
-    publicDomain: "Pubblico dominio", frenchOnly: "Questa pagina è disponibile solo in francese.",
+    publicDomain: "Pubblico dominio", frenchOnly: "Questa pagina è disponibile solo in francese.", unknownAuthor: "Autore sconosciuto",
   },
   categories: {
     romans: "Romanzi", sciences: "Scienze", histoire: "Storia", informatique: "Informatica", religion: "Religione",
@@ -90,6 +90,7 @@ export const it: DeepPartial<PublicMessages> = {
     emptyHint: "Torna presto, oppure sfoglia i libri da leggere.", browse: "Sfoglia il catalogo",
   },
   collections: {
+    fallbackNotes: ["Un'opera di pubblico dominio, libera da leggere, scaricare e condividere.", "Un testo del patrimonio da (ri)scoprire, gratis e senza account.", "Un classico alla portata di tutti, da leggere online o in PDF.", "Da riscoprire: un libro di pubblico dominio, completamente gratuito.", "Un titolo della biblioteca libera, da leggere con calma.", "Una lettura di pubblico dominio, offerta a tutti i curiosi."],
     eyebrow: "Raccolte", one: "Raccolta", title: "Raccolte di libri",
     intro: "Selezioni tematiche riunite attorno a un'idea, per trovare la tua prossima lettura.",
     empty: "Ancora nessuna raccolta", emptyHint: "Torna presto per scoprire le nostre selezioni.",

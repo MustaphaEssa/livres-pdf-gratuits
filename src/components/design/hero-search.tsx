@@ -3,10 +3,9 @@
 import { useEffect, useId, useRef, useState } from "react";
 import Link, { useLocaleRouter, useLocalizedHref } from "@/i18n/navigation";
 import { useI18n } from "@/components/i18n-provider";
-import { fmt } from "@/i18n/format";
+import { fmt, authorLabel } from "@/i18n/format";
 import Icon, { I } from "./icon";
 import BookCover, { type CoverBook } from "./book-cover";
-import { formatAuthorName } from "@/lib/utils";
 
 
 /**
@@ -154,7 +153,7 @@ export default function HeroSearch() {
                         {b.title}
                       </span>
                       <span className="suggest-author" dir="auto">
-                        {formatAuthorName(b.author)}
+                        {authorLabel(t, b.author)}
                       </span>
                     </span>
                     {b.language && <span className="suggest-lang">{b.language.toUpperCase()}</span>}

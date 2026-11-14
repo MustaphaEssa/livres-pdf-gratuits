@@ -1,7 +1,7 @@
 import Link from "@/i18n/navigation";
 import { getServerI18n } from "@/i18n/server";
 import { i18nAlternates } from "@/i18n/seo";
-import { categoryLabel, fmt, formatDateLocale, plural } from "@/i18n/format";
+import { categoryLabel, fmt, formatDateLocale, plural, authorLabel } from "@/i18n/format";
 import DesignHeader from "@/components/design/header";
 import DesignFooter from "@/components/design/footer";
 import MobileTabbar from "@/components/design/mobile-tabbar";
@@ -23,6 +23,7 @@ import {
   getLatestAudiobooks,
 } from "@/lib/books";
 import { getHomeCollections } from "@/lib/collections";
+import { localizeCollection } from "@/i18n/collections";
 import { getLatestPosts } from "@/lib/posts";
 import { languageLabel, sortLanguages } from "@/lib/languages";
 
@@ -54,7 +55,7 @@ export default async function HomePage() {
       Promise.all(shelfLangs.map((l) => getBooksByLang(l.code, 8))),
       getFeaturedBooks(6),
       getCategoriesWithCounts(),
-      getHomeCollections(4),
+      getHomeCollections(4).then((cs) => cs.map((c) => localizeCollection(locale, c))),
       getTopAuthors(10),
       getLatestAudiobooks(6),
       getLatestPosts(3),
@@ -232,7 +233,7 @@ export default async function HomePage() {
                     <Link href={`/livre/${b.slug}`} dir="auto">
                       {b.title}
                     </Link>
-                    <span dir="auto">{b.author}</span>
+                    <span dir="auto">{authorLabel(t, b.author)}</span>
                   </span>
                   <Link href={`/livre/${b.slug}`} className="round-link" aria-label={fmt(t.home.seeBookOf, { title: b.title })}>
                     <Icon d={I.arrow} />

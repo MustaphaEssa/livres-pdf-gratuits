@@ -36,7 +36,7 @@ export const zh: DeepPartial<PublicMessages> = {
     close: "关闭", share: "分享", copyLink: "复制链接", linkCopied: "链接已复制！",
     books: { other: "{n} 本书" },
     seeBook: "查看详情", seeBookOf: "《{title}》— 查看详情", coverOf: "《{title}》封面", coverOfBy: "《{title}》封面，{author}",
-    publicDomain: "公版", frenchOnly: "本页面仅提供法语版本。",
+    publicDomain: "公版", frenchOnly: "本页面仅提供法语版本。", unknownAuthor: "佚名",
   },
   categories: {
     romans: "小说", sciences: "科学", histoire: "历史", informatique: "计算机", religion: "宗教",
@@ -86,6 +86,7 @@ export const zh: DeepPartial<PublicMessages> = {
     firstPage: "返回第一页", empty: "暂无有声书", emptyHint: "请稍后再来，或浏览可阅读的图书。", browse: "浏览书目",
   },
   collections: {
+    fallbackNotes: ["一部公有领域作品，可自由阅读、下载和分享。", "一部值得（重新）发现的文化遗产文本，免费且无需注册。", "人人可读的经典，可在线阅读或下载 PDF。", "值得重温：一本完全免费的公有领域图书。", "自由图书馆中的一本书，按自己的节奏阅读。", "一部公有领域读物，献给每一位好奇的读者。"],
     eyebrow: "合集", one: "合集", title: "图书合集",
     intro: "围绕同一主题的精选，帮你找到下一本好书。",
     empty: "暂无合集", emptyHint: "请稍后再来，探索我们的精选。",

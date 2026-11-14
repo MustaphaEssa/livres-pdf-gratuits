@@ -46,7 +46,7 @@ export const en: PublicMessages = {
     close: "Close", share: "Share", copyLink: "Copy link", linkCopied: "Link copied!",
     books: { one: "{n} book", other: "{n} books" },
     seeBook: "View book", seeBookOf: "{title} — view book", coverOf: "Cover of {title}", coverOfBy: "Cover of {title}, {author}",
-    publicDomain: "Public domain", frenchOnly: "This page is only available in French.",
+    publicDomain: "Public domain", frenchOnly: "This page is only available in French.", unknownAuthor: "Unknown author",
   },
   categories: {
     romans: "Novels", sciences: "Science", histoire: "History", informatique: "Computing", religion: "Religion",
@@ -98,6 +98,7 @@ export const en: PublicMessages = {
     browse: "Browse the catalogue",
   },
   collections: {
+    fallbackNotes: ["A public-domain work, free to read, download and share.", "A heritage text to (re)discover, free and with no account.", "A classic open to everyone, to read online or as a PDF.", "Worth rediscovering: a public-domain book, completely free.", "A title from the free library, to read at your own pace.", "A public-domain read, offered to every curious mind."],
     eyebrow: "Collections", one: "Collection", title: "Book collections",
     intro: "Themed selections built around an idea, to help you find your next read.",
     empty: "No collections yet", emptyHint: "Come back soon to discover our selections.",

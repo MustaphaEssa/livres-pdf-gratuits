@@ -3,10 +3,9 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "@/i18n/navigation";
 import { useI18n } from "@/components/i18n-provider";
-import { fmt } from "@/i18n/format";
+import { fmt, authorLabel } from "@/i18n/format";
 import BookCover, { type CoverBook } from "./book-cover";
 import Icon, { I } from "./icon";
-import { formatAuthorName } from "@/lib/utils";
 
 export interface ArchBook extends CoverBook {
   hasPdf: boolean;
@@ -105,7 +104,7 @@ export default function HeroArch({ books }: { books: ArchBook[] }) {
             {book.title}
           </Link>
           <span className="arch-author" dir="auto">
-            {formatAuthorName(book.author)}
+            {authorLabel(t, book.author)}
           </span>
         </div>
         <div className="arch-actions">

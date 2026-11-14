@@ -38,7 +38,7 @@ export const nl: DeepPartial<PublicMessages> = {
     close: "Sluiten", share: "Delen", copyLink: "Link kopiëren", linkCopied: "Link gekopieerd!",
     books: { one: "{n} boek", other: "{n} boeken" },
     seeBook: "Bekijk het boek", seeBookOf: "{title} — bekijk het boek", coverOf: "Omslag van {title}", coverOfBy: "Omslag van {title}, {author}",
-    publicDomain: "Publiek domein", frenchOnly: "Deze pagina is alleen in het Frans beschikbaar.",
+    publicDomain: "Publiek domein", frenchOnly: "Deze pagina is alleen in het Frans beschikbaar.", unknownAuthor: "Onbekende auteur",
   },
   categories: {
     romans: "Romans", sciences: "Wetenschap", histoire: "Geschiedenis", informatique: "Informatica", religion: "Religie",
@@ -90,6 +90,7 @@ export const nl: DeepPartial<PublicMessages> = {
     emptyHint: "Kom snel terug, of blader door de boeken om te lezen.", browse: "Blader door de catalogus",
   },
   collections: {
+    fallbackNotes: ["Een werk uit het publieke domein, vrij te lezen, downloaden en delen.", "Een erfgoedtekst om (opnieuw) te ontdekken, gratis en zonder account.", "Een klassieker voor iedereen, online of als pdf te lezen.", "Om te herontdekken: een boek uit het publieke domein, helemaal gratis.", "Een titel uit de vrije bibliotheek, te lezen in je eigen tempo.", "Een boek uit het publieke domein voor iedere nieuwsgierige lezer."],
     eyebrow: "Collecties", one: "Collectie", title: "Boekencollecties",
     intro: "Thematische selecties rond één idee, om je volgende boek te vinden.",
     empty: "Nog geen collecties", emptyHint: "Kom snel terug om onze selecties te ontdekken.",

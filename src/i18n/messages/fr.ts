@@ -47,7 +47,7 @@ export const fr: PublicMessages = {
     books: { one: "{n} livre", other: "{n} livres" },
     seeBook: "Voir la fiche", seeBookOf: "{title} — voir la fiche", coverOf: "Couverture de {title}",
     coverOfBy: "Couverture de {title}, {author}", publicDomain: "Domaine public",
-    frenchOnly: "Cette page n'est disponible qu'en français.",
+    frenchOnly: "Cette page n'est disponible qu'en français.", unknownAuthor: "Auteur inconnu",
   },
   categories: {
     romans: "Romans", sciences: "Sciences", histoire: "Histoire", informatique: "Informatique", religion: "Religion",
@@ -99,6 +99,7 @@ export const fr: PublicMessages = {
     emptyHint: "Revenez bientôt, ou parcourez les livres à lire.", browse: "Parcourir le catalogue",
   },
   collections: {
+    fallbackNotes: ["Une œuvre du domaine public, libre à lire, à télécharger et à partager.", "Un texte patrimonial à (re)découvrir, gratuitement et sans compte.", "Un classique accessible à tous, en lecture en ligne comme en PDF.", "À redécouvrir : un ouvrage du domaine public, entièrement gratuit.", "Un titre de la bibliothèque libre, à lire à votre rythme.", "Une lecture du domaine public, offerte à tous les curieux."],
     eyebrow: "Collections", one: "Collection", title: "Collections de livres",
     intro: "Des sélections thématiques, réunies autour d'une idée, pour trouver votre prochaine lecture.",
     empty: "Aucune collection pour le moment", emptyHint: "Revenez bientôt pour découvrir nos sélections.",

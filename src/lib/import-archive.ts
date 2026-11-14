@@ -1,4 +1,5 @@
 import "server-only";
+import { fetchBioTranslations } from "@/lib/author-bios";
 import { writeFile, mkdir, statfs } from "fs/promises";
 import path from "path";
 import prisma from "@/lib/db";
@@ -456,10 +457,13 @@ export async function upsertAuthorProfile(authorSlug: string, rawName: string): 
     }
   }
 
+  // Bios dans les autres langues du site (articles Wikipédia de chaque langue)
+  const bioI18n = bio ? await fetchBioTranslations(name).catch(() => ({})) : {};
+
   await prisma.author.upsert({
     where: { slug: authorSlug },
-    update: { name, bio, birthYear, deathYear, ...(image ? { image } : {}) },
-    create: { slug: authorSlug, name, image, bio, birthYear, deathYear },
+    update: { name, bio, bioI18n, birthYear, deathYear, ...(image ? { image } : {}) },
+    create: { slug: authorSlug, name, image, bio, bioI18n, birthYear, deathYear },
   });
   return !!image;
 }

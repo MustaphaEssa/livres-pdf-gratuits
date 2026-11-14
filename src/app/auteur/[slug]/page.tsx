@@ -43,7 +43,7 @@ export default async function AuthorPage({ params, searchParams }: AuthorPagePro
   ]);
   if (!authorName || total === 0) notFound();
 
-  const author = await getAuthorInfo(slug, authorName);
+  const author = await getAuthorInfo(slug, authorName, locale);
 
   const personLd = {
     "@context": "https://schema.org",

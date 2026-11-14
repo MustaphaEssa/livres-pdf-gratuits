@@ -2,8 +2,7 @@
 
 import Link from "@/i18n/navigation";
 import { useI18n } from "@/components/i18n-provider";
-import { categoryLabel, fmt } from "@/i18n/format";
-import { formatAuthorName } from "@/lib/utils";
+import { categoryLabel, fmt, authorLabel } from "@/i18n/format";
 import BookCover, { type CoverBook } from "./book-cover";
 
 export interface CardBook extends CoverBook {
@@ -32,7 +31,7 @@ export default function BookCard({ book }: { book: CardBook }) {
           {book.title}
         </Link>
         <span className="book-author" dir="auto">
-          {formatAuthorName(book.author)}
+          {authorLabel(t, book.author)}
         </span>
         {cat && <span className="book-cat">{cat}</span>}
       </div>

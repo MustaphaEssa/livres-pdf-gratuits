@@ -14,11 +14,13 @@ export default function DesignHeader() {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const { user, openAuth } = useAuth();
-  const isCurrent = (href: string) => (href === "/" ? path === "/" : path.startsWith(href));
+  const isCurrent = (href: string) =>
+    href === "/" ? path === "/" : href === "/auteurs" ? path.startsWith("/auteur") : path.startsWith(href);
 
   const NAV = [
     { href: "/", label: t.nav.home },
     { href: "/catalogue", label: t.nav.catalogue },
+    { href: "/auteurs", label: t.nav.authors },
     { href: "/livres-audio", label: t.nav.audiobooks },
     { href: "/collections", label: t.nav.collections },
     { href: "/blog", label: t.nav.blog },
@@ -33,7 +35,8 @@ export default function DesignHeader() {
         <div className="header-inner">
           <Logo />
           <nav className="nav" aria-label={t.nav.main}>
-            {NAV.map((n) => (
+            {/* « Accueil » omis sur ordinateur : le logo y mène déjà (gagne la place d'« Auteurs ») */}
+            {NAV.filter((n) => n.href !== "/").map((n) => (
               <Link key={n.href} href={n.href} aria-current={isCurrent(n.href) ? "page" : undefined}>
                 {n.label}
               </Link>

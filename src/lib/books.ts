@@ -196,7 +196,7 @@ export async function getAuthorProfile(authorSlug: string | null) {
   if (!authorSlug) return null;
   return prisma.author.findUnique({
     where: { slug: authorSlug },
-    select: { slug: true, name: true, image: true, bio: true, birthYear: true, deathYear: true },
+    select: { slug: true, name: true, image: true, bio: true, bioI18n: true, birthYear: true, deathYear: true },
   });
 }
 

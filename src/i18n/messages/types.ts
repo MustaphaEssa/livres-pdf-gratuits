@@ -37,7 +37,7 @@ export interface PublicMessages {
     breadcrumb: string; page: string; pageOf: string; pagination: string; showMore: string; clearAll: string;
     reset: string; all: string; audio: string; pdfAudio: string; close: string; share: string; copyLink: string; linkCopied: string;
     books: Plural; seeBook: string; seeBookOf: string; coverOf: string; coverOfBy: string;
-    publicDomain: string; frenchOnly: string;
+    publicDomain: string; frenchOnly: string; unknownAuthor: string;
   };
   /** Noms des genres par slug (repli : nom en base). */
   categories: Record<string, string>;
@@ -73,7 +73,10 @@ export interface PublicMessages {
     eyebrow: string; title: string; intro: string; titles: Plural; noPage: string; pagesCount: Plural;
     firstPage: string; empty: string; emptyHint: string; browse: string;
   };
-  collections: { eyebrow: string; one: string; title: string; intro: string; empty: string; emptyHint: string };
+  collections: {
+    /** Notes génériques des collections (même ordre que FALLBACKS de scripts/seed-collections.mjs). */
+    fallbackNotes: string[];
+    eyebrow: string; one: string; title: string; intro: string; empty: string; emptyHint: string };
   authors: { title: string; count: Plural; empty: string; booksAvailable: Plural; booksOf: string };
   category: { freeBooks: Plural; empty: string; seeCatalogue: string; booksOf: string };
   book: {

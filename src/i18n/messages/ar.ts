@@ -38,7 +38,7 @@ export const ar: DeepPartial<PublicMessages> = {
     close: "إغلاق", share: "مشاركة", copyLink: "نسخ الرابط", linkCopied: "تم نسخ الرابط!",
     books: { zero: "لا توجد كتب", one: "كتاب واحد", two: "كتابان", few: "{n} كتب", many: "{n} كتابًا", other: "{n} كتاب" },
     seeBook: "عرض البطاقة", seeBookOf: "{title} — عرض البطاقة", coverOf: "غلاف {title}", coverOfBy: "غلاف {title}، {author}",
-    publicDomain: "ملك عام", frenchOnly: "هذه الصفحة متاحة باللغة الفرنسية فقط.",
+    publicDomain: "ملك عام", frenchOnly: "هذه الصفحة متاحة باللغة الفرنسية فقط.", unknownAuthor: "مؤلف مجهول",
   },
   categories: {
     romans: "روايات", sciences: "علوم", histoire: "تاريخ", informatique: "معلوميات", religion: "دين",
@@ -91,6 +91,7 @@ export const ar: DeepPartial<PublicMessages> = {
     emptyHint: "عد قريبًا، أو تصفّح الكتب المتاحة للقراءة.", browse: "تصفّح الفهرس",
   },
   collections: {
+    fallbackNotes: ["عمل من الملك العام، متاح للقراءة والتنزيل والمشاركة بحرية.", "نص تراثي لإعادة اكتشافه مجانًا ودون حساب.", "عمل كلاسيكي في متناول الجميع، للقراءة على الإنترنت أو بصيغة PDF.", "يستحق إعادة الاكتشاف: كتاب من الملك العام مجاني بالكامل.", "عنوان من المكتبة الحرة، اقرأه على مهلك.", "قراءة من الملك العام، مقدَّمة لكل محبّ للمعرفة."],
     eyebrow: "المجموعات", one: "مجموعة", title: "مجموعات الكتب",
     intro: "مختارات موضوعية حول فكرة واحدة، لتجد قراءتك القادمة.",
     empty: "لا توجد مجموعات حاليًا", emptyHint: "عد قريبًا لاكتشاف مختاراتنا.",

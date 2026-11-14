@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { formatAuthorName } from "@/lib/utils";
 import { useI18n } from "@/components/i18n-provider";
-import { fmt } from "@/i18n/format";
+import { fmt, authorLabel } from "@/i18n/format";
 import { RTL_LANGS } from "@/lib/languages";
 
 // Couvertures « vides » : beaucoup de scans Internet Archive montrent la reliure
@@ -128,7 +127,7 @@ export default function BookCover({
       ) : (
         <div className="cover-inner">
           <span className="cover-author" dir="auto">
-            {formatAuthorName(book.author)}
+            {authorLabel(t, book.author)}
           </span>
           <span className="cover-title" dir="auto">
             {book.title}

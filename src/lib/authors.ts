@@ -1,6 +1,8 @@
 import "server-only";
 import prisma from "@/lib/db";
 import { formatAuthorName } from "@/lib/utils";
+import { localizedBio } from "@/lib/author-bios";
+import type { Locale } from "@/i18n/config";
 
 // Ré-export pour compatibilité des imports existants
 export { formatAuthorName };
@@ -17,14 +19,15 @@ export interface AuthorInfo {
 // Repli sur le nom formaté si aucune fiche n'existe encore.
 export async function getAuthorInfo(
   slug: string,
-  fallbackRawName: string
+  fallbackRawName: string,
+  locale: Locale = "fr"
 ): Promise<AuthorInfo> {
   const a = await prisma.author.findUnique({ where: { slug } });
   if (a) {
     return {
       name: a.name,
       image: a.image,
-      bio: a.bio,
+      bio: localizedBio(locale, a),
       birthYear: a.birthYear,
       deathYear: a.deathYear,
     };

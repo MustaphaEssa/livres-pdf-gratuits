@@ -38,7 +38,7 @@ export const ja: DeepPartial<PublicMessages> = {
     close: "閉じる", share: "共有", copyLink: "リンクをコピー", linkCopied: "リンクをコピーしました！",
     books: { other: "{n} 冊" },
     seeBook: "詳細を見る", seeBookOf: "『{title}』— 詳細を見る", coverOf: "『{title}』の表紙", coverOfBy: "『{title}』の表紙、{author}",
-    publicDomain: "パブリックドメイン", frenchOnly: "このページはフランス語のみでご覧いただけます。",
+    publicDomain: "パブリックドメイン", frenchOnly: "このページはフランス語のみでご覧いただけます。", unknownAuthor: "著者不明",
   },
   categories: {
     romans: "小説", sciences: "科学", histoire: "歴史", informatique: "コンピュータ", religion: "宗教",
@@ -90,6 +90,7 @@ export const ja: DeepPartial<PublicMessages> = {
     emptyHint: "また後でお越しいただくか、読める本をご覧ください。", browse: "カタログを見る",
   },
   collections: {
+    fallbackNotes: ["パブリックドメインの作品。自由に読んで、ダウンロードして、共有できます。", "無料・登録不要で（再）発見できる文化遺産のテキスト。", "誰でも楽しめる古典。オンラインでも PDF でも読めます。", "再発見したい一冊：完全無料のパブリックドメイン作品。", "自由な図書館の一冊。自分のペースで読めます。", "好奇心あふれるすべての人に贈るパブリックドメインの読み物。"],
     eyebrow: "コレクション", one: "コレクション", title: "本のコレクション",
     intro: "ひとつのテーマでまとめたセレクションで、次の一冊を見つけましょう。",
     empty: "コレクションはまだありません", emptyHint: "セレクションをお楽しみに。また後でお越しください。",

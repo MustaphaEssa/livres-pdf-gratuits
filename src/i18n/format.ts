@@ -1,4 +1,5 @@
 import type { Locale } from "./config";
+import { formatAuthorName } from "@/lib/utils";
 import type { Plural } from "./messages/types";
 
 /** Remplace les {placeholders} d'un message. */
@@ -42,4 +43,26 @@ export function categoryLabel(
 /** Nom de la marque dans la langue (« Livres PDF Gratuits », « Free PDF Books »…). */
 export function brandName(t: { brand: { before: string; after: string } }): string {
   return [t.brand.before, "PDF", t.brand.after].filter(Boolean).join(" ");
+}
+
+/** Auteurs génériques saisis en base (« Auteur inconnu », « Anonyme »…), traduits à l'affichage. */
+const GENERIC_AUTHOR = /^(auteur inconnu|inconnu|anonyme|anonymous|unknown|unknown author)$/i;
+
+/** Nom d'auteur affichable : « Hugo, Victor » → « Victor Hugo », générique → libellé traduit. */
+export function authorLabel(t: { common: { unknownAuthor: string } }, raw: string): string {
+  const name = formatAuthorName(raw);
+  return GENERIC_AUTHOR.test(name.trim()) ? t.common.unknownAuthor : name;
+}
+
+/** Note de collection affichable : remplissage générique traduit, sinon texte réel s'il est exploitable. */
+export function collectionNote(
+  t: { collections: { fallbackNotes: string[] } },
+  frFallbacks: string[],
+  note: string | null | undefined,
+  useful: (s: string) => boolean
+): string | null {
+  if (!note) return null;
+  const i = frFallbacks.indexOf(note.trim());
+  if (i >= 0) return t.collections.fallbackNotes[i] ?? null;
+  return useful(note) ? note : null;
 }

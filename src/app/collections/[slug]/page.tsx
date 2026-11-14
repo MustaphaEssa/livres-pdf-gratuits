@@ -2,7 +2,10 @@ import Link from "@/i18n/navigation";
 import { getServerI18n } from "@/i18n/server";
 import { i18nAlternates } from "@/i18n/seo";
 import { localizePath } from "@/i18n/config";
-import { fmt, plural } from "@/i18n/format";
+import { fmt, plural, collectionNote } from "@/i18n/format";
+import { localizeCollection } from "@/i18n/collections";
+import { getMessages } from "@/i18n/messages";
+import { isUsefulDescription } from "@/lib/book-description";
 import { notFound } from "next/navigation";
 import DesignHeader from "@/components/design/header";
 import DesignFooter from "@/components/design/footer";
@@ -20,8 +23,9 @@ interface Props {
 
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
-  const [col, { locale, t }] = await Promise.all([getPublishedCollectionBySlug(slug), getServerI18n()]);
-  if (!col) return { title: t.meta.collectionNotFound };
+  const [raw, { locale, t }] = await Promise.all([getPublishedCollectionBySlug(slug), getServerI18n()]);
+  if (!raw) return { title: t.meta.collectionNotFound };
+  const col = localizeCollection(locale, raw);
   return {
     title: col.title,
     description: col.description || fmt(t.meta.collectionDesc, { n: col.books.length }),
@@ -39,11 +43,15 @@ export async function generateMetadata({ params }: Props) {
 export default async function CollectionDetailPage({ params }: Props) {
   const { slug } = await params;
   const { locale, t } = await getServerI18n();
-  const [col, categories] = await Promise.all([
+  const [raw, categories] = await Promise.all([
     getPublishedCollectionBySlug(slug),
     getCategoriesWithCounts(),
   ]);
-  if (!col) notFound();
+  if (!raw) notFound();
+  const col = localizeCollection(locale, raw);
+  // Notes : remplissage générique traduit ; texte réel gardé seulement s'il est exploitable
+  const frNotes = getMessages("fr").collections.fallbackNotes;
+  const noteOf = (n: string | null) => collectionNote(t, frNotes, n, isUsefulDescription);
 
   return (
     <div className="ma">
@@ -91,12 +99,12 @@ export default async function CollectionDetailPage({ params }: Props) {
                 style={{ display: "grid", gridTemplateColumns: "150px 1fr", gap: 24, alignItems: "start" }}
               >
                 <BookCard book={entry.book} />
-                {entry.note && (
+                {noteOf(entry.note) && (
                   <p
                     className="prose"
                     style={{ borderInlineStart: "3px solid var(--accent)", paddingInlineStart: 18, fontSize: 17 }}
                   >
-                    {entry.note}
+                    {noteOf(entry.note)}
                   </p>
                 )}
               </div>

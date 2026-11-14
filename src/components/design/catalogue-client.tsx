@@ -3,11 +3,10 @@
 import { useState, useTransition, type ReactNode } from "react";
 import Link, { useLocaleRouter, useLocalizedHref } from "@/i18n/navigation";
 import { useI18n } from "@/components/i18n-provider";
-import { categoryLabel, plural, formatNumber } from "@/i18n/format";
+import { categoryLabel, plural, formatNumber, authorLabel } from "@/i18n/format";
 import BookCard, { type CardBook } from "./book-card";
 import BookCover from "./book-cover";
 import Icon, { I } from "./icon";
-import { formatAuthorName } from "@/lib/utils";
 import { languageLabel, sortLanguages } from "@/lib/languages";
 import { catalogueHref, type CatalogueState, type CatSort } from "./catalogue-url";
 
@@ -242,7 +241,7 @@ export default function CatalogueClient({
                     <BookCover book={b} mini />
                     <span className="list-row-text">
                       <span className="list-row-title" dir="auto">{b.title}</span>
-                      <span className="book-author" dir="auto">{formatAuthorName(b.author)}</span>
+                      <span className="book-author" dir="auto">{authorLabel(t, b.author)}</span>
                     </span>
                     {hasAudio(b) && <span className="pill-audio">{t.common.audio}</span>}
                     {c0 && <span className="cat">{categoryLabel(t, c0)}</span>}

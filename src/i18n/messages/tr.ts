@@ -37,7 +37,7 @@ export const tr: DeepPartial<PublicMessages> = {
     close: "Kapat", share: "Paylaş", copyLink: "Bağlantıyı kopyala", linkCopied: "Bağlantı kopyalandı!",
     books: { one: "{n} kitap", other: "{n} kitap" },
     seeBook: "Kitaba git", seeBookOf: "{title} — kitaba git", coverOf: "{title} kapağı", coverOfBy: "{title} kapağı, {author}",
-    publicDomain: "Kamu malı", frenchOnly: "Bu sayfa yalnızca Fransızca olarak mevcuttur.",
+    publicDomain: "Kamu malı", frenchOnly: "Bu sayfa yalnızca Fransızca olarak mevcuttur.", unknownAuthor: "Bilinmeyen yazar",
   },
   categories: {
     romans: "Romanlar", sciences: "Bilim", histoire: "Tarih", informatique: "Bilişim", religion: "Din",
@@ -89,6 +89,7 @@ export const tr: DeepPartial<PublicMessages> = {
     emptyHint: "Yakında tekrar uğrayın ya da okunacak kitaplara göz atın.", browse: "Kataloğa göz at",
   },
   collections: {
+    fallbackNotes: ["Kamu malı bir eser: özgürce okuyun, indirin ve paylaşın.", "Ücretsiz ve hesap gerektirmeden (yeniden) keşfedilecek bir miras metni.", "Herkese açık bir klasik; çevrimiçi ya da PDF olarak okuyun.", "Yeniden keşfedin: tamamen ücretsiz, kamu malı bir kitap.", "Özgür kütüphaneden, kendi temponuzda okuyacağınız bir eser.", "Tüm meraklılara sunulan kamu malı bir okuma."],
     eyebrow: "Koleksiyonlar", one: "Koleksiyon", title: "Kitap koleksiyonları",
     intro: "Bir fikir etrafında bir araya getirilmiş tematik seçkiler; bir sonraki kitabınızı bulun.",
     empty: "Henüz koleksiyon yok", emptyHint: "Seçkilerimizi keşfetmek için yakında tekrar uğrayın.",

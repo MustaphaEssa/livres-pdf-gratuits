@@ -14,7 +14,8 @@ import { ZelligePattern } from "@/components/design/patterns";
 import { AudioPlayer } from "@/components/books/audio-player";
 import { ShareButtons } from "@/components/books/share-buttons";
 import { Reviews } from "@/components/books/reviews";
-import { formatFileSize, formatAuthorName } from "@/lib/utils";
+import { formatFileSize } from "@/lib/utils";
+import { localizedBio } from "@/lib/author-bios";
 import {
   getBookBySlug,
   getRelatedBooks,
@@ -33,7 +34,7 @@ import { shouldCountView } from "@/lib/view-throttle";
 import { getServerI18n } from "@/i18n/server";
 import { i18nAlternates } from "@/i18n/seo";
 import { localizePath } from "@/i18n/config";
-import { categoryLabel, fmt, formatNumber } from "@/i18n/format";
+import { categoryLabel, fmt, formatNumber, authorLabel } from "@/i18n/format";
 import { isUsefulDescription, autoDescription, truncateText } from "@/lib/book-description";
 
 interface BookPageProps {
@@ -94,7 +95,7 @@ export default async function BookPage({ params }: BookPageProps) {
 
   const bookMediaType = book.mediaType === "AUDIO" ? "AUDIO" : "PDF";
   const genreSlug = book.categories[0]?.category.slug;
-  const [hdrs, { locale, t }, relatedBooks, sameAuthorBooks, genreBooks, authorProfile, settings, session] =
+  const [hdrs, { locale, t }, relatedBooks, sameAuthorBooks, genreBooks, rawAuthorProfile, settings, session] =
     await Promise.all([
       headers(),
       getServerI18n(),
@@ -105,6 +106,9 @@ export default async function BookPage({ params }: BookPageProps) {
       getSiteSettings(),
       getUserSession(),
     ]);
+
+  // Bio de l'auteur dans la langue de la page (vide si Wikipédia n'a pas d'article dans cette langue)
+  const authorProfile = rawAuthorProfile && { ...rawAuthorProfile, bio: localizedBio(locale, rawAuthorProfile) };
 
   const viewerIp =
     hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() || hdrs.get("x-real-ip") || "unknown";
@@ -231,7 +235,7 @@ export default async function BookPage({ params }: BookPageProps) {
                   href={book.authorSlug ? `/auteur/${book.authorSlug}` : `/catalogue?q=${encodeURIComponent(book.author)}`}
                   dir="auto"
                 >
-                  {formatAuthorName(book.author)}
+                  {authorLabel(t, book.author)}
                 </Link>
                 {book.publishedYear && <span>· {book.publishedYear}</span>}
               </div>
@@ -431,7 +435,7 @@ export default async function BookPage({ params }: BookPageProps) {
                   </div>
                   <div>
                     <dt>{t.book.author}</dt>
-                    <dd dir="auto">{formatAuthorName(book.author)}</dd>
+                    <dd dir="auto">{authorLabel(t, book.author)}</dd>
                   </div>
                   {primaryCategory && (
                     <div>

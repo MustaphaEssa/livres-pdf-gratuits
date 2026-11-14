@@ -2,6 +2,7 @@ import Link from "@/i18n/navigation";
 import { getServerI18n } from "@/i18n/server";
 import { i18nAlternates } from "@/i18n/seo";
 import { plural } from "@/i18n/format";
+import { localizeCollection } from "@/i18n/collections";
 import DesignHeader from "@/components/design/header";
 import DesignFooter from "@/components/design/footer";
 import MobileTabbar from "@/components/design/mobile-tabbar";
@@ -21,7 +22,7 @@ export async function generateMetadata() {
 export default async function CollectionsPage() {
   const { locale, t } = await getServerI18n();
   const [collections, categories] = await Promise.all([
-    getPublishedCollections(),
+    getPublishedCollections().then((cs) => cs.map((c) => localizeCollection(locale, c))),
     getCategoriesWithCounts(),
   ]);
 
