@@ -30,7 +30,8 @@ function getSecret(): Uint8Array {
 // Signe un jeton de session pour une audience donnée (admin ou user)
 export async function createSessionToken(
   payload: { id: string; email: string; name: string; role?: string },
-  audience: SessionAudience
+  audience: SessionAudience,
+  maxAgeSeconds: number = SESSION_MAX_AGE
 ): Promise<string> {
   const claims: Record<string, unknown> = {
     email: payload.email,
@@ -43,7 +44,7 @@ export async function createSessionToken(
     .setSubject(payload.id)
     .setAudience(audience)
     .setIssuedAt()
-    .setExpirationTime(`${SESSION_MAX_AGE}s`)
+    .setExpirationTime(`${maxAgeSeconds}s`)
     .sign(getSecret());
 }
 
