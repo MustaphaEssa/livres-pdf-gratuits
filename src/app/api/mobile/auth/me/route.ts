@@ -21,6 +21,27 @@ export async function GET(request: Request) {
 export async function DELETE(request: Request) {
   const session = await getMobileUser(request);
   if (!session) return bad("Non connecté", 401);
+  const user = await prisma.user.findUnique({ where: { id: session.sub }, select: { email: true } });
+  if (user) {
+    // Les avis ne sont pas reliés au compte (nom + e-mail copiés) : on les supprime aussi,
+    // puis on recalcule la note des livres concernés.
+    const reviews = await prisma.review.findMany({
+      where: { email: user.email },
+      select: { bookId: true },
+    });
+    await prisma.review.deleteMany({ where: { email: user.email } });
+    for (const bookId of new Set(reviews.map((r) => r.bookId))) {
+      const agg = await prisma.review.aggregate({
+        where: { bookId, isApproved: true },
+        _avg: { rating: true },
+        _count: true,
+      });
+      await prisma.book.update({
+        where: { id: bookId },
+        data: { rating: Math.round((agg._avg.rating ?? 0) * 10) / 10, ratingCount: agg._count },
+      });
+    }
+  }
   await prisma.user.delete({ where: { id: session.sub } }).catch(() => {});
   return NextResponse.json({ ok: true });
 }
