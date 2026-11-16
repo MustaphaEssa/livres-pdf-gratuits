@@ -40,6 +40,14 @@ export const readableWhere: Prisma.BookWhereInput = {
   isPublished: true,
   pdfUrl: { not: null },
   NOT: { mediaType: "AUDIO" },
+  // Sécurité Google Play : l'app n'expose que des œuvres du domaine public —
+  // Gutenberg, ou publiées en 1929 ou avant (année inconnue = import Internet Archive
+  // déjà restreint à ≤ 1929).
+  OR: [
+    { publishedYear: null },
+    { publishedYear: { lte: 1929 } },
+    { sourceId: { startsWith: "gutenberg:" } },
+  ],
 };
 
 export function absUrl(path: string | null | undefined): string | null {

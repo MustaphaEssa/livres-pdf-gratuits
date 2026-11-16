@@ -5,6 +5,7 @@ import { I18nProvider } from "@/components/i18n-provider";
 import { SettingsProvider } from "@/components/settings-provider";
 import { AuthProvider } from "@/components/auth/auth-modal";
 import { Analytics } from "@/components/analytics";
+import AndroidAppBanner from "@/components/android-app-banner";
 import { getLocale, getServerI18n } from "@/i18n/server";
 import { brandName } from "@/i18n/format";
 import { getSiteSettings } from "@/lib/settings";
@@ -118,6 +119,8 @@ export default async function RootLayout({
             <AuthProvider>{children}</AuthProvider>
           </SettingsProvider>
         </I18nProvider>
+
+        <AndroidAppBanner locale={locale} />
 
         {/* Google Analytics (si configuré) — exclu des pages /admin */}
         <Analytics gaId={settings.googleAnalyticsId} />
