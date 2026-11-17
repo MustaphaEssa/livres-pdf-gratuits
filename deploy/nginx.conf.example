@@ -19,6 +19,18 @@ server {
     # Autorise l'upload de PDF jusqu'à 50 Mo (doit couvrir MAX_FILE_SIZE)
     client_max_body_size 55m;
 
+    # --- PDF / EPUB des livres : canonical vers la fiche HTML (SEO) ---
+    # /uploads/books/madame-bovary.pdf → Link: <https://…/livre/madame-bovary>; rel="canonical"
+    # (regex : prioritaire sur le bloc /uploads/ ci-dessous ; les add_header du
+    # bloc parent ne sont pas hérités, d'où la répétition du Cache-Control)
+    location ~ ^/uploads/books/(?<book_slug>[^/]+)\.(pdf|epub)$ {
+        root $APP_ROOT/public;
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+        add_header Link "<https://livrespdfgratuits.com/livre/$book_slug>; rel=\"canonical\"";
+        try_files $uri =404;
+    }
+
     # --- Fichiers uploadés servis DIRECTEMENT par nginx (performant) ---
     # PDF et couvertures : pas besoin de passer par Node.
     location /uploads/ {
