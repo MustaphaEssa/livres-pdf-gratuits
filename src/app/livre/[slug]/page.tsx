@@ -31,6 +31,7 @@ import prisma from "@/lib/db";
 import { SITE_URL, SITE_NAME } from "@/lib/site";
 import { headers } from "next/headers";
 import { shouldCountView } from "@/lib/view-throttle";
+import { isBot } from "@/lib/bot";
 import { getServerI18n } from "@/i18n/server";
 import { i18nAlternates } from "@/i18n/seo";
 import { localizePath } from "@/i18n/config";
@@ -112,7 +113,7 @@ export default async function BookPage({ params }: BookPageProps) {
 
   const viewerIp =
     hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() || hdrs.get("x-real-ip") || "unknown";
-  if (shouldCountView(book.id, viewerIp)) incrementViewCount(book.id).catch(() => {});
+  if (!isBot(hdrs.get("user-agent")) && shouldCountView(book.id, viewerIp)) incrementViewCount(book.id).catch(() => {});
 
   const isLoggedIn = !!session;
   let isFavorited = false;

@@ -4,6 +4,14 @@ import { NextResponse } from "next/server";
 import { getBookBySlug, registerDownload } from "@/lib/books";
 import { getUserSession } from "@/lib/user-server";
 import { slugify } from "@/lib/utils";
+import { isBot } from "@/lib/bot";
+import { shouldCountDownload } from "@/lib/view-throttle";
+
+// Les requêtes HEAD (aperçus de liens, gestionnaires de téléchargement) ne
+// doivent ni servir le fichier ni compter un téléchargement.
+export function HEAD() {
+  return new NextResponse(null, { status: 200, headers: { "Cache-Control": "no-store" } });
+}
 
 export async function GET(
   request: Request,
@@ -27,20 +35,30 @@ export async function GET(
     return new NextResponse("Livre introuvable", { status: 404 });
   }
 
-  // Comptabilise le téléchargement (compteur + journal)
+  // Comptabilise le téléchargement (compteur + journal), uniquement pour un
+  // humain : pas les robots, pas les requêtes partielles (Range) envoyées par
+  // les gestionnaires de téléchargement, et une seule fois par livre/IP/24 h.
   const ipAddress =
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
-  const userAgent = request.headers.get("user-agent");
-  const session = await getUserSession();
-  try {
-    await registerDownload(book.id, {
-      ipAddress,
-      userAgent,
-      userId: session?.sub ?? null,
-    });
-  } catch (e) {
-    // On ne bloque pas le téléchargement si le comptage échoue
-    console.error("registerDownload error:", e);
+    h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || null;
+  const userAgent = h.get("user-agent");
+  const range = h.get("range");
+  const isPartial = !!range && !/^bytes=0-/.test(range);
+  if (
+    !isBot(userAgent) &&
+    !isPartial &&
+    shouldCountDownload(book.id, ipAddress ?? "unknown")
+  ) {
+    const session = await getUserSession();
+    try {
+      await registerDownload(book.id, {
+        ipAddress,
+        userAgent,
+        userId: session?.sub ?? null,
+      });
+    } catch (e) {
+      // On ne bloque pas le téléchargement si le comptage échoue
+      console.error("registerDownload error:", e);
+    }
   }
 
   // PDF externe -> simple redirection

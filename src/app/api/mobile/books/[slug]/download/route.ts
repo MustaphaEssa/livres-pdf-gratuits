@@ -3,6 +3,7 @@ import prisma from "@/lib/db";
 import { registerDownload } from "@/lib/books";
 import { bad, getMobileUser, readableWhere } from "@/lib/mobile";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { shouldCountDownload } from "@/lib/view-throttle";
 
 export const runtime = "nodejs";
 
@@ -21,6 +22,9 @@ export async function POST(
     select: { id: true },
   });
   if (!book) return bad("Livre introuvable", 404);
+
+  // Un seul comptage par livre et par IP sur 24 h (re-téléchargements, réessais)
+  if (!shouldCountDownload(book.id, ip)) return NextResponse.json({ ok: true });
 
   const user = await getMobileUser(request);
   await registerDownload(book.id, {
