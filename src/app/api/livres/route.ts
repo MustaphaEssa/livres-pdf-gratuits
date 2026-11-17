@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
+import { getSession } from "@/lib/auth-server";
 
 export const runtime = "nodejs";
 
-// Liste des livres (depuis la base) — utilisée par l'admin et le dashboard.
+// Liste complète des livres (brouillons inclus) — réservée à l'admin.
 export async function GET() {
+  if (!(await getSession())) {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  }
   try {
     const books = await prisma.book.findMany({
       include: {

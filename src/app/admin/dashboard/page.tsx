@@ -11,10 +11,15 @@ import {
   Plus,
   Eye,
   Star,
+  TrendingUp,
+  TrendingDown,
+  Globe,
+  Smartphone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { DownloadsChart, type SeriesPoint } from "@/components/admin/downloads-chart";
 import { formatAuthorName } from "@/lib/utils";
 
 interface Book {
@@ -22,10 +27,15 @@ interface Book {
   slug: string;
   title: string;
   author: string;
-  downloadCount: number;
-  rating: number;
   isPublished: boolean;
-  createdAt: string;
+}
+
+interface TopBook {
+  id: string;
+  slug: string;
+  title: string;
+  author: string;
+  count: number;
 }
 
 interface RecentReview {
@@ -40,39 +50,54 @@ interface RecentReview {
 }
 
 interface Stats {
+  books: number;
   users: number;
   posts: number;
   downloadsTotal: number;
   pendingReviews: number;
   recentReviews: RecentReview[];
-  downloadsSeries: { date: string; count: number }[];
+  recentBooks: Book[];
+  days: number;
+  downloadsSeries: SeriesPoint[];
+  period: { total: number; web: number; app: number; previousTotal: number };
+  topBooks: TopBook[];
 }
+
+const PERIODS = [
+  { days: 7, label: "7 j" },
+  { days: 30, label: "30 j" },
+  { days: 90, label: "90 j" },
+  { days: 365, label: "1 an" },
+];
 
 export default function AdminDashboard() {
   const { t } = useI18n();
-  const [books, setBooks] = useState<Book[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [days, setDays] = useState(30);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const [booksRes, statsRes] = await Promise.all([
-          fetch("/api/livres"),
-          fetch("/api/admin/stats"),
-        ]);
-        if (booksRes.ok) setBooks(await booksRes.json());
-        if (statsRes.ok) setStats(await statsRes.json());
-      } catch (error) {
-        console.error("Erreur de chargement du dashboard :", error);
-      } finally {
-        setLoading(false);
-      }
+    let cancelled = false;
+    setRefreshing(true);
+    fetch(`/api/admin/stats?days=${days}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled && data) setStats(data);
+      })
+      .catch((error) => console.error("Erreur de chargement du dashboard :", error))
+      .finally(() => {
+        if (!cancelled) setRefreshing(false);
+      });
+    return () => {
+      cancelled = true;
     };
-    load();
-  }, []);
+  }, [days]);
 
-  const maxDownload = Math.max(1, ...(stats?.downloadsSeries.map((d) => d.count) ?? [0]));
+  const books = stats?.recentBooks ?? [];
+  const p = stats?.period;
+  const change =
+    p && p.previousTotal > 0 ? Math.round(((p.total - p.previousTotal) / p.previousTotal) * 100) : null;
+  const appShare = p && p.total > 0 ? Math.round((p.app / p.total) * 100) : 0;
 
   return (
     <AdminShell active="dashboard">
@@ -102,7 +127,7 @@ export default function AdminDashboard() {
               <BookOpen className="h-6 w-6 text-amber-500" />
             </div>
             <div className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
-              {loading ? "..." : books.length}
+              {stats ? stats.books.toLocaleString() : "..."}
             </div>
             <div className="text-sm text-slate-500">{t.admin.totalBooks}</div>
           </CardContent>
@@ -110,7 +135,7 @@ export default function AdminDashboard() {
         <Card>
           <CardContent className="p-6">
             <div className="p-3 bg-[#e8ebf3] dark:bg-[#14213d]/20 rounded-lg w-fit mb-4">
-              <Download className="h-6 w-6 text-[#14213d]" />
+              <Download className="h-6 w-6 text-[#14213d] dark:text-sky-300" />
             </div>
             <div className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
               {stats ? stats.downloadsTotal.toLocaleString() : "..."}
@@ -142,33 +167,123 @@ export default function AdminDashboard() {
         </Card>
       </div>
 
-      {/* Graphique des téléchargements (14 jours) */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Téléchargements (14 derniers jours)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {!stats ? (
-            <div className="text-center py-8 text-slate-500">{t.admin.loading}</div>
-          ) : (
-            <div className="flex items-end gap-1 h-40">
-              {stats.downloadsSeries.map((d) => (
-                <div key={d.date} className="flex-1 flex flex-col items-center justify-end gap-1 group">
-                  <span className="text-xs text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {d.count}
+      {/* Graphique des téléchargements + top de la période */}
+      <div className="grid lg:grid-cols-3 gap-6 mb-6">
+        <Card className="lg:col-span-2">
+          <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
+            <div>
+              <CardTitle>Téléchargements</CardTitle>
+              {p && (
+                <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <span className="text-3xl font-bold text-slate-900 dark:text-white">
+                    {p.total.toLocaleString("fr-FR")}
                   </span>
-                  <div
-                    className="w-full bg-amber-500/80 hover:bg-amber-500 rounded-t transition-all"
-                    style={{ height: `${(d.count / maxDownload) * 100}%`, minHeight: d.count > 0 ? "4px" : "2px" }}
-                    title={`${d.date} : ${d.count}`}
-                  />
-                  <span className="text-[10px] text-slate-400">{d.date.slice(8, 10)}</span>
+                  {change !== null && (
+                    <span
+                      className={`inline-flex items-center gap-1 text-sm font-medium ${
+                        change >= 0 ? "text-green-600" : "text-red-500"
+                      }`}
+                      title={`Période précédente : ${p.previousTotal.toLocaleString("fr-FR")}`}
+                    >
+                      {change >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+                      {change >= 0 ? "+" : ""}
+                      {change} % vs période précédente
+                    </span>
+                  )}
                 </div>
+              )}
+            </div>
+            <div className="flex rounded-lg bg-slate-100 dark:bg-slate-800 p-1" role="group" aria-label="Période">
+              {PERIODS.map((opt) => (
+                <button
+                  key={opt.days}
+                  onClick={() => setDays(opt.days)}
+                  aria-pressed={days === opt.days}
+                  className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                    days === opt.days
+                      ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm font-medium"
+                      : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                  }`}
+                >
+                  {opt.label}
+                </button>
               ))}
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardHeader>
+          <CardContent className={`transition-opacity ${refreshing && stats ? "opacity-60" : ""}`}>
+            {!stats ? (
+              <div className="text-center py-20 text-slate-500">{t.admin.loading}</div>
+            ) : (
+              <>
+                <DownloadsChart series={stats.downloadsSeries} />
+                <div className="grid grid-cols-2 gap-3 mt-5">
+                  <div className="flex items-center gap-3 rounded-lg bg-slate-50 dark:bg-slate-800 p-3">
+                    <Globe className="h-5 w-5 text-[#14213d] dark:text-sky-300" />
+                    <div>
+                      <div className="font-semibold text-slate-900 dark:text-white">
+                        {stats.period.web.toLocaleString("fr-FR")}
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        Site web{stats.period.total > 0 ? ` · ${100 - appShare} %` : ""}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 rounded-lg bg-slate-50 dark:bg-slate-800 p-3">
+                    <Smartphone className="h-5 w-5 text-amber-500" />
+                    <div>
+                      <div className="font-semibold text-slate-900 dark:text-white">
+                        {stats.period.app.toLocaleString("fr-FR")}
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        App Android{stats.period.total > 0 ? ` · ${appShare} %` : ""}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Les plus téléchargés</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {!stats ? (
+              <div className="text-center py-8 text-slate-500">{t.admin.loading}</div>
+            ) : stats.topBooks.length === 0 ? (
+              <div className="text-center py-8 text-slate-500">Aucun téléchargement sur cette période</div>
+            ) : (
+              <ol className="space-y-3">
+                {stats.topBooks.map((b, i) => (
+                  <li key={b.id}>
+                    <div className="flex items-baseline gap-2 text-sm">
+                      <span className="w-4 text-slate-400 tabular-nums">{i + 1}</span>
+                      <Link
+                        href={`/livre/${b.slug}`}
+                        className="flex-1 min-w-0 truncate font-medium text-slate-900 dark:text-white hover:underline"
+                        title={`${b.title} — ${formatAuthorName(b.author)}`}
+                      >
+                        {b.title}
+                      </Link>
+                      <span className="tabular-nums text-slate-600 dark:text-slate-300">
+                        {b.count.toLocaleString("fr-FR")}
+                      </span>
+                    </div>
+                    <div className="ml-6 mt-1 h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-amber-500"
+                        style={{ width: `${(b.count / stats.topBooks[0].count) * 100}%` }}
+                      />
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Livres récents & avis récents */}
       <div className="grid lg:grid-cols-2 gap-6 mb-6">
@@ -182,23 +297,23 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {loading ? (
+              {!stats ? (
                 <div className="text-center py-4 text-slate-500">{t.admin.loading}</div>
               ) : books.length === 0 ? (
                 <div className="text-center py-4 text-slate-500">{t.admin.noBooks}</div>
               ) : (
-                books.slice(0, 5).map((book) => (
+                books.map((book) => (
                   <div key={book.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-slate-200 dark:bg-slate-700 rounded flex items-center justify-center">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 shrink-0 bg-slate-200 dark:bg-slate-700 rounded flex items-center justify-center">
                         <BookOpen className="h-5 w-5 text-slate-400" />
                       </div>
-                      <div>
-                        <h4 className="font-medium text-slate-900 dark:text-white">{book.title}</h4>
-                        <p className="text-sm text-slate-500">{formatAuthorName(book.author)}</p>
+                      <div className="min-w-0">
+                        <h4 className="font-medium text-slate-900 dark:text-white truncate">{book.title}</h4>
+                        <p className="text-sm text-slate-500 truncate">{formatAuthorName(book.author)}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 shrink-0">
                       <span className={`px-2 py-1 text-xs rounded ${
                         book.isPublished
                           ? "bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400"
@@ -206,10 +321,12 @@ export default function AdminDashboard() {
                       }`}>
                         {book.isPublished ? t.admin.published : t.admin.draft}
                       </span>
-                      <Link href={`/livre/${book.slug}`}>
-                        <button className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded">
-                          <Eye className="h-4 w-4 text-slate-400" />
-                        </button>
+                      <Link
+                        href={`/livre/${book.slug}`}
+                        className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded"
+                        title={t.admin.view}
+                      >
+                        <Eye className="h-4 w-4 text-slate-400" />
                       </Link>
                     </div>
                   </div>
