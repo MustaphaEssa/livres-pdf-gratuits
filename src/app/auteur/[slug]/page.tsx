@@ -1,6 +1,5 @@
 import Link from "@/i18n/navigation";
 import { getServerI18n } from "@/i18n/server";
-import { i18nAlternates } from "@/i18n/seo";
 import { localizePath } from "@/i18n/config";
 import { fmt, plural } from "@/i18n/format";
 import { notFound } from "next/navigation";
@@ -13,22 +12,34 @@ import { getBooksByAuthorSlug, getCategoriesWithCounts } from "@/lib/books";
 import { getAuthorInfo, formatAuthorName } from "@/lib/authors";
 import JsonLd, { breadcrumbLd, itemListLd } from "@/components/seo/json-ld";
 import { SITE_URL } from "@/lib/site";
+import { pageMetadata, withPage, tpl, clip, titleList, MAX_INDEXED_PAGE } from "@/lib/seo";
+import { seoMessages } from "@/i18n/seo-messages";
+import type { Metadata } from "next";
 
 interface AuthorPageProps {
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ page?: string }>;
 }
 
-export async function generateMetadata({ params }: AuthorPageProps) {
-  const { slug } = await params;
-  const [{ authorName, total }, { locale, t }] = await Promise.all([getBooksByAuthorSlug(slug, 1), getServerI18n()]);
-  if (!authorName) return { title: t.meta.authorNotFound };
+export async function generateMetadata({ params, searchParams }: AuthorPageProps): Promise<Metadata> {
+  const [{ slug }, sp] = await Promise.all([params, searchParams]);
+  const page = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
+  const [{ authorName, books }, { locale, t }] = await Promise.all([getBooksByAuthorSlug(slug, 1), getServerI18n()]);
+  if (!authorName) return { title: t.meta.authorNotFound, robots: { index: false, follow: true } };
+  const seo = seoMessages(locale);
   const name = formatAuthorName(authorName);
-  return {
-    title: `${name} — ${plural(locale, t.common.books, total)}`,
-    description: fmt(t.meta.authorDesc, { name }),
-    alternates: i18nAlternates(locale, `/auteur/${slug}`),
-  };
+  const baseTitle = tpl(seo.authorTitle, { name });
+  // Description unique : cite les titres les plus lus de l'auteur
+  const description = clip(tpl(seo.authorDesc, { name, titles: titleList(books.map((b) => b.title)) }), 160);
+  return pageMetadata({
+    locale,
+    path: withPage(`/auteur/${slug}`, page),
+    title: page > 1 ? `${baseTitle} — ${fmt(t.common.page, { n: page })}` : baseTitle,
+    absoluteTitle: true,
+    description,
+    type: "profile",
+    noindex: page > MAX_INDEXED_PAGE,
+  });
 }
 
 export default async function AuthorPage({ params, searchParams }: AuthorPageProps) {

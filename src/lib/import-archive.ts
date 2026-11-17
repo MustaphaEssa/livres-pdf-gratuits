@@ -3,7 +3,7 @@ import { fetchBioTranslations } from "@/lib/author-bios";
 import { writeFile, mkdir, statfs } from "fs/promises";
 import path from "path";
 import prisma from "@/lib/db";
-import { slugify } from "@/lib/utils";
+import { slugify, bookSlug } from "@/lib/utils";
 import { titleKey } from "@/lib/text-key";
 
 // Espace disque libre (en Mo) du volume contenant `dir`. null si indisponible.
@@ -300,7 +300,7 @@ export async function importBook(
     }
   }
 
-  let slug = slugify(title) || slugify(identifier);
+  let slug = bookSlug(title, formatAuthorName(fallbackAuthor)) || slugify(identifier);
   if (await prisma.book.count({ where: { slug } })) {
     slug = `${slug}-${identifier.slice(-6).toLowerCase()}`;
     if (await prisma.book.count({ where: { slug } })) return { status: "skip" };
@@ -689,7 +689,7 @@ export async function importAudiobook(
   const totalDuration = audio.totalDuration;
 
   const title = audio.title.slice(0, 250);
-  let slug = slugify(title) || slugify(identifier);
+  let slug = bookSlug(title, formatAuthorName(fallbackAuthor)) || slugify(identifier);
   if (await prisma.book.count({ where: { slug } })) {
     slug = `${slug}-${identifier.slice(-6).toLowerCase()}`;
     if (await prisma.book.count({ where: { slug } })) return { status: "skip" };

@@ -14,7 +14,7 @@ import { ZelligePattern } from "@/components/design/patterns";
 import { AudioPlayer } from "@/components/books/audio-player";
 import { ShareButtons } from "@/components/books/share-buttons";
 import { Reviews } from "@/components/books/reviews";
-import { formatFileSize } from "@/lib/utils";
+import { formatFileSize, formatAuthorName } from "@/lib/utils";
 import { localizedBio } from "@/lib/author-bios";
 import {
   getBookBySlug,
@@ -33,24 +33,23 @@ import { headers } from "next/headers";
 import { shouldCountView } from "@/lib/view-throttle";
 import { isBot } from "@/lib/bot";
 import { getServerI18n } from "@/i18n/server";
-import { i18nAlternates } from "@/i18n/seo";
 import { localizePath } from "@/i18n/config";
 import { categoryLabel, fmt, formatNumber, authorLabel } from "@/i18n/format";
 import { isUsefulDescription, autoDescription, truncateText } from "@/lib/book-description";
+import { pageMetadata, descriptionWithCta, clip, absoluteUrl } from "@/lib/seo";
+import { seoMessages } from "@/i18n/seo-messages";
+import type { Metadata } from "next";
 
 interface BookPageProps {
   params: Promise<{ slug: string }>;
 }
 
-export async function generateMetadata({ params }: BookPageProps) {
+export async function generateMetadata({ params }: BookPageProps): Promise<Metadata> {
   const { slug } = await params;
   const [book, { locale, t }] = await Promise.all([getBookBySlug(slug), getServerI18n()]);
-  if (!book) return { title: t.meta.bookNotFound };
-  const image = book.coverImage
-    ? book.coverImage.startsWith("http")
-      ? book.coverImage
-      : `${SITE_URL}${book.coverImage}`
-    : `${SITE_URL}/og-image.png`;
+  if (!book) return { title: t.meta.bookNotFound, robots: { index: false, follow: true } };
+  const seo = seoMessages(locale);
+  const isAudio = book.mediaType === "AUDIO";
   // Description : texte de la source s'il est utile, sinon description générée
   // (les notes techniques d'Internet Archive font de mauvais extraits Google).
   const metaGenre = book.categories[0]?.category;
@@ -58,34 +57,45 @@ export async function generateMetadata({ params }: BookPageProps) {
   // fiches générées à l'import) : ailleurs, on donne une description dans la
   // langue de la page (une meta unique par version linguistique).
   const sourceFits = locale === "fr" || locale === book.language;
-  const metaDesc = truncateText(
+  const baseDesc =
     sourceFits && isUsefulDescription(book.description)
       ? book.description
-      : autoDescription(t, locale, { ...book, hasAudio: !!book.audioTracks }, metaGenre ? categoryLabel(t, metaGenre) : null)
-  );
-  // Google coupe les titres vers 60 caractères : on raccourcit au dernier mot entier
-  // (le titre complet reste dans la page et dans Open Graph).
-  const shortTitle =
-    book.title.length > 60 ? `${book.title.slice(0, 58).replace(/[\s,;:.\-–]+\S*$/, "")}…` : book.title;
-  return {
-    title: shortTitle,
+      : autoDescription(t, locale, { ...book, hasAudio: !!book.audioTracks }, metaGenre ? categoryLabel(t, metaGenre) : null);
+  const metaDesc = descriptionWithCta(baseDesc, isAudio ? seo.audioCta : seo.bookCta);
+  const title = bookSeoTitle(book.title, book.author, isAudio ? seo.audioSuffix : seo.bookSuffix);
+  return pageMetadata({
+    locale,
+    path: `/livre/${book.slug}`,
+    title,
+    absoluteTitle: true,
     description: metaDesc,
-    alternates: i18nAlternates(locale, `/livre/${slug}`),
-    openGraph: {
-      title: book.title,
-      description: metaDesc,
-      type: "book",
-      url: `${SITE_URL}${localizePath(locale, `/livre/${book.slug}`)}`,
+    type: "book",
+    // Carte 1200×630 générée (couverture + titre), cf. /og/livre/[slug]
+    image: { url: `/og/livre/${encodeURIComponent(book.slug)}`, width: 1200, height: 630, alt: book.title },
+    openGraphExtra: {
       authors: [book.author],
-      images: [{ url: image }],
+      ...(book.isbn ? { isbn: book.isbn } : {}),
+      ...(book.publishedYear ? { releaseDate: String(book.publishedYear) } : {}),
     },
-    twitter: {
-      card: "summary_large_image",
-      title: book.title,
-      description: metaDesc,
-      images: [image],
-    },
-  };
+  });
+}
+
+/**
+ * « {Titre} - {Auteur} | Télécharger PDF gratuit » en 60 caractères max :
+ * sans l'auteur si trop long, puis titre raccourci au dernier mot entier.
+ */
+function bookSeoTitle(title: string, author: string, suffix: string): string {
+  const name = formatAuthorName(author);
+  // Titre principal sans sous-titre : « Madame Bovary: mœurs de province » → « Madame Bovary »
+  const main = title.split(/\s*[:;/(\[]\s*|\s+[-–—]\s+/)[0].trim();
+  const candidates = [
+    name && `${title} - ${name} | ${suffix}`,
+    name && main.length >= 3 && main !== title && `${main} - ${name} | ${suffix}`,
+    `${title} | ${suffix}`,
+    main.length >= 3 && `${main} | ${suffix}`,
+  ];
+  const fit = candidates.find((c): c is string => !!c && c.length <= 60);
+  return fit ?? `${clip(main.length >= 3 ? main : title, Math.max(20, 60 - suffix.length - 3))} | ${suffix}`;
 }
 
 
@@ -151,7 +161,11 @@ export default async function BookPage({ params }: BookPageProps) {
     "@context": "https://schema.org",
     "@type": "Book",
     name: book.title,
-    author: { "@type": "Person", name: book.author },
+    author: {
+      "@type": "Person",
+      name: formatAuthorName(book.author),
+      ...(book.authorSlug ? { url: `${SITE_URL}${localizePath(locale, `/auteur/${book.authorSlug}`)}` } : {}),
+    },
     inLanguage: book.language,
     url: bookUrl,
     description: truncateText(
@@ -164,9 +178,19 @@ export default async function BookPage({ params }: BookPageProps) {
     ...(book.publishedYear ? { datePublished: String(book.publishedYear) } : {}),
     ...(book.isbn ? { isbn: book.isbn } : {}),
     ...(book.publisher ? { publisher: { "@type": "Organization", name: book.publisher } } : {}),
-    ...(book.coverImage
-      ? { image: book.coverImage.startsWith("http") ? book.coverImage : `${SITE_URL}${book.coverImage}` }
-      : {}),
+    ...(book.coverImage ? { image: absoluteUrl(book.coverImage) } : {}),
+    ...(primaryCategoryLabel ? { genre: primaryCategoryLabel } : {}),
+    ...(bookMediaType === "AUDIO"
+      ? { bookFormat: "https://schema.org/AudiobookFormat" }
+      : { bookFormat: "https://schema.org/EBook", ...(hasPdf ? { encodingFormat: "application/pdf" } : {}) }),
+    // Livre gratuit : offre à 0 (Google attend price + priceCurrency)
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "EUR",
+      availability: "https://schema.org/InStock",
+      url: bookUrl,
+    },
     ...(book.ratingCount > 0
       ? { aggregateRating: { "@type": "AggregateRating", ratingValue: book.rating, reviewCount: book.ratingCount } }
       : {}),

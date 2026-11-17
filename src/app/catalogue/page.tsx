@@ -8,7 +8,7 @@ import { searchCatalogue, getCatalogueFacets } from "@/lib/books";
 import JsonLd, { breadcrumbLd, itemListLd } from "@/components/seo/json-ld";
 import { isLangCode } from "@/lib/languages";
 import { getServerI18n } from "@/i18n/server";
-import { i18nAlternates } from "@/i18n/seo";
+import { pageMetadata, MAX_INDEXED_PAGE } from "@/lib/seo";
 import { fmt } from "@/i18n/format";
 import { localizePath } from "@/i18n/config";
 import { redirect } from "next/navigation";
@@ -52,12 +52,13 @@ export async function generateMetadata({ searchParams }: Props) {
   // Pages paginées : indexables (chacune liste d'autres livres). Recherches et
   // filtres : combinaisons infinies → noindex, mais liens suivis.
   const path = state.page > 1 ? `/catalogue?page=${state.page}` : "/catalogue";
-  return {
+  return pageMetadata({
+    locale,
+    path: filtered ? "/catalogue" : path,
     title: state.page > 1 ? `${t.meta.catalogueTitle} — ${fmt(t.common.page, { n: state.page })}` : t.meta.catalogueTitle,
     description: t.meta.catalogueDesc,
-    alternates: i18nAlternates(locale, filtered ? "/catalogue" : path),
-    ...(filtered ? { robots: { index: false, follow: true } } : {}),
-  };
+    noindex: filtered || state.page > MAX_INDEXED_PAGE,
+  });
 }
 
 export default async function CataloguePage({ searchParams }: Props) {

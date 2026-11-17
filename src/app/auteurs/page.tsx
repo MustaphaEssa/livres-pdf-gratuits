@@ -1,6 +1,6 @@
 import Link from "@/i18n/navigation";
 import { getServerI18n } from "@/i18n/server";
-import { i18nAlternates } from "@/i18n/seo";
+import { pageMetadata, MAX_INDEXED_PAGE } from "@/lib/seo";
 import { fmt, plural } from "@/i18n/format";
 import Pagination from "@/components/design/pagination";
 import { localizePath } from "@/i18n/config";
@@ -27,11 +27,13 @@ const pageHref = (p: number) => (p > 1 ? `/auteurs?page=${p}` : "/auteurs");
 export async function generateMetadata({ searchParams }: Props) {
   const [{ locale, t }, sp] = await Promise.all([getServerI18n(), searchParams]);
   const page = pageFrom(sp.page);
-  return {
+  return pageMetadata({
+    locale,
+    path: pageHref(page),
     title: page > 1 ? `${t.meta.authorsTitle} — ${fmt(t.common.page, { n: page })}` : t.meta.authorsTitle,
     description: t.meta.authorsDesc,
-    alternates: i18nAlternates(locale, pageHref(page)),
-  };
+    noindex: page > MAX_INDEXED_PAGE,
+  });
 }
 
 export default async function AuthorsPage({ searchParams }: Props) {

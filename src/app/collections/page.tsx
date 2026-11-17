@@ -1,6 +1,6 @@
 import Link from "@/i18n/navigation";
 import { getServerI18n } from "@/i18n/server";
-import { i18nAlternates } from "@/i18n/seo";
+import { pageMetadata } from "@/lib/seo";
 import { plural } from "@/i18n/format";
 import { localizeCollection } from "@/i18n/collections";
 import DesignHeader from "@/components/design/header";
@@ -12,11 +12,12 @@ import { getCategoriesWithCounts } from "@/lib/books";
 
 export async function generateMetadata() {
   const { locale, t } = await getServerI18n();
-  return {
+  return pageMetadata({
+    locale,
+    path: "/collections",
     title: t.meta.collectionsTitle,
     description: t.meta.collectionsDesc,
-    alternates: i18nAlternates(locale, "/collections"),
-  };
+  });
 }
 
 export default async function CollectionsPage() {

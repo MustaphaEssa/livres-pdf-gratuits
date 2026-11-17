@@ -1,6 +1,7 @@
 import Link from "@/i18n/navigation";
 import { getServerI18n } from "@/i18n/server";
 import { i18nAlternates } from "@/i18n/seo";
+import { pageMetadata, clip } from "@/lib/seo";
 import { localizePath } from "@/i18n/config";
 import { fmt, plural, collectionNote } from "@/i18n/format";
 import { localizeCollection } from "@/i18n/collections";
@@ -26,18 +27,13 @@ export async function generateMetadata({ params }: Props) {
   const [raw, { locale, t }] = await Promise.all([getPublishedCollectionBySlug(slug), getServerI18n()]);
   if (!raw) return { title: t.meta.collectionNotFound };
   const col = localizeCollection(locale, raw);
-  return {
+  return pageMetadata({
+    locale,
+    path: `/collections/${slug}`,
     title: col.title,
-    description: col.description || fmt(t.meta.collectionDesc, { n: col.books.length }),
-    alternates: i18nAlternates(locale, `/collections/${slug}`),
-    openGraph: {
-      title: col.title,
-      description: col.description || undefined,
-      type: "website",
-      url: `${SITE_URL}${localizePath(locale, `/collections/${slug}`)}`,
-      ...(col.coverImage ? { images: [{ url: col.coverImage }] } : {}),
-    },
-  };
+    description: clip(col.description || fmt(t.meta.collectionDesc, { n: col.books.length }), 160),
+    ...(col.coverImage ? { image: { url: col.coverImage, alt: col.title } } : {}),
+  });
 }
 
 export default async function CollectionDetailPage({ params }: Props) {

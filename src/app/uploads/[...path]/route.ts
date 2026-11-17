@@ -1,4 +1,5 @@
 import { createReadStream } from "fs";
+import { SITE_URL } from "@/lib/site";
 import { stat } from "fs/promises";
 import path from "path";
 import { Readable } from "stream";
@@ -63,6 +64,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ path
     "Cache-Control": "public, max-age=86400",
     "X-Content-Type-Options": "nosniff",
   });
+  // Fichiers d'un livre (/uploads/books/{slug}.pdf|.epub) : canonical vers la fiche
+  // HTML, qui concentre les signaux SEO ; les images restent indexables (Google Images).
+  if (parts[0] === "books" && /\.(pdf|epub)$/i.test(file)) {
+    const slug = path.basename(file).replace(/\.(pdf|epub)$/i, "");
+    headers.set("Link", `<${SITE_URL}/livre/${encodeURIComponent(slug)}>; rel="canonical"`);
+  }
   if (type === "image/svg+xml") headers.set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'");
 
   // Requêtes partielles (lecteur PDF, audio)

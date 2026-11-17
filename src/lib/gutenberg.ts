@@ -2,7 +2,7 @@ import "server-only";
 import { writeFile, mkdir, readFile, stat } from "fs/promises";
 import path from "path";
 import prisma from "@/lib/db";
-import { slugify } from "@/lib/utils";
+import { slugify, bookSlug } from "@/lib/utils";
 import { titleKey } from "@/lib/text-key";
 import {
   formatAuthorName,
@@ -536,7 +536,7 @@ export async function importGutenbergBook(
   }
 
   // Slug unique
-  let slug = slugify(title) || `gutenberg-${row.id}`;
+  let slug = bookSlug(title, authorName) || `gutenberg-${row.id}`;
   if (await prisma.book.count({ where: { slug } })) {
     slug = `${slug}-g${row.id}`;
     if (await prisma.book.count({ where: { slug } })) return { status: "skip" };

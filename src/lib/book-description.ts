@@ -27,6 +27,8 @@ const JUNK = [
   /scanned\s+(by|in|from)/i,
   /google\s+books?/i,
   /internet\s+archive/i,
+  /digiti[sz]ation\s+(program|project)/i, // « From the Brittle Books digitization program… »
+  /brittle\s+books/i,
   /archive\.org/i,
   /\barlima\b/i,
   /^\s*bound\s+by/i,
@@ -69,13 +71,14 @@ interface DescBook {
   author: string;
   language?: string | null;
   publishedYear?: number | null;
+  pageCount?: number | null;
   pdfUrl?: string | null;
   epubUrl?: string | null;
   hasAudio?: boolean;
 }
 
 interface DescMessages {
-  book: { autoDesc: string; genre: string; language: string; publication: string };
+  book: { autoDesc: string; genre: string; language: string; publication: string; pages: string };
   common: { audio: string };
 }
 
@@ -99,6 +102,7 @@ export function autoDescription(
     genre && `${t.book.genre}${sep}${genre}`,
     lang && `${t.book.language}${sep}${lang}`,
     book.publishedYear && `${t.book.publication}${sep}${book.publishedYear}`,
+    book.pageCount && book.pageCount > 0 && `${t.book.pages}${sep}${book.pageCount}`,
   ].filter(Boolean);
   return details.length ? `${intro} ${details.join(" · ")}.` : intro;
 }

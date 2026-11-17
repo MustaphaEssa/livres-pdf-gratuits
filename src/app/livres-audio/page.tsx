@@ -1,6 +1,6 @@
 import Link from "@/i18n/navigation";
 import { getServerI18n } from "@/i18n/server";
-import { i18nAlternates } from "@/i18n/seo";
+import { pageMetadata, MAX_INDEXED_PAGE } from "@/lib/seo";
 import { fmt, plural } from "@/i18n/format";
 import DesignHeader from "@/components/design/header";
 import DesignFooter from "@/components/design/footer";
@@ -25,11 +25,13 @@ const pageHref = (p: number) => (p > 1 ? `/livres-audio?page=${p}` : "/livres-au
 export async function generateMetadata({ searchParams }: Props) {
   const page = pageFrom((await searchParams).page);
   const { locale, t } = await getServerI18n();
-  return {
+  return pageMetadata({
+    locale,
+    path: pageHref(page),
     title: page > 1 ? fmt(t.meta.audioTitlePage, { n: page }) : t.meta.audioTitle,
     description: t.meta.audioDesc,
-    alternates: i18nAlternates(locale, pageHref(page)),
-  };
+    noindex: page > MAX_INDEXED_PAGE,
+  });
 }
 
 export default async function LivresAudioPage({ searchParams }: Props) {

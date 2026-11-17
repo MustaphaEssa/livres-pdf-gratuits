@@ -1,6 +1,6 @@
 import Link from "@/i18n/navigation";
 import { getServerI18n } from "@/i18n/server";
-import { i18nAlternates } from "@/i18n/seo";
+import { pageMetadata } from "@/lib/seo";
 import { formatDateLocale } from "@/i18n/format";
 import DesignHeader from "@/components/design/header";
 import DesignFooter from "@/components/design/footer";
@@ -10,7 +10,7 @@ import { getCategoriesWithCounts } from "@/lib/books";
 
 export async function generateMetadata() {
   const { locale, t } = await getServerI18n();
-  return { title: t.meta.blogTitle, description: t.meta.blogDesc, alternates: i18nAlternates(locale, "/blog") };
+  return pageMetadata({ locale, path: "/blog", title: t.meta.blogTitle, description: t.meta.blogDesc });
 }
 
 export default async function BlogPage() {

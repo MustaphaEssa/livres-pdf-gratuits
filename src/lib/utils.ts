@@ -27,6 +27,28 @@ export function slugify(text: string): string {
     .replace(/(^-|-$)/g, "");
 }
 
+const NO_AUTHOR = /^(inconnu|anonyme|anonymous|unknown|various|divers|collectif|auteur-inconnu)$/;
+
+/** Coupe un slug au dernier tiret avant `max` caractères. */
+function capSlug(slug: string, max: number): string {
+  if (slug.length <= max) return slug;
+  const cut = slug.slice(0, max);
+  return cut.slice(0, cut.lastIndexOf("-") > 20 ? cut.lastIndexOf("-") : max).replace(/-+$/, "");
+}
+
+/**
+ * Slug SEO d'un livre importé : « titre-auteur » (« les-miserables-victor-hugo »),
+ * sans l'auteur s'il est inconnu ou déjà présent dans le titre. ~90 caractères max.
+ * L'unicité est vérifiée par l'appelant (suffixe en cas de collision).
+ */
+export function bookSlug(title: string, author?: string | null): string {
+  const t = capSlug(slugify(title), 70);
+  const a = capSlug(slugify(author ?? ""), 30);
+  if (!t) return "";
+  if (!a || NO_AUTHOR.test(a) || t.includes(a)) return t;
+  return `${t}-${a}`;
+}
+
 export function formatFileSize(bytes: number): string {
   if (bytes === 0) return "0 Bytes";
   const k = 1024;

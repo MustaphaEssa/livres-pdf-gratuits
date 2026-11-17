@@ -2,6 +2,11 @@ import { readFile } from "fs/promises";
 import path from "path";
 import { NextResponse } from "next/server";
 import { getBookBySlug } from "@/lib/books";
+import { SITE_URL } from "@/lib/site";
+
+// Le PDF transmet ses signaux SEO à la fiche HTML du livre (rel=canonical en en-tête HTTP,
+// reconnu par Google pour les fichiers non HTML) : c'est la fiche qui doit se classer.
+const canonicalLink = (slug: string) => `<${SITE_URL}/livre/${encodeURIComponent(slug)}>; rel="canonical"`;
 
 export const runtime = "nodejs";
 
@@ -49,6 +54,7 @@ export async function GET(
     headers.set("Content-Disposition", "inline");
     headers.set("Accept-Ranges", "bytes");
     headers.set("Cache-Control", "public, max-age=86400");
+    headers.set("Link", canonicalLink(book.slug));
     const cl = upstream.headers.get("content-length");
     const cr = upstream.headers.get("content-range");
     if (cl) headers.set("Content-Length", cl);
@@ -68,6 +74,7 @@ export async function GET(
         "Content-Disposition": "inline",
         "Content-Length": String(file.length),
         "Cache-Control": "public, max-age=86400",
+        Link: canonicalLink(book.slug),
       },
     });
   } catch {
