@@ -46,7 +46,9 @@ export async function GET(
   if (
     !isBot(userAgent) &&
     !isPartial &&
-    shouldCountDownload(book.id, ipAddress ?? "unknown")
+    // IP + navigateur : deux personnes derrière la même IP (réseau mobile,
+    // wifi public) restent comptées séparément si leurs appareils diffèrent.
+    shouldCountDownload(book.id, `${ipAddress ?? "unknown"}|${userAgent ?? ""}`)
   ) {
     const session = await getUserSession();
     try {

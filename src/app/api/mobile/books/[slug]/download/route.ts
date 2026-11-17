@@ -3,8 +3,6 @@ import prisma from "@/lib/db";
 import { registerDownload } from "@/lib/books";
 import { bad, getMobileUser, readableWhere } from "@/lib/mobile";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
-import { shouldCountDownload } from "@/lib/view-throttle";
-
 export const runtime = "nodejs";
 
 // L'app appelle cette route une fois le livre téléchargé : sert uniquement aux statistiques.
@@ -13,7 +11,7 @@ export async function POST(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   const ip = clientIp(request);
-  const rl = rateLimit(`mobile-dl:${ip}`, 60, 60 * 60 * 1000);
+  const rl = rateLimit(`mobile-dl:${ip}`, 300,60 * 60 * 1000);
   if (!rl.ok) return bad("Trop de requêtes", 429);
 
   const { slug } = await params;
@@ -23,9 +21,9 @@ export async function POST(
   });
   if (!book) return bad("Livre introuvable", 404);
 
-  // Un seul comptage par livre et par IP sur 24 h (re-téléchargements, réessais)
-  if (!shouldCountDownload(book.id, ip)) return NextResponse.json({ ok: true });
-
+  // Chaque téléchargement terminé dans l'app compte : l'app ne le signale
+  // qu'une fois par livre enregistré sur le téléphone. Pas de dédoublonnage
+  // par IP (sur réseau mobile, de nombreux utilisateurs partagent la même IP).
   const user = await getMobileUser(request);
   await registerDownload(book.id, {
     ipAddress: ip,
