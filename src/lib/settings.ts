@@ -21,7 +21,7 @@ export interface PublicSettings {
   featuredBooksCount: number;
 }
 
-const DEFAULTS: PublicSettings = {
+export const SETTINGS_DEFAULTS: PublicSettings = {
   siteName: "Livre PDF Gratuit",
   siteDescription:
     "Téléchargez des milliers de livres PDF gratuits dans toutes les catégories : Romans, Sciences, Histoire, Informatique, Religion et bien plus encore.",
@@ -45,24 +45,24 @@ const DEFAULTS: PublicSettings = {
 export const getSiteSettings = cache(async (): Promise<PublicSettings> => {
   try {
     const s = await prisma.siteSettings.findUnique({ where: { id: "default" } });
-    if (!s) return DEFAULTS;
+    if (!s) return SETTINGS_DEFAULTS;
     return {
-      siteName: s.siteName || DEFAULTS.siteName,
-      siteDescription: s.siteDescription || DEFAULTS.siteDescription,
+      siteName: s.siteName || SETTINGS_DEFAULTS.siteName,
+      siteDescription: s.siteDescription || SETTINGS_DEFAULTS.siteDescription,
       logo: s.logo,
-      email: s.email || DEFAULTS.email,
-      telephone: s.telephone || DEFAULTS.telephone,
-      address: s.address || DEFAULTS.address,
+      email: s.email || SETTINGS_DEFAULTS.email,
+      telephone: s.telephone || SETTINGS_DEFAULTS.telephone,
+      address: s.address || SETTINGS_DEFAULTS.address,
       googleAnalyticsId: s.googleAnalyticsId,
-      facebook: s.facebook || DEFAULTS.facebook,
+      facebook: s.facebook || SETTINGS_DEFAULTS.facebook,
       twitter: s.twitter,
       instagram: s.instagram,
       youtube: s.youtube,
       heroTitle: s.heroTitle,
       heroSubtitle: s.heroSubtitle,
-      featuredBooksCount: s.featuredBooksCount || DEFAULTS.featuredBooksCount,
+      featuredBooksCount: s.featuredBooksCount || SETTINGS_DEFAULTS.featuredBooksCount,
     };
   } catch {
-    return DEFAULTS;
+    return SETTINGS_DEFAULTS;
   }
 });

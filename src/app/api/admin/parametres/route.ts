@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth-server";
 import prisma from "@/lib/db";
+import { SETTINGS_DEFAULTS } from "@/lib/settings";
 
 export const runtime = "nodejs";
 
@@ -36,7 +37,17 @@ export async function GET() {
     create: { id: DEFAULT_ID },
     update: {},
   });
-  return NextResponse.json({ settings });
+
+  // Pré-remplit les champs vides avec les valeurs par défaut réellement
+  // utilisées par le site public (sinon l'admin affiche des champs vides
+  // alors que le site montre un email, une description, etc.)
+  const merged: Record<string, unknown> = { ...settings };
+  for (const [key, value] of Object.entries(SETTINGS_DEFAULTS)) {
+    if ((merged[key] === null || merged[key] === "") && value !== null) {
+      merged[key] = value;
+    }
+  }
+  return NextResponse.json({ settings: merged });
 }
 
 // Met à jour les paramètres du site
