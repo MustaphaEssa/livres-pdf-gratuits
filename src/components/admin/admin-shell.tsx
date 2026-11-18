@@ -16,6 +16,7 @@ import {
   Download,
   Trash2,
   Library,
+  Copy,
   LogOut,
   Menu,
   X,
@@ -28,6 +29,7 @@ export type AdminNavKey =
   | "livres"
   | "import"
   | "nettoyage"
+  | "doublons"
   | "auteurs"
   | "categories"
   | "collections"
@@ -60,6 +62,7 @@ export function AdminShell({ active, children }: AdminShellProps) {
     { key: "livres", href: "/admin/livres", label: t.admin.books, Icon: BookOpen },
     { key: "import", href: "/admin/import", label: "Import", Icon: Download },
     { key: "nettoyage", href: "/admin/nettoyage", label: "Nettoyage", Icon: Trash2 },
+    { key: "doublons", href: "/admin/doublons", label: "Doublons", Icon: Copy },
     { key: "auteurs", href: "/admin/auteurs", label: "Auteurs", Icon: Users },
     { key: "categories", href: "/admin/categories", label: t.admin.categories, Icon: Filter },
     { key: "collections", href: "/admin/collections", label: "Collections", Icon: Library },
