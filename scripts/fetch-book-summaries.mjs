@@ -108,7 +108,7 @@ const LITERARY =
 
 const NOT_BOOK =
   /\b(film|films|musicale|musical|opera|serie|telefilm|album|chanson|song|jeu|game|ballet|bande dessinee|comic|anime|manga|adaptation|tv|television)\b/;
-const CHARACTER = /\b(personnage|character|personaje|personaggio|figur|personagem|personage)\b/;
+const CHARACTER = /\b(personnages?|characters?|personajes?|personaggi|personaggio|figur|figuren|personagens?|personages?)\b/;
 
 function pickMatch(pages, book) {
   const bookTitle = norm(book.title);
