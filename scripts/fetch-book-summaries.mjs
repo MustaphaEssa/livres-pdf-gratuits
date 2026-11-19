@@ -91,6 +91,10 @@ async function searchWiki(lang, title, author) {
 const LITERARY =
   /\b(roman|nouvelle|livre|piece|theatre|poeme|poesie|recueil|essai|conte|fable|tragedie|comedie|drame|novel|novella|book|play|poem|story|novela|libro|obra|romanzo|buch|erzahlung|gedicht|romance|livro|boek|toneelstuk)\b/;
 
+const NOT_BOOK =
+  /\b(film|films|musicale|musical|opera|serie|telefilm|album|chanson|song|jeu|game|ballet|bande dessinee|comic|anime|manga|adaptation|tv|television)\b/;
+const CHARACTER = /\b(personnage|character|personaje|personaggio|figur|personagem|personage)\b/;
+
 function pickMatch(pages, book) {
   const bookTitle = norm(book.title);
   const sn = surname(book.author);
@@ -100,7 +104,7 @@ function pickMatch(pages, book) {
     // « La Tulipe noire (film) » ≠ le livre : la précision entre parenthèses
     // doit désigner un écrit (roman, pièce, poème…) ou l'auteur.
     const paren = norm(p.title.match(/\(([^)]*)\)\s*$/)?.[1] ?? "");
-    if (paren && !(LITERARY.test(paren) || paren.includes(sn))) continue;
+    if (paren && (NOT_BOOK.test(paren) || !(LITERARY.test(paren) || paren.includes(sn)))) continue;
     const base = norm(p.title.replace(/\s*\(.*?\)\s*$/, ""));
     if (base.length < 4) continue;
     // Le titre de l'article doit être le début du titre du livre (mot entier)
@@ -110,6 +114,9 @@ function pickMatch(pages, book) {
     const extract = (p.extract ?? "").trim();
     if (extract.length < 200) continue;
     if (!norm(extract).includes(sn)) continue;
+    // 1re phrase : l'article doit décrire une œuvre, pas un personnage / un film…
+    const lead = norm(extract.split(/(?<=[.!?。])\s/)[0]);
+    if (CHARACTER.test(lead) || (NOT_BOOK.test(lead) && !LITERARY.test(lead))) continue;
     // L'article parle d'une œuvre, pas de l'auteur lui-même
     if (norm(p.title).includes(sn) && !bookTitle.includes(sn)) continue;
     return { text: cleanExtract(extract), url: p.fullurl ?? p.canonicalurl, title: p.title };
