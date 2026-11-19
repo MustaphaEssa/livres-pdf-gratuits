@@ -43,6 +43,9 @@ model Book {
   author        String
   authorSlug    String?  // pour les pages/liens par auteur
   description   String?
+  // URL de la source de la description quand elle vient d'ailleurs (ex. article
+  // Wikipédia, licence CC BY-SA) → attribution affichée sous le résumé.
+  descriptionSource String?
   coverImage    String?
 
   // Type de média : PDF (livre à lire/télécharger) ou AUDIO (livre audio en streaming)

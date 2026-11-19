@@ -38,6 +38,7 @@ import { categoryLabel, fmt, formatNumber, authorLabel } from "@/i18n/format";
 import { isUsefulDescription, autoDescription, truncateText } from "@/lib/book-description";
 import { pageMetadata, descriptionWithCta, clip, absoluteUrl } from "@/lib/seo";
 import { seoMessages } from "@/i18n/seo-messages";
+import { seoContent, fill } from "@/i18n/seo-content";
 import type { Metadata } from "next";
 
 interface BookPageProps {
@@ -197,6 +198,27 @@ export default async function BookPage({ params }: BookPageProps) {
     isAccessibleForFree: true,
     provider: { "@type": "Organization", name: SITE_NAME },
   };
+  // FAQ propre au livre (vise « {titre} pdf gratuit ») — livres PDF uniquement
+  const sc = seoContent(locale);
+  const faqVars = {
+    title: book.title,
+    author: authorLabel(t, book.author),
+    formats: [hasPdf && "PDF", book.epubUrl && "EPUB", hasAudio && t.common.audio].filter(Boolean).join(", "),
+  };
+  const bookFaq = hasPdf ? sc.bookFaq.map((f) => ({ q: fill(f.q, faqVars), a: fill(f.a, faqVars) })) : [];
+  const faqJsonLd = bookFaq.length
+    ? {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        mainEntity: bookFaq.map((f) => ({
+          "@type": "Question",
+          name: f.q,
+          acceptedAnswer: { "@type": "Answer", text: f.a },
+        })),
+      }
+    : null;
+  const summarySource = usefulDesc && book.descriptionSource ? book.descriptionSource : null;
+
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -214,6 +236,9 @@ export default async function BookPage({ params }: BookPageProps) {
     <div className="ma">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+      {faqJsonLd && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+      )}
       <DesignHeader />
 
       <main className="page-main" id="contenu">
@@ -314,6 +339,13 @@ export default async function BookPage({ params }: BookPageProps) {
                 <p className="prose" dir="auto">
                   {aboutText}
                 </p>
+                {summarySource && (
+                  <p className="small-note" style={{ marginTop: 8 }}>
+                    <a href={summarySource} target="_blank" rel="noopener">
+                      {sc.summarySource}
+                    </a>
+                  </p>
+                )}
               </section>
 
               {hasAudio && (
@@ -372,6 +404,24 @@ export default async function BookPage({ params }: BookPageProps) {
                       <BookMini key={b.slug} book={b} />
                     ))}
                   </div>
+                </section>
+              )}
+
+              {bookFaq.length > 0 && (
+                <section aria-labelledby="book-faq">
+                  <h2 id="book-faq">{sc.bookFaqTitle}</h2>
+                  {bookFaq.map((f) => (
+                    <details key={f.q} style={{ borderTop: "1px solid var(--line)", padding: "14px 0" }}>
+                      <summary style={{ cursor: "pointer", fontWeight: 600 }}>
+                        <h3 style={{ display: "inline", fontSize: "inherit", fontWeight: "inherit" }} dir="auto">
+                          {f.q}
+                        </h3>
+                      </summary>
+                      <p style={{ marginTop: 8, color: "var(--muted)" }} dir="auto">
+                        {f.a}
+                      </p>
+                    </details>
+                  ))}
                 </section>
               )}
 

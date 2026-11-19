@@ -26,6 +26,7 @@ import { getHomeCollections } from "@/lib/collections";
 import { localizeCollection } from "@/i18n/collections";
 import { getLatestPosts } from "@/lib/posts";
 import { languageLabel, sortLanguages } from "@/lib/languages";
+import { seoContent, fill } from "@/i18n/seo-content";
 
 // Icônes (tracés SVG) par catégorie
 const CAT_ICON: Record<string, string> = {
@@ -47,7 +48,15 @@ export async function generateMetadata() {
 export default async function HomePage() {
   const { locale, t } = await getServerI18n();
   // Étagère par langue : les 5 premières langues présentes (FR, EN, ES, AR… selon le catalogue)
-  const shelfLangs = sortLanguages(await getLanguagesWithCounts()).slice(0, 5);
+  const allLangs = await getLanguagesWithCounts();
+  const shelfLangs = sortLanguages(allLangs).slice(0, 5);
+  // Texte de présentation + FAQ (vise « livres pdf gratuits ») ; nombre arrondi à la centaine
+  const sc = seoContent(locale);
+  const totalBooks = allLangs.reduce((n, l) => n + l.count, 0);
+  const booksLabel = new Intl.NumberFormat(locale).format(
+    totalBooks >= 1000 ? Math.floor(totalBooks / 100) * 100 : totalBooks
+  ) + (totalBooks >= 1000 ? "+" : "");
+  const homeFaq = sc.homeFaq;
 
   const [newest, langBooks, featured, categories, collections, authors, audiobooks, posts] =
     await Promise.all([
@@ -78,6 +87,15 @@ export default async function HomePage() {
           websiteLd(locale),
           organizationLd(),
           itemListLd(featured, t.home.featuredTitle, locale),
+          {
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            mainEntity: homeFaq.map((f) => ({
+              "@type": "Question",
+              name: f.q,
+              acceptedAnswer: { "@type": "Answer", text: f.a },
+            })),
+          },
         ]}
       />
       <DesignHeader />
@@ -262,6 +280,22 @@ export default async function HomePage() {
             </div>
           </section>
         )}
+
+        <section className="section wrap" aria-labelledby="about-site-title" style={{ maxWidth: 860 }}>
+          <h2 id="about-site-title">{sc.homeTitle}</h2>
+          {sc.homeText.map((p, i) => (
+            <p key={i} style={{ marginTop: 12, color: "var(--muted)", lineHeight: 1.7 }}>
+              {fill(p, { n: booksLabel })}
+            </p>
+          ))}
+          <h3 style={{ marginTop: 28 }}>{sc.homeFaqTitle}</h3>
+          {homeFaq.map((f) => (
+            <details key={f.q} style={{ borderTop: "1px solid var(--line)", padding: "14px 0" }}>
+              <summary style={{ cursor: "pointer", fontWeight: 600 }}>{f.q}</summary>
+              <p style={{ marginTop: 8, color: "var(--muted)" }}>{f.a}</p>
+            </details>
+          ))}
+        </section>
 
         <section className="section wrap" aria-labelledby="help-title">
           <div className="help-strip">
