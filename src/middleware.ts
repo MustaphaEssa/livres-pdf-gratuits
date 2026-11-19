@@ -19,6 +19,14 @@ import {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // www.livrespdfgratuits.com → livrespdfgratuits.com (301) : une seule adresse
+  // pour Google, sinon chaque page existe en double (www et sans www).
+  const host = (request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? "").toLowerCase();
+  if (host.startsWith("www.")) {
+    const target = `https://${host.slice(4)}${pathname}${request.nextUrl.search}`;
+    return NextResponse.redirect(target, 301);
+  }
+
   if (pathname.startsWith("/admin")) return adminGuard(request);
 
   const seg = pathname.split("/")[1] ?? "";
