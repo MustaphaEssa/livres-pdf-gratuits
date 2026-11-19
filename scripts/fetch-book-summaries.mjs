@@ -68,12 +68,27 @@ function displayAuthor(rawAuthor) {
   return parts.length === 2 ? `${parts[1]} ${parts[0]}` : s;
 }
 
+const PROPS =
+  "&prop=extracts|pageprops|info&inprop=url&exintro=1&explaintext=1&ppprop=disambiguation";
+const mainTitle = (title) => title.split(/\s*[:;(—–]\s*|\s\/\s|\.\s/)[0].trim();
+
+// 1) Article au titre exact (« Les Contemplations », « Les Contemplations (Hugo) »…)
+// 2) Repli : recherche plein texte titre + auteur
 async function searchWiki(lang, title, author) {
-  const q = `${title.split(/\s[:;(]\s?|\s\/\s/)[0]} ${displayAuthor(author)}`;
+  const main = mainTitle(title);
+  const cased = main.charAt(0).toLocaleUpperCase() + main.slice(1).toLocaleLowerCase();
+  const sn = displayAuthor(author).split(/\s+/).pop();
+  const titles = [...new Set([main, cased, `${cased} (roman)`, `${cased} (${sn})`])].join("|");
+  const exact = await wikiQuery(lang, `&titles=${encodeURIComponent(titles)}`);
+  const found = exact.filter((p) => !p.missing && p.extract);
+  if (found.length) return found;
+  return wikiQuery(lang, `&generator=search&gsrlimit=5&gsrsearch=${encodeURIComponent(`${main} ${displayAuthor(author)}`)}`);
+}
+
+async function wikiQuery(lang, params) {
   const url =
     `https://${lang}.wikipedia.org/w/api.php?action=query&format=json&redirects=1&formatversion=2` +
-    `&prop=extracts|pageprops|info&inprop=url&exintro=1&explaintext=1&ppprop=disambiguation` +
-    `&generator=search&gsrlimit=5&gsrsearch=${encodeURIComponent(q)}`;
+    PROPS + params;
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       const res = await fetch(url, { headers: { "User-Agent": UA } });
