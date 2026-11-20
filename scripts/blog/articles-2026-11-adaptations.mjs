@@ -72,7 +72,7 @@ Le roman de vengeance par excellence. Edmond Dantès, emprisonné à tort au ch�
 
 ## 2. L'Odyssée, Homère
 
-Le long retour d'Ulysse vers Ithaque, ses ruses, ses monstres et ses tentations. L'adaptation de Christopher Nolan, sortie en juillet 2026, est l'un des plus grands succès de l'année. [Lire L'Odyssée](/livre/@g14286) dans la traduction de Leconte de Lisle.
+Le long retour d'Ulysse vers Ithaque, ses ruses, ses monstres et ses tentations. L'adaptation de Christopher Nolan, sortie en juillet 2026, est l'un des plus grands succès de l'année. [Lire L'Odyssée gratuitement](/livre/l-odyssee).
 
 ## 3. Les Trois Mousquetaires, Alexandre Dumas
 
