@@ -27,7 +27,10 @@ const BOOKS_DIR = path.join(process.cwd(), "public", "uploads", "books");
 const COVERS_DIR = path.join(process.cwd(), "public", "uploads", "covers");
 const CACHE_DIR = path.join(process.cwd(), "public", "uploads", ".cache");
 const CATALOG_PATH = path.join(CACHE_DIR, "pg_catalog.csv");
-const CATALOG_URL = "https://www.gutenberg.org/cache/epub/feeds/pg_catalog.csv";
+// gutenberg.org bloque parfois les serveurs (HTTP 503 + Retry-After de plusieurs
+// heures) : repli sur le miroir officiel pglaf (mêmes chemins /cache/epub/…).
+const GUTENBERG_HOSTS = ["https://www.gutenberg.org", "https://gutenberg.pglaf.org"];
+const blockedHosts = new Set<string>();
 const CATALOG_MAX_AGE_MS = 7 * 24 * 3600 * 1000; // 7 jours
 const UA = "livrespdfgratuits.com (contact@livrespdfgratuits.com)";
 
@@ -105,17 +108,48 @@ function parseCsvLine(line: string): string[] {
   return out;
 }
 
-// Télécharge le catalogue si absent ou périmé
+/**
+ * Télécharge le premier chemin disponible, sur gutenberg.org puis sur le miroir.
+ * Un hôte qui répond 503 (blocage temporaire) est ignoré pour la suite du process.
+ */
+async function fetchGutenberg(paths: string[], timeoutMs: number): Promise<Buffer> {
+  let lastErr: unknown = new Error("aucun hôte Gutenberg disponible");
+  for (const host of GUTENBERG_HOSTS) {
+    if (blockedHosts.has(host)) continue;
+    for (const p of paths) {
+      try {
+        return await fetchBuffer(`${host}${p}`, timeoutMs);
+      } catch (e) {
+        lastErr = e;
+        if (/HTTP (503|429|403)/.test(String((e as Error)?.message))) {
+          blockedHosts.add(host);
+          break;
+        }
+      }
+    }
+  }
+  throw lastErr;
+}
+
+// Télécharge le catalogue si absent ou périmé (garde l'ancien si le téléchargement échoue)
 async function ensureCatalogFile(): Promise<void> {
+  let hasOld = false;
   try {
     const st = await stat(CATALOG_PATH);
-    if (Date.now() - st.mtimeMs < CATALOG_MAX_AGE_MS && st.size > 1_000_000) return;
+    hasOld = st.size > 1_000_000;
+    if (Date.now() - st.mtimeMs < CATALOG_MAX_AGE_MS && hasOld) return;
   } catch {
     /* absent → on télécharge */
   }
-  const buf = await fetchBuffer(CATALOG_URL, 120000);
-  await mkdir(CACHE_DIR, { recursive: true });
-  await writeFile(CATALOG_PATH, buf);
+  try {
+    const buf = await fetchGutenberg(["/cache/epub/feeds/pg_catalog.csv"], 120000);
+    if (buf.length < 1_000_000) throw new Error("catalogue tronqué");
+    await mkdir(CACHE_DIR, { recursive: true });
+    await writeFile(CATALOG_PATH, buf);
+  } catch (e) {
+    if (!hasOld) throw e;
+    console.warn("Gutenberg : catalogue non rafraîchi, ancienne copie utilisée", (e as Error).message);
+  }
 }
 
 // Langues proposées à l'import. Limité aux écritures latines : le PDF est
@@ -425,13 +459,9 @@ async function buildGutenbergFiles(
   // 1) Texte → PDF
   let text: string;
   try {
-    text = (await fetchBuffer(`https://www.gutenberg.org/cache/epub/${id}/pg${id}.txt`, 90000)).toString("utf8");
+    text = (await fetchGutenberg([`/cache/epub/${id}/pg${id}.txt`, `/ebooks/${id}.txt.utf-8`], 90000)).toString("utf8");
   } catch {
-    try {
-      text = (await fetchBuffer(`https://www.gutenberg.org/ebooks/${id}.txt.utf-8`, 90000)).toString("utf8");
-    } catch {
-      return null;
-    }
+    return null;
   }
   const { paragraphs } = cleanGutenbergText(text);
   if (paragraphs.length < 3) return null;
@@ -449,7 +479,7 @@ async function buildGutenbergFiles(
   // 2) EPUB (léger, direct Gutenberg) — auto-hébergé
   let epubUrl: string | null = null;
   try {
-    const epubBuf = await fetchBuffer(`https://www.gutenberg.org/ebooks/${id}.epub.images`, 90000);
+    const epubBuf = await fetchGutenberg([`/ebooks/${id}.epub.images`, `/cache/epub/${id}/pg${id}-images.epub`], 90000);
     if (epubBuf.length > 1000 && epubBuf.subarray(0, 2).toString("latin1") === "PK") {
       await writeFile(path.join(BOOKS_DIR, `${slug}.epub`), epubBuf);
       epubUrl = `/uploads/books/${slug}.epub`;
@@ -461,7 +491,7 @@ async function buildGutenbergFiles(
   // 3) Couverture générée par Gutenberg (rejette si minuscule/absente)
   let coverImage: string | null = null;
   try {
-    const imgBuf = await fetchBuffer(`https://www.gutenberg.org/cache/epub/${id}/pg${id}.cover.medium.jpg`, 30000);
+    const imgBuf = await fetchGutenberg([`/cache/epub/${id}/pg${id}.cover.medium.jpg`], 30000);
     const ext = imageExt(imgBuf);
     if (ext && imgBuf.length > 2000) {
       await mkdir(COVERS_DIR, { recursive: true });
