@@ -23,13 +23,24 @@ const strip = (html) =>
 async function api(params) {
   const u = new URL("https://commons.wikimedia.org/w/api.php");
   for (const [k, v] of Object.entries({ format: "json", formatversion: "2", ...params })) u.searchParams.set(k, v);
-  for (let attempt = 0; attempt < 4; attempt++) {
-    await sleep(1500 + attempt * 8000); // Commons limite les requêtes rapprochées
+  for (let attempt = 0; attempt < 5; attempt++) {
+    await sleep(4000 + attempt * 20000); // Commons limite fortement les requêtes rapprochées
     const r = await fetch(u, { headers: { "User-Agent": UA } });
     const t = await r.text();
     if (t.startsWith("{")) return JSON.parse(t);
   }
   throw new Error("API Commons indisponible");
+}
+
+/** Téléchargement avec nouvelles tentatives espacées sur 429 / 503. */
+async function download(src) {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    await sleep(3000 + attempt * 20000);
+    const r = await fetch(src, { headers: { "User-Agent": UA } });
+    if (r.ok) return Buffer.from(await r.arrayBuffer());
+    if (r.status !== 429 && r.status !== 503) throw new Error(`téléchargement HTTP ${r.status}`);
+  }
+  throw new Error("téléchargement refusé (trop de requêtes)");
 }
 
 /**
@@ -69,10 +80,7 @@ export async function commonsImage(file, base, lang = "fr") {
       exists = (await stat(dest)).size > 1000;
     } catch {}
     if (!exists) {
-      await sleep(800);
-      const r = await fetch(src, { headers: { "User-Agent": UA } });
-      if (!r.ok) throw new Error(`téléchargement HTTP ${r.status}`);
-      const buf = Buffer.from(await r.arrayBuffer());
+      const buf = await download(src);
       await mkdir(DIR, { recursive: true });
       await writeFile(dest, buf);
     }
@@ -92,22 +100,25 @@ export async function commonsImage(file, base, lang = "fr") {
 
 /**
  * Remplace dans un contenu Markdown les images « ![alt](commons:File:X.jpg "légende") »
- * par l'image hébergée localement, crédit ajouté à la légende. Image omise si refusée.
+ * par l'image hébergée localement, crédit ajouté à la légende.
+ * Renvoie aussi le nombre d'images refusées (l'appelant peut alors reporter la publication).
  */
 export async function resolveCommonsImages(content, slug, lang = "fr") {
   const re = /!\[([^\]]*)\]\(commons:([^)"]+?)(?:\s+"([^"]*)")?\)/g;
   const found = [...content.matchAll(re)];
   let out = content;
   let n = 0;
+  let failed = 0;
   for (const m of found) {
     n++;
     const img = await commonsImage(m[2].trim(), `${slug}-${n}`, lang);
+    if (!img) failed++;
     out = out.replace(
       m[0],
       img ? `![${m[1]}](${img.url} "${m[3] ? `${m[3]} — ` : ""}${lang === "fr" ? "Image : " : "Image: "}${img.credit}")` : ""
     );
   }
-  return out;
+  return { content: out, failed };
 }
 
 /** Ligne de crédit de l'image de couverture, ajoutée en fin d'article. */

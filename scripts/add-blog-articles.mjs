@@ -125,10 +125,18 @@ async function main() {
     }
     const lang = a.language ?? "fr";
     // Liens Gutenberg → fiches, puis images Wikimedia Commons → images hébergées + crédit
-    let content = await resolveCommonsImages(await resolveGutenbergLinks(a.content), a.slug, lang);
+    const resolved = await resolveCommonsImages(await resolveGutenbergLinks(a.content), a.slug, lang);
+    let content = resolved.content;
     let coverImage = null;
+    const coverImg = a.cover ? await commonsImage(a.cover, `${a.slug}-cover`, lang) : null;
+    // Une image manquante → article reporté (réessayé au prochain lancement) plutôt que
+    // publié sans ses images : une fois créé, il ne serait plus jamais retraité.
+    if (resolved.failed || (a.cover && !coverImg)) {
+      console.warn(`REPORTÉ (images indisponibles, relancer plus tard) : ${a.slug}`);
+      continue;
+    }
     if (a.cover) {
-      const img = await commonsImage(a.cover, `${a.slug}-cover`, lang);
+      const img = coverImg;
       if (img) {
         coverImage = img.url;
         content += `
