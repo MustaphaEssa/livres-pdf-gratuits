@@ -8,6 +8,7 @@ import Link from "@/i18n/navigation";
  *   - élément (lignes)   → <ul><li>
  *   [texte](/livre/x)    → lien interne (externe si http…)
  *   **gras**             → <strong>
+ *   ![alt](/img.jpg "légende") → <figure> (seul dans son bloc)
  *
  * Les anciens articles (paragraphes simples séparés par une ligne vide) s'affichent
  * comme avant.
@@ -75,6 +76,33 @@ export default function PostBody({ content }: { content: string }) {
             <h2 key={k} id={slugId(t)} style={h2Style}>
               {inline(t, k)}
             </h2>
+          );
+        }
+        const img = b.match(/^!\[([^\]]*)\]\(([^)\s]+)(?:\s+"([^"]*)")?\)$/);
+        if (img) {
+          return (
+            <figure key={k} style={{ margin: "8px 0" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={img[2]}
+                alt={img[1]}
+                loading="lazy"
+                decoding="async"
+                style={{
+                  display: "block",
+                  width: "100%",
+                  maxHeight: 560,
+                  objectFit: "contain",
+                  background: "var(--sand-2)",
+                  borderRadius: 14,
+                }}
+              />
+              {img[3] && (
+                <figcaption style={{ marginTop: 8, fontSize: 13, lineHeight: 1.45, color: "var(--muted)" }}>
+                  {inline(img[3], `${k}-c`)}
+                </figcaption>
+              )}
+            </figure>
           );
         }
         const lines = b.split("\n");

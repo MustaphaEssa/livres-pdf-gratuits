@@ -142,7 +142,7 @@ export default async function PostPage({ params }: Props) {
             <img
               src={post.coverImage}
               alt={post.title}
-              style={{ width: "100%", aspectRatio: "16/9", objectFit: "cover", borderRadius: 16, marginBottom: 28 }}
+              style={{ width: "100%", aspectRatio: "16/9", objectFit: "cover", objectPosition: "center 25%", borderRadius: 16, marginBottom: 28 }}
             />
           )}
 

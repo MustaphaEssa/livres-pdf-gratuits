@@ -58,7 +58,7 @@ export default async function BlogPage() {
                     <img
                       src={post.coverImage}
                       alt={post.title}
-                      style={{ width: "100%", aspectRatio: "16/9", objectFit: "cover", borderRadius: 12 }}
+                      style={{ width: "100%", aspectRatio: "16/9", objectFit: "cover", objectPosition: "center 25%", borderRadius: 12 }}
                     />
                   )}
                   {post.categories[0] && <span className="book-cat">{post.categories[0].category.name}</span>}

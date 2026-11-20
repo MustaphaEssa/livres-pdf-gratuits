@@ -12,6 +12,7 @@ import { PrismaClient } from "@prisma/client";
 import { articles as articles202611 } from "./blog/articles-2026-11.mjs";
 import { articles as articles202611en } from "./blog/articles-2026-11-en.mjs";
 import { articles as articlesAdaptations } from "./blog/articles-2026-11-adaptations.mjs";
+import { commonsImage, resolveCommonsImages, coverCreditLine } from "./blog/commons.mjs";
 const prisma = new PrismaClient();
 
 const AUTHOR = "La rédaction";
@@ -122,17 +123,31 @@ async function main() {
         `Catégorie « ${a.categorySlug} » introuvable — article créé sans catégorie.`
       );
     }
+    const lang = a.language ?? "fr";
+    // Liens Gutenberg → fiches, puis images Wikimedia Commons → images hébergées + crédit
+    let content = await resolveCommonsImages(await resolveGutenbergLinks(a.content), a.slug, lang);
+    let coverImage = null;
+    if (a.cover) {
+      const img = await commonsImage(a.cover, `${a.slug}-cover`, lang);
+      if (img) {
+        coverImage = img.url;
+        content += `
+
+${coverCreditLine(img.credit, lang)}`;
+      }
+    }
     await prisma.post.create({
       data: {
         slug: a.slug,
         title: a.title,
         excerpt: a.excerpt,
-        content: await resolveGutenbergLinks(a.content),
+        content,
+        coverImage,
         author: AUTHOR,
         isPublished: true,
         publishedAt: new Date(),
         tags: a.tags,
-        language: a.language ?? "fr",
+        language: lang,
         metaTitle: a.metaTitle,
         metaDescription: a.metaDescription,
         categories: cat ? { create: [{ categoryId: cat.id }] } : undefined,
