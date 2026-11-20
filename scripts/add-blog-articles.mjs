@@ -11,6 +11,7 @@
 import { PrismaClient } from "@prisma/client";
 import { articles as articles202611 } from "./blog/articles-2026-11.mjs";
 import { articles as articles202611en } from "./blog/articles-2026-11-en.mjs";
+import { articles as articlesAdaptations } from "./blog/articles-2026-11-adaptations.mjs";
 const prisma = new PrismaClient();
 
 const AUTHOR = "La rédaction";
@@ -86,8 +87,28 @@ Notre conseil, en résumé : choisissez le PDF pour les livres illustrés, techn
   },
 ];
 
+/**
+ * Liens « [texte](/livre/@g1342) » : livre importé depuis Gutenberg (n° 1342).
+ * Remplacés par l'adresse réelle de la fiche ; si le livre n'est pas (encore) en
+ * base, le lien est retiré et seul le texte reste (jamais de lien cassé).
+ */
+async function resolveGutenbergLinks(content) {
+  const ids = [...new Set([...content.matchAll(/\/livre\/@g(\d+)/g)].map((m) => m[1]))];
+  if (!ids.length) return content;
+  const books = await prisma.book.findMany({
+    where: { sourceId: { in: ids.map((id) => `gutenberg:${id}`) }, isPublished: true },
+    select: { sourceId: true, slug: true },
+  });
+  const slugById = new Map(books.map((b) => [b.sourceId.slice("gutenberg:".length), b.slug]));
+  const missing = ids.filter((id) => !slugById.has(id));
+  if (missing.length) console.warn("  liens Gutenberg sans fiche (texte seul) :", missing.join(", "));
+  return content.replace(/\[([^\]]+)\]\(\/livre\/@g(\d+)\)/g, (_, text, id) =>
+    slugById.has(id) ? `[${text}](/livre/${slugById.get(id)})` : text
+  );
+}
+
 async function main() {
-  for (const a of [...articles, ...articles202611, ...articles202611en]) {
+  for (const a of [...articles, ...articles202611, ...articles202611en, ...articlesAdaptations]) {
     const existing = await prisma.post.findUnique({ where: { slug: a.slug } });
     if (existing) {
       console.log("DÉJÀ PRÉSENT, ignoré :", a.slug);
@@ -106,7 +127,7 @@ async function main() {
         slug: a.slug,
         title: a.title,
         excerpt: a.excerpt,
-        content: a.content,
+        content: await resolveGutenbergLinks(a.content),
         author: AUTHOR,
         isPublished: true,
         publishedAt: new Date(),
