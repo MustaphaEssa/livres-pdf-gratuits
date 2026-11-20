@@ -1,4 +1,5 @@
 import Link from "@/i18n/navigation";
+import PostBody from "@/components/blog/post-body";
 import { getServerI18n } from "@/i18n/server";
 import { frenchOnlyAlternates } from "@/i18n/seo";
 import { formatDateLocale } from "@/i18n/format";
@@ -60,7 +61,6 @@ export default async function PostPage({ params }: Props) {
     getCategoriesWithCounts(),
     getServerI18n(),
   ]);
-  const paragraphs = post.content.split(/\n\s*\n/).filter(Boolean);
   const shareUrl = `${SITE_URL}/blog/${slug}`;
   const postImage = post.coverImage
     ? post.coverImage.startsWith("http")
@@ -137,13 +137,7 @@ export default async function PostPage({ params }: Props) {
             />
           )}
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-            {paragraphs.map((p, i) => (
-              <p key={i} className="prose" style={{ maxWidth: "none" }}>
-                {p}
-              </p>
-            ))}
-          </div>
+          <PostBody content={post.content} />
 
           <div style={{ marginTop: 48 }}>
             <PostComments postId={post.id} isLoggedIn={!!session} />

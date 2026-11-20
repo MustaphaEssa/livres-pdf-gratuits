@@ -1,5 +1,5 @@
 /**
- * Ajoute 3 articles de blog à la base de données.
+ * Ajoute les articles de blog à la base de données (3 d'origine + scripts/blog/*.mjs).
  *
  * Utilise automatiquement DATABASE_URL du fichier .env présent dans le dossier.
  * À lancer sur le serveur de PRODUCTION (là où se trouve le .env de prod) :
@@ -9,6 +9,7 @@
  * Idempotent : un article déjà présent (même slug) est ignoré, rien n'est écrasé.
  */
 import { PrismaClient } from "@prisma/client";
+import { articles as articles202611 } from "./blog/articles-2026-11.mjs";
 const prisma = new PrismaClient();
 
 const AUTHOR = "La rédaction";
@@ -85,7 +86,7 @@ Notre conseil, en résumé : choisissez le PDF pour les livres illustrés, techn
 ];
 
 async function main() {
-  for (const a of articles) {
+  for (const a of [...articles, ...articles202611]) {
     const existing = await prisma.post.findUnique({ where: { slug: a.slug } });
     if (existing) {
       console.log("DÉJÀ PRÉSENT, ignoré :", a.slug);
