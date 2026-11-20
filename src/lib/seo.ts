@@ -41,6 +41,8 @@ interface PageMetaInput {
   noindex?: boolean;
   /** Remplace canonical/hreflang (ex. page en français uniquement). */
   alternates?: Metadata["alternates"];
+  /** Langues où la page est indexée (hreflang limité à celles-ci, noindex ailleurs). Défaut : toutes. */
+  indexLocales?: readonly Locale[];
   /** Champs Open Graph spécifiques (book:author…). */
   openGraphExtra?: Record<string, unknown>;
 }
@@ -48,11 +50,13 @@ interface PageMetaInput {
 export function pageMetadata(o: PageMetaInput): Metadata {
   const url = `${SITE_URL}${localizePath(o.locale, o.path)}`;
   const image = o.image ?? { ...DEFAULT_OG_IMAGE, alt: o.siteName ?? SITE_NAME };
+  const indexLocales = o.indexLocales ?? LOCALES;
+  const noindex = o.noindex || !indexLocales.includes(o.locale);
   const images = [{ ...image, url: absoluteUrl(image.url) }];
   return {
     title: o.absoluteTitle ? { absolute: o.title } : o.title,
     description: o.description,
-    alternates: o.alternates ?? i18nAlternates(o.locale, o.path),
+    alternates: o.alternates ?? i18nAlternates(o.locale, o.path, indexLocales),
     openGraph: {
       type: o.type ?? "website",
       url,
@@ -60,7 +64,7 @@ export function pageMetadata(o: PageMetaInput): Metadata {
       description: o.description,
       siteName: o.siteName ?? SITE_NAME,
       locale: LOCALE_INFO[o.locale].og,
-      alternateLocale: LOCALES.filter((l) => l !== o.locale).map((l) => LOCALE_INFO[l].og),
+      alternateLocale: indexLocales.filter((l) => l !== o.locale).map((l) => LOCALE_INFO[l].og),
       images,
       ...(o.openGraphExtra ?? {}),
     },
@@ -70,7 +74,7 @@ export function pageMetadata(o: PageMetaInput): Metadata {
       description: o.description,
       images: images.map((i) => i.url),
     },
-    ...(o.noindex ? { robots: { index: false, follow: true } } : {}),
+    ...(noindex ? { robots: { index: false, follow: true } } : {}),
   };
 }
 

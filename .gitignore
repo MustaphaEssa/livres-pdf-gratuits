@@ -58,3 +58,4 @@ public/uploads/authors/*
 
 # Maquette de design (référence locale, pas une app déployée)
 /design/
+copyright-audit.csv

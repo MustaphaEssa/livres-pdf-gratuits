@@ -8,6 +8,7 @@ import BookActionBar from "@/components/design/book-action-bar";
 import BookCover from "@/components/design/book-cover";
 import BookMini from "@/components/design/book-mini";
 import BookCard from "@/components/design/book-card";
+import BuyCard from "@/components/design/buy-card";
 import FavButton from "@/components/design/fav-button";
 import Icon, { I } from "@/components/design/icon";
 import { ZelligePattern } from "@/components/design/patterns";
@@ -34,6 +35,7 @@ import { shouldCountView } from "@/lib/view-throttle";
 import { isBot } from "@/lib/bot";
 import { getServerI18n } from "@/i18n/server";
 import { localizePath } from "@/i18n/config";
+import { bookIndexLocales } from "@/i18n/seo";
 import { categoryLabel, fmt, formatNumber, authorLabel } from "@/i18n/format";
 import { isUsefulDescription, autoDescription, truncateText } from "@/lib/book-description";
 import { pageMetadata, descriptionWithCta, clip, absoluteUrl } from "@/lib/seo";
@@ -71,6 +73,7 @@ export async function generateMetadata({ params }: BookPageProps): Promise<Metad
     absoluteTitle: true,
     description: metaDesc,
     type: "book",
+    indexLocales: bookIndexLocales(book.language),
     // Carte 1200×630 générée (couverture + titre), cf. /og/livre/[slug]
     image: { url: `/og/livre/${encodeURIComponent(book.slug)}`, width: 1200, height: 630, alt: book.title },
     openGraphExtra: {
@@ -500,6 +503,14 @@ export default async function BookPage({ params }: BookPageProps) {
                   {t.book.dmcaPolicy}
                 </Link>
               </div>
+
+              <BuyCard
+                locale={locale}
+                title={book.title}
+                author={book.author}
+                isbn={book.isbn}
+                hasAudio={hasAudio || book.mediaType === "AUDIO"}
+              />
 
               <div className="facts-card">
                 <h2>{t.book.facts}</h2>

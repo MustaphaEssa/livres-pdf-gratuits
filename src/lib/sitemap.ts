@@ -1,5 +1,6 @@
 import prisma from "@/lib/db";
 import { SITE_URL } from "@/lib/site";
+import { bookIndexLocales } from "@/i18n/seo";
 import { DEFAULT_LOCALE, LOCALES, X_DEFAULT_LOCALE, isLocale, localizePath, type Locale } from "@/i18n/config";
 
 // Sitemaps XML écrits à la main (plutôt que app/sitemap.ts) pour :
@@ -18,6 +19,8 @@ interface Entry {
   priority: number;
   /** false : page en français uniquement (blog, pages légales) */
   i18n: boolean;
+  /** Langues où la page est indexée (fiches livre : FR + EN + langue du livre). Défaut : toutes. */
+  locales?: readonly Locale[];
 }
 
 let cache: { at: number; entries: Entry[] } | null = null;
@@ -44,7 +47,7 @@ export async function sitemapEntries(): Promise<Entry[]> {
     const [books, categories, authors, posts, collections] = await Promise.all([
       prisma.book.findMany({
         where: { isPublished: true },
-        select: { slug: true, updatedAt: true },
+        select: { slug: true, updatedAt: true, language: true },
         orderBy: { createdAt: "asc" },
       }),
       prisma.category.findMany({
@@ -73,7 +76,14 @@ export async function sitemapEntries(): Promise<Entry[]> {
       });
     }
     for (const b of books)
-      entries.push({ path: `/livre/${b.slug}`, lastmod: b.updatedAt, freq: "monthly", priority: 0.8, i18n: true });
+      entries.push({
+        path: `/livre/${b.slug}`,
+        lastmod: b.updatedAt,
+        freq: "monthly",
+        priority: 0.8,
+        i18n: true,
+        locales: bookIndexLocales(b.language),
+      });
     for (const p of posts)
       entries.push({ path: `/blog/${p.slug}`, lastmod: p.updatedAt, freq: "monthly", priority: 0.5, i18n: false });
   } catch (e) {
@@ -87,16 +97,14 @@ export async function sitemapEntries(): Promise<Entry[]> {
 /** Entrées présentes dans le sitemap d'une langue. */
 async function localeEntries(locale: Locale): Promise<Entry[]> {
   const all = await sitemapEntries();
-  return locale === DEFAULT_LOCALE ? all : all.filter((e) => e.i18n);
+  return all.filter((e) => (locale === DEFAULT_LOCALE || e.i18n) && (!e.locales || e.locales.includes(locale)));
 }
 
 /** Liste des fichiers du sitemap : « fr-0.xml », « en-0.xml »… */
 export async function sitemapFiles(): Promise<string[]> {
-  const all = await sitemapEntries();
-  const i18nCount = all.filter((e) => e.i18n).length;
   const files: string[] = [];
   for (const l of LOCALES) {
-    const count = l === DEFAULT_LOCALE ? all.length : i18nCount;
+    const count = (await localeEntries(l)).length;
     const chunks = Math.max(1, Math.ceil(count / CHUNK));
     for (let i = 0; i < chunks; i++) files.push(`${l}-${i}.xml`);
   }
@@ -129,7 +137,8 @@ export async function sitemapXml(file: string): Promise<string | null> {
   const urls = entries.map((e) => {
     const lines = [`<loc>${esc(abs(localizePath(locale, e.path)))}</loc>`];
     if (e.i18n) {
-      for (const l of LOCALES)
+      const alts = e.locales ?? LOCALES;
+      for (const l of alts)
         lines.push(`<xhtml:link rel="alternate" hreflang="${l}" href="${esc(abs(localizePath(l, e.path)))}"/>`);
       lines.push(
         `<xhtml:link rel="alternate" hreflang="x-default" href="${esc(abs(localizePath(X_DEFAULT_LOCALE, e.path)))}"/>`

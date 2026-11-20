@@ -2,6 +2,22 @@ import { Prisma } from "@prisma/client";
 import prisma from "@/lib/db";
 import { slugify } from "@/lib/utils";
 
+// Cache mémoire court pour les agrégats recalculés à chaque visite (accueil,
+// catalogue, auteurs) : groupBy sur ~10 000 livres. Le process PM2 est long,
+// 10 minutes de fraîcheur suffisent pour des compteurs.
+const AGG_TTL = 10 * 60 * 1000;
+const aggCache = new Map<string, { at: number; value: Promise<unknown> }>();
+function memoAgg<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  const hit = aggCache.get(key);
+  if (hit && Date.now() - hit.at < AGG_TTL) return hit.value as Promise<T>;
+  const value = fn().catch((e) => {
+    aggCache.delete(key); // pas de cache sur échec
+    throw e;
+  });
+  aggCache.set(key, { at: Date.now(), value });
+  return value;
+}
+
 // Nombre de livres par page du catalogue
 export const PAGE_SIZE = 12;
 
@@ -253,7 +269,13 @@ export async function getBooksByAuthorSlug(
 
 // Liste des auteurs (slug + nom + photo + nombre de livres), triée par nom.
 // Le nom et la photo proviennent de la table Author quand elle est remplie.
-export async function getAuthorsWithCounts(): Promise<
+export function getAuthorsWithCounts(): Promise<
+  { slug: string; name: string; count: number; image: string | null }[]
+> {
+  return memoAgg("authors", getAuthorsWithCountsRaw);
+}
+
+async function getAuthorsWithCountsRaw(): Promise<
   { slug: string; name: string; count: number; image: string | null }[]
 > {
   const rows = await prisma.book.groupBy({
@@ -305,7 +327,11 @@ export async function getBookBySlug(
 }
 
 // Catégories avec le nombre de livres publiés dans chacune
-export async function getCategoriesWithCounts() {
+export function getCategoriesWithCounts() {
+  return memoAgg("categories", getCategoriesWithCountsRaw);
+}
+
+async function getCategoriesWithCountsRaw() {
   const categories = await prisma.category.findMany({
     where: { type: "BOOK" },
     orderBy: { name: "asc" },
@@ -609,7 +635,11 @@ export async function getTopAuthors(limit = 10) {
 }
 
 // Langues des livres publiés (PDF), avec leur nombre de livres
-export async function getLanguagesWithCounts(): Promise<{ code: string; count: number }[]> {
+export function getLanguagesWithCounts(): Promise<{ code: string; count: number }[]> {
+  return memoAgg("languages", getLanguagesWithCountsRaw);
+}
+
+async function getLanguagesWithCountsRaw(): Promise<{ code: string; count: number }[]> {
   const rows = await prisma.book.groupBy({
     by: ["language"],
     where: { isPublished: true, mediaType: "PDF" },
