@@ -5,14 +5,48 @@
  *
  * Seules les licences libres sont acceptées (domaine public, CC0, CC BY, CC BY-SA) :
  * un fichier sous une autre licence est refusé (l'image est alors simplement omise).
+ *
+ * Manifeste public/uploads/blog/.commons-manifest.json : métadonnées déjà récupérées.
+ * Si l'image et son entrée sont présentes, AUCUN appel réseau (utile quand Commons
+ * bloque le serveur : on prépare tout depuis un autre poste avec prefetch-images.mjs,
+ * puis on copie le dossier sur le serveur).
  */
-import { mkdir, writeFile, stat } from "node:fs/promises";
+import { mkdir, writeFile, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
 const DIR = path.join(process.cwd(), "public", "uploads", "blog");
 const UA = "livrespdfgratuits.com blog-images/1.0";
-const OK_LICENSE = /^(public domain|pd|cc0|cc by(-sa)?( \d(\.\d)?)?)/i;
+const OK_LICENSE = /^(public domain|pd|cc0|no restrictions|cc by(-sa)?( \d(\.\d)?)?)/i;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const MANIFEST = path.join(DIR, ".commons-manifest.json");
+
+let manifest = null;
+async function loadManifest() {
+  if (manifest) return manifest;
+  try {
+    manifest = JSON.parse(await readFile(MANIFEST, "utf8"));
+  } catch {
+    manifest = {};
+  }
+  return manifest;
+}
+async function saveManifest() {
+  await mkdir(DIR, { recursive: true });
+  await writeFile(MANIFEST, JSON.stringify(manifest, null, 2));
+}
+async function fileOk(p) {
+  try {
+    return (await stat(p)).size > 1000;
+  } catch {
+    return false;
+  }
+}
+
+function buildCredit({ artist, license, pageUrl }, lang) {
+  const pd = /^(public domain|pd|cc0|no restrictions)/i.test(license);
+  const lic = pd ? (lang === "fr" ? "domaine public" : "public domain") : license;
+  return `${artist ? `${artist}, ` : ""}${lic}, via [Wikimedia Commons](${pageUrl})`;
+}
 
 const strip = (html) =>
   String(html ?? "")
@@ -52,6 +86,11 @@ async function download(src) {
 export async function commonsImage(file, base, lang = "fr") {
   const title = file.startsWith("File:") ? file : `File:${file}`;
   try {
+    const m = await loadManifest();
+    const known = m[base];
+    if (known && known.title === title && (await fileOk(path.join(DIR, known.name)))) {
+      return { url: `/uploads/blog/${known.name}`, credit: buildCredit(known, lang) };
+    }
     const d = await api({
       action: "query",
       titles: title,
@@ -75,11 +114,7 @@ export async function commonsImage(file, base, lang = "fr") {
     const ext = (/\.(png|jpe?g|webp|gif)(?:$|\?)/i.exec(src)?.[1] || "jpg").toLowerCase().replace("jpeg", "jpg");
     const name = `${base}.${ext}`;
     const dest = path.join(DIR, name);
-    let exists = false;
-    try {
-      exists = (await stat(dest)).size > 1000;
-    } catch {}
-    if (!exists) {
+    if (!(await fileOk(dest))) {
       const buf = await download(src);
       await mkdir(DIR, { recursive: true });
       await writeFile(dest, buf);
@@ -88,10 +123,10 @@ export async function commonsImage(file, base, lang = "fr") {
     const pageUrl = `https://commons.wikimedia.org/wiki/${encodeURIComponent(page.title.replace(/ /g, "_"))}`
       .replace(/\(/g, "%28")
       .replace(/\)/g, "%29");
-    const pd = /^(public domain|pd|cc0)/i.test(license);
-    const lic = pd ? (lang === "fr" ? "domaine public" : "public domain") : license;
-    const credit = `${artist ? `${artist}, ` : ""}${lic}, via [Wikimedia Commons](${pageUrl})`;
-    return { url: `/uploads/blog/${name}`, credit };
+    const meta = { title, name, artist, license, pageUrl };
+    m[base] = meta;
+    await saveManifest();
+    return { url: `/uploads/blog/${name}`, credit: buildCredit(meta, lang) };
   } catch (e) {
     console.warn(`  image ignorée (${title}) : ${e.message}`);
     return null;
