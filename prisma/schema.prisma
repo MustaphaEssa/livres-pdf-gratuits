@@ -99,6 +99,7 @@ model Book {
   @@index([downloadCount])
   @@index([createdAt])
   @@index([isPublished])
+  @@index([language])
   @@index([mediaType])
 }
 
@@ -194,6 +195,10 @@ model Post {
   metaDescription String?
 
   fbPostedAt  DateTime? // date de partage automatique sur Facebook
+
+  // Langue de l'article (fr, en…) : un article n'existe que dans sa langue,
+  // servi sous /blog/x (fr) ou /en/blog/x (en).
+  language    String   @default("fr")
 
   publishedAt DateTime?
   createdAt   DateTime @default(now())

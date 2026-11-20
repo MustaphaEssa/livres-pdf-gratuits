@@ -18,6 +18,7 @@ interface InitialPost {
   author?: string | null;
   coverImage?: string | null;
   categorySlug?: string;
+  language?: string;
   isPublished?: boolean;
   isFeatured?: boolean;
 }
@@ -45,6 +46,7 @@ export function ArticleForm({
     author: initial.author ?? "",
     coverImage: initial.coverImage ?? "",
     categorySlug: initial.categorySlug ?? "",
+    language: initial.language ?? "fr",
     isPublished: initial.isPublished ?? true,
     isFeatured: initial.isFeatured ?? false,
   });
@@ -149,6 +151,19 @@ export function ArticleForm({
               placeholder="Séparez les paragraphes par une ligne vide."
               className="flex w-full rounded-md border border-slate-200 dark:border-slate-700 bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Langue de l&apos;article</label>
+            <select
+              value={form.language}
+              onChange={(e) => up({ language: e.target.value })}
+              className="w-full h-10 px-3 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm"
+            >
+              <option value="fr">Français (/blog/…)</option>
+              <option value="en">English (/en/blog/…)</option>
+              <option value="es">Español (/es/blog/…)</option>
+              <option value="ar">العربية (/ar/blog/…)</option>
+            </select>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>

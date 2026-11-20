@@ -24,7 +24,7 @@ import {
 } from "@/lib/books";
 import { getHomeCollections } from "@/lib/collections";
 import { localizeCollection } from "@/i18n/collections";
-import { getLatestPosts } from "@/lib/posts";
+import { getLatestPosts, blogLanguageFor } from "@/lib/posts";
 import { languageLabel, sortLanguages } from "@/lib/languages";
 import { seoContent, fill } from "@/i18n/seo-content";
 
@@ -67,7 +67,7 @@ export default async function HomePage() {
       getHomeCollections(4).then((cs) => cs.map((c) => localizeCollection(locale, c))),
       getTopAuthors(10),
       getLatestAudiobooks(6),
-      getLatestPosts(3),
+      blogLanguageFor(locale).then((lang) => getLatestPosts(3, lang)),
     ]);
 
   // Arche « à la une » : données minimales sérialisables pour le composant client

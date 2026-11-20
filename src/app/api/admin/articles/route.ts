@@ -3,6 +3,8 @@ import { getSession } from "@/lib/auth-server";
 import { getAllPosts, createPost, slugExistsPost } from "@/lib/posts";
 import { slugify } from "@/lib/utils";
 
+const POST_LANGUAGES = new Set(["fr", "en", "es", "ar", "de", "it", "pt", "nl", "ru", "tr", "zh", "ja"]);
+
 export const runtime = "nodejs";
 
 export async function GET() {
@@ -45,6 +47,7 @@ export async function POST(request: Request) {
     author: String(body.author || "") || null,
     coverImage: String(body.coverImage || "") || null,
     categorySlug: String(body.categorySlug || "") || undefined,
+    language: POST_LANGUAGES.has(String(body.language)) ? String(body.language) : "fr",
     isPublished: body.isPublished !== false,
     isFeatured: body.isFeatured === true,
   });

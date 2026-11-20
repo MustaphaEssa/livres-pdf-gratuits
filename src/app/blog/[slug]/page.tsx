@@ -1,9 +1,9 @@
 import Link from "@/i18n/navigation";
 import PostBody from "@/components/blog/post-body";
 import { getServerI18n } from "@/i18n/server";
-import { frenchOnlyAlternates } from "@/i18n/seo";
+import { isLocale, localizePath, DEFAULT_LOCALE, type Locale } from "@/i18n/config";
 import { formatDateLocale } from "@/i18n/format";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import DesignHeader from "@/components/design/header";
 import DesignFooter from "@/components/design/footer";
 import MobileTabbar from "@/components/design/mobile-tabbar";
@@ -20,6 +20,11 @@ interface Props {
   params: Promise<{ slug: string }>;
 }
 
+/** Un article n'existe que dans sa langue : /blog/x (fr) ou /en/blog/x (en). */
+function postLocale(language: string | null | undefined): Locale {
+  return isLocale(language) ? language : DEFAULT_LOCALE;
+}
+
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
   const [post, { t }] = await Promise.all([getPublishedPostBySlug(slug), getServerI18n()]);
@@ -34,12 +39,12 @@ export async function generateMetadata({ params }: Props) {
   return {
     title,
     description,
-    alternates: frenchOnlyAlternates(`/blog/${slug}`),
+    alternates: { canonical: localizePath(postLocale(post.language), `/blog/${slug}`) },
     openGraph: {
       title,
       description,
       type: "article",
-      url: `${SITE_URL}/blog/${slug}`,
+      url: `${SITE_URL}${localizePath(postLocale(post.language), `/blog/${slug}`)}`,
       ...(image ? { images: [{ url: image }] } : {}),
     },
     twitter: {
@@ -61,7 +66,10 @@ export default async function PostPage({ params }: Props) {
     getCategoriesWithCounts(),
     getServerI18n(),
   ]);
-  const shareUrl = `${SITE_URL}/blog/${slug}`;
+  const lang = postLocale(post.language);
+  // Mauvaise langue d'URL (/en/blog/article-francais) → adresse canonique de l'article
+  if (locale !== lang) permanentRedirect(localizePath(lang, `/blog/${slug}`));
+  const shareUrl = `${SITE_URL}${localizePath(lang, `/blog/${slug}`)}`;
   const postImage = post.coverImage
     ? post.coverImage.startsWith("http")
       ? post.coverImage
@@ -71,6 +79,7 @@ export default async function PostPage({ params }: Props) {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
     headline: post.title,
+    inLanguage: lang,
     url: shareUrl,
     mainEntityOfPage: shareUrl,
     image: postImage,
@@ -93,7 +102,7 @@ export default async function PostPage({ params }: Props) {
             { name: t.nav.home, url: "/" },
             { name: t.nav.blog, url: "/blog" },
             { name: post.title, url: `/blog/${slug}` },
-          ]),
+          ], lang),
           articleLd,
         ]}
       />

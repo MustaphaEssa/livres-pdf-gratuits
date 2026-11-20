@@ -27,6 +27,7 @@ export default function EditArticlePage() {
             author: p.author,
             coverImage: p.coverImage,
             categorySlug: p.categories?.[0]?.category?.slug ?? "",
+            language: p.language ?? "fr",
             isPublished: p.isPublished,
             isFeatured: p.isFeatured,
           });

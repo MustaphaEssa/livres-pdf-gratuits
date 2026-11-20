@@ -10,6 +10,7 @@
  */
 import { PrismaClient } from "@prisma/client";
 import { articles as articles202611 } from "./blog/articles-2026-11.mjs";
+import { articles as articles202611en } from "./blog/articles-2026-11-en.mjs";
 const prisma = new PrismaClient();
 
 const AUTHOR = "La rédaction";
@@ -86,7 +87,7 @@ Notre conseil, en résumé : choisissez le PDF pour les livres illustrés, techn
 ];
 
 async function main() {
-  for (const a of [...articles, ...articles202611]) {
+  for (const a of [...articles, ...articles202611, ...articles202611en]) {
     const existing = await prisma.post.findUnique({ where: { slug: a.slug } });
     if (existing) {
       console.log("DÉJÀ PRÉSENT, ignoré :", a.slug);
@@ -110,6 +111,7 @@ async function main() {
         isPublished: true,
         publishedAt: new Date(),
         tags: a.tags,
+        language: a.language ?? "fr",
         metaTitle: a.metaTitle,
         metaDescription: a.metaDescription,
         categories: cat ? { create: [{ categoryId: cat.id }] } : undefined,

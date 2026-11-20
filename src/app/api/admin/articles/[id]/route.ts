@@ -9,6 +9,8 @@ import {
 } from "@/lib/posts";
 import { slugify } from "@/lib/utils";
 
+const POST_LANGUAGES = new Set(["fr", "en", "es", "ar", "de", "it", "pt", "nl", "ru", "tr", "zh", "ja"]);
+
 export const runtime = "nodejs";
 
 export async function GET(
@@ -47,6 +49,7 @@ export async function PATCH(
   if (typeof body.author === "string") data.author = body.author || null;
   if (typeof body.coverImage === "string") data.coverImage = body.coverImage || null;
   if (typeof body.categorySlug === "string") data.categorySlug = body.categorySlug;
+  if (typeof body.language === "string" && POST_LANGUAGES.has(body.language)) data.language = body.language;
   if (typeof body.isPublished === "boolean") data.isPublished = body.isPublished;
   if (typeof body.isFeatured === "boolean") data.isFeatured = body.isFeatured;
 

@@ -10,9 +10,16 @@ const postWithCategories = Prisma.validator<Prisma.PostDefaultArgs>()({
 export type PostWithCategories = Prisma.PostGetPayload<typeof postWithCategories>;
 
 // Articles publiés (liste publique)
-export async function getPublishedPosts(): Promise<PostWithCategories[]> {
+/** Langue des articles affichés pour une langue d'interface : la sienne s'il y en a, sinon l'anglais. */
+export async function blogLanguageFor(locale: string): Promise<string> {
+  if (locale === "fr" || locale === "en") return locale;
+  const n = await prisma.post.count({ where: { isPublished: true, language: locale } });
+  return n > 0 ? locale : "en";
+}
+
+export async function getPublishedPosts(language?: string): Promise<PostWithCategories[]> {
   return prisma.post.findMany({
-    where: { isPublished: true },
+    where: { isPublished: true, ...(language ? { language } : {}) },
     include: postWithCategories.include,
     orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
   });
@@ -55,6 +62,7 @@ export interface PostInput {
   isPublished?: boolean;
   isFeatured?: boolean;
   categorySlug?: string;
+  language?: string;
 }
 
 export async function createPost(input: PostInput): Promise<PostWithCategories> {
@@ -121,9 +129,9 @@ export async function getApprovedComments(postId: string) {
 }
 
 // Derniers articles publiés (accueil)
-export async function getLatestPosts(limit = 3): Promise<PostWithCategories[]> {
+export async function getLatestPosts(limit = 3, language?: string): Promise<PostWithCategories[]> {
   return prisma.post.findMany({
-    where: { isPublished: true },
+    where: { isPublished: true, ...(language ? { language } : {}) },
     include: postWithCategories.include,
     orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
     take: limit,

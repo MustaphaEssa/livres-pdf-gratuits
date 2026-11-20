@@ -36,7 +36,7 @@ export async function sitemapEntries(): Promise<Entry[]> {
     { path: "/livres-audio", freq: "daily", priority: 0.8, i18n: true, lastmod: now },
     { path: "/auteurs", freq: "weekly", priority: 0.8, i18n: true },
     { path: "/collections", freq: "weekly", priority: 0.7, i18n: true },
-    { path: "/blog", freq: "weekly", priority: 0.6, i18n: true },
+    { path: "/blog", freq: "weekly", priority: 0.6, i18n: true, locales: ["fr", "en"] },
     { path: "/a-propos", freq: "yearly", priority: 0.4, i18n: true },
     { path: "/contact", freq: "yearly", priority: 0.3, i18n: true },
     ...["/confidentialite", "/mentions-legales", "/conditions", "/dmca"].map(
@@ -59,7 +59,7 @@ export async function sitemapEntries(): Promise<Entry[]> {
         where: { isPublished: true, authorSlug: { not: null } },
         _max: { updatedAt: true },
       }),
-      prisma.post.findMany({ where: { isPublished: true }, select: { slug: true, updatedAt: true } }),
+      prisma.post.findMany({ where: { isPublished: true }, select: { slug: true, updatedAt: true, language: true } }),
       prisma.collection.findMany({ where: { isPublished: true }, select: { slug: true, updatedAt: true } }),
     ]);
     for (const c of categories) entries.push({ path: `/categorie/${c.slug}`, freq: "weekly", priority: 0.7, i18n: true });
@@ -84,8 +84,15 @@ export async function sitemapEntries(): Promise<Entry[]> {
         i18n: true,
         locales: bookIndexLocales(b.language),
       });
-    for (const p of posts)
-      entries.push({ path: `/blog/${p.slug}`, lastmod: p.updatedAt, freq: "monthly", priority: 0.5, i18n: false });
+    for (const p of posts) {
+      // Article dans une seule langue : FR → sitemap fr (sans hreflang) ; autre → sitemap de sa langue
+      const lang = isLocale(p.language) ? p.language : DEFAULT_LOCALE;
+      entries.push(
+        lang === DEFAULT_LOCALE
+          ? { path: `/blog/${p.slug}`, lastmod: p.updatedAt, freq: "monthly", priority: 0.5, i18n: false }
+          : { path: `/blog/${p.slug}`, lastmod: p.updatedAt, freq: "monthly", priority: 0.5, i18n: true, locales: [lang] }
+      );
+    }
   } catch (e) {
     console.error("sitemap: échec de récupération des données dynamiques", e);
     return entries; // pas de cache : on réessaiera au prochain appel
@@ -136,13 +143,15 @@ export async function sitemapXml(file: string): Promise<string | null> {
 
   const urls = entries.map((e) => {
     const lines = [`<loc>${esc(abs(localizePath(locale, e.path)))}</loc>`];
-    if (e.i18n) {
-      const alts = e.locales ?? LOCALES;
+    const alts = e.locales ?? LOCALES;
+    // Une seule version linguistique : pas de hreflang
+    if (e.i18n && alts.length > 1) {
       for (const l of alts)
         lines.push(`<xhtml:link rel="alternate" hreflang="${l}" href="${esc(abs(localizePath(l, e.path)))}"/>`);
-      lines.push(
-        `<xhtml:link rel="alternate" hreflang="x-default" href="${esc(abs(localizePath(X_DEFAULT_LOCALE, e.path)))}"/>`
-      );
+      if (alts.includes(X_DEFAULT_LOCALE))
+        lines.push(
+          `<xhtml:link rel="alternate" hreflang="x-default" href="${esc(abs(localizePath(X_DEFAULT_LOCALE, e.path)))}"/>`
+        );
     }
     if (e.lastmod) lines.push(`<lastmod>${e.lastmod.toISOString()}</lastmod>`);
     lines.push(`<changefreq>${e.freq}</changefreq>`, `<priority>${e.priority.toFixed(1)}</priority>`);

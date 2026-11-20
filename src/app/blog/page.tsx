@@ -5,18 +5,25 @@ import { formatDateLocale } from "@/i18n/format";
 import DesignHeader from "@/components/design/header";
 import DesignFooter from "@/components/design/footer";
 import MobileTabbar from "@/components/design/mobile-tabbar";
-import { getPublishedPosts } from "@/lib/posts";
+import { getPublishedPosts, blogLanguageFor } from "@/lib/posts";
 import { getCategoriesWithCounts } from "@/lib/books";
 
 export async function generateMetadata() {
   const { locale, t } = await getServerI18n();
-  return pageMetadata({ locale, path: "/blog", title: t.meta.blogTitle, description: t.meta.blogDesc });
+  // Liste indexée en FR et EN (les autres langues affichent les articles anglais : quasi-doublons)
+  return pageMetadata({
+    locale,
+    path: "/blog",
+    title: t.meta.blogTitle,
+    description: t.meta.blogDesc,
+    indexLocales: ["fr", "en"],
+  });
 }
 
 export default async function BlogPage() {
   const { locale, t } = await getServerI18n();
   const [posts, categories] = await Promise.all([
-    getPublishedPosts(),
+    blogLanguageFor(locale).then((lang) => getPublishedPosts(lang)),
     getCategoriesWithCounts(),
   ]);
 
