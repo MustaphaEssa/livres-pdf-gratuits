@@ -7,15 +7,23 @@
  * catalogue officiel est vérifiée : le titre ET le nom de l'auteur doivent
  * correspondre, sinon l'œuvre est ignorée (pas d'import sur un mauvais numéro).
  *
- *   NODE_OPTIONS=--conditions=react-server ./node_modules/.bin/tsx scripts/import-classics.ts          # aperçu
- *   NODE_OPTIONS=--conditions=react-server ./node_modules/.bin/tsx scripts/import-classics.ts --apply  # importe
+ *   ./node_modules/.bin/tsx scripts/import-classics.ts          # aperçu
+ *   ./node_modules/.bin/tsx scripts/import-classics.ts --apply  # importe
  *
- * (--conditions=react-server : src/lib/gutenberg.ts importe "server-only".)
+ * src/lib/gutenberg.ts importe "server-only" (fourni par Next, absent hors build) :
+ * on le remplace par un module vide avant de charger le code d'import.
  * Relançable : les œuvres déjà présentes (même numéro Gutenberg, ou même titre +
  * auteur) sont ignorées par importGutenbergBook.
  */
-import prisma from "@/lib/db";
-import { loadCatalog, importGutenbergBook, type GutenbergRow } from "@/lib/gutenberg";
+import Module from "node:module";
+import type { GutenbergRow } from "@/lib/gutenberg";
+
+const M = Module as unknown as { _resolveFilename: (req: string, ...rest: unknown[]) => string };
+const resolve = M._resolveFilename;
+M._resolveFilename = function (req: string, ...rest: unknown[]) {
+  if (req === "server-only") return require.resolve("./stubs/empty.cjs");
+  return resolve.call(this, req, ...rest);
+};
 
 const APPLY = process.argv.includes("--apply");
 const NO_AUDIO = process.argv.includes("--no-audio");
@@ -114,6 +122,20 @@ function matches(row: GutenbergRow, w: Wanted): boolean {
 }
 
 async function main() {
+  const { default: prisma } = await import("@/lib/db");
+  const { loadCatalog, importGutenbergBook } = await import("@/lib/gutenberg");
+  try {
+    await run(prisma, loadCatalog, importGutenbergBook);
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+async function run(
+  prisma: typeof import("@/lib/db").default,
+  loadCatalog: typeof import("@/lib/gutenberg").loadCatalog,
+  importGutenbergBook: typeof import("@/lib/gutenberg").importGutenbergBook
+) {
   const catalog = await loadCatalog();
   const byId = new Map(catalog.map((r) => [r.id, r]));
   const cats = await prisma.category.findMany({ where: { type: "BOOK" }, select: { slug: true, id: true } });
@@ -160,9 +182,7 @@ async function main() {
   console.log("\nBilan :", counts);
 }
 
-main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(() => prisma.$disconnect());
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});
