@@ -61,7 +61,7 @@ const WANTED: Wanted[] = [
   { id: 174, title: "Picture of Dorian Gray", author: "Oscar Wilde", lang: "en" },
   { id: 43, title: "Jekyll", author: "Robert Louis Stevenson", lang: "en" },
   { id: 120, title: "Treasure Island", author: "Robert Louis Stevenson", lang: "en" },
-  { id: 1727, title: "Odyssey", author: "Homer", lang: "en" },
+  { title: "Odyssey", author: "Homer", lang: "en" },
   { id: 2199, title: "Iliad", author: "Homer", lang: "en" },
   { id: 11, title: "Alice's Adventures in Wonderland", author: "Lewis Carroll", lang: "en" },
   { id: 2701, title: "Moby Dick", author: "Herman Melville", lang: "en" },
