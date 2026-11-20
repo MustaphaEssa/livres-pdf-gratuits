@@ -251,7 +251,7 @@ All ten books on this list are in the public domain, so you can read them free, 
 
 ## 1. The Odyssey, Homer
 
-Odysseus's long journey home to Ithaca, with its monsters, gods and temptations. Christopher Nolan's adaptation, released in July 2026, became one of the biggest films of the year. [Read The Odyssey](/livre/@g1727) or its prequel, [The Iliad](/livre/@g2199).
+Odysseus's long journey home to Ithaca, with its monsters, gods and temptations. Christopher Nolan's adaptation, released in July 2026, became one of the biggest films of the year. [Read The Odyssey](/livre/@g3160) (in Alexander Pope's translation) or its prequel, [The Iliad](/livre/@g2199).
 
 ## 2. Wuthering Heights, Emily Brontë
 
