@@ -60,6 +60,39 @@ async function isGenericCover(file) {
   return (white / topN > 0.55 && sat / botN > 0.5) || (white / topN > 0.6 && soft / botN > 0.6);
 }
 
+/**
+ * Reliure sans titre (scan Internet Archive : toile unie ou papier marbré) :
+ * image très sombre dont le centre ne contient AUCUN contour net (pas de lettres).
+ * Seuil volontairement prudent, calibré sur planches de contrôle : la première vraie
+ * couverture (titre pâle) apparaît à 0,0002 ; les reliures avec étiquette à code-barres
+ * ne sont pas touchées (l'étiquette ressemble à du texte).
+ */
+async function isBlankBinding(file) {
+  {
+    const W = 80, H = 120;
+    const { data } = await sharp(file).resize(W, H, { fit: "fill" }).greyscale().raw().toBuffer({ resolveWithObject: true });
+    const L = (x, y) => data[y * W + x] / 255;
+    let dark = 0, c = 0, cn = 0;
+    for (let i = 0; i < W * H; i++) if (data[i] / 255 < 0.3) dark++;
+    for (let y = Math.floor(H * 0.12); y < H * 0.75; y++)
+      for (let x = Math.floor(W * 0.18); x < W * 0.82; x++) {
+        c += Math.abs(L(x + 1, y) - L(x, y)) + Math.abs(L(x, y + 1) - L(x, y));
+        cn++;
+      }
+    if (!(dark / (W * H) > 0.7 && c / cn < 0.035)) return false;
+  }
+  const W = 200, H = 300;
+  const { data } = await sharp(file).resize(W, H, { fit: "fill" }).greyscale().raw().toBuffer({ resolveWithObject: true });
+  const L = (x, y) => data[y * W + x] / 255;
+  let strong = 0, n = 0;
+  for (let y = Math.floor(H * 0.08); y < H * 0.85; y++)
+    for (let x = Math.floor(W * 0.15); x < W * 0.85; x++) {
+      n++;
+      if (Math.max(Math.abs(L(x + 1, y) - L(x, y)), Math.abs(L(x, y + 1) - L(x, y))) > 0.12) strong++;
+    }
+  return strong / n < 0.00015;
+}
+
 // ------------------------------------------------------------------ dessin
 
 const PALETTES = [
@@ -191,7 +224,7 @@ for (const b of books) {
     const file = path.join(PUB, b.coverImage);
     let isGen = false;
     try {
-      isGen = await isGenericCover(file);
+      isGen = (await isGenericCover(file)) || (await isBlankBinding(file));
     } catch {
       continue; // fichier absent ou illisible
     }
