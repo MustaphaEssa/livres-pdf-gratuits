@@ -224,7 +224,9 @@ export default async function BookPage({ params }: BookPageProps) {
         })),
       }
     : null;
-  const summarySource = usefulDesc && book.descriptionSource ? book.descriptionSource : null;
+  // Lien d'attribution seulement pour un extrait externe (Wikipédia) ; nos textes
+  // éditoriaux (« editorial|… ») n'en ont pas.
+  const summarySource = usefulDesc && book.descriptionSource?.startsWith("http") ? book.descriptionSource : null;
 
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
@@ -343,9 +345,16 @@ export default async function BookPage({ params }: BookPageProps) {
             <div className="detail-main">
               <section aria-labelledby="about">
                 <h2 id="about">{t.book.about}</h2>
-                <p className="prose" dir="auto">
-                  {aboutText}
-                </p>
+                {/* Descriptions éditoriales en plusieurs paragraphes (séparés par une ligne vide) */}
+                {aboutText
+                  .split(/\n\s*\n/)
+                  .map((para) => para.trim())
+                  .filter(Boolean)
+                  .map((para, i) => (
+                    <p key={i} className="prose" dir="auto" style={i > 0 ? { marginTop: 12 } : undefined}>
+                      {para}
+                    </p>
+                  ))}
                 {summarySource && (
                   <p className="small-note" style={{ marginTop: 8 }}>
                     <a href={summarySource} target="_blank" rel="noopener">

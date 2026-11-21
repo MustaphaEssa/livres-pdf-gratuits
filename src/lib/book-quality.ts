@@ -36,6 +36,6 @@ export interface QualityFields {
 }
 
 export function isLowValueBook(b: QualityFields): boolean {
-  if ((b.descriptionSource ?? "").startsWith("http")) return false;
+  if (/^(http|editorial)/.test(b.descriptionSource ?? "")) return false;
   return NON_BOOK.some((re) => re.test(b.title));
 }

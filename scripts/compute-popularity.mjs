@@ -83,12 +83,14 @@ const end = new Date();
 const endMonth = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), 1) - 86400000); // dernier jour du mois précédent
 const startMonth = new Date(Date.UTC(endMonth.getUTCFullYear() - 1, endMonth.getUTCMonth() + 1, 1));
 const fmt = (d) => `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, "0")}${String(d.getUTCDate()).padStart(2, "0")}00`;
-const wiki = books.filter((b) => b.descriptionSource?.startsWith("http") && data.get(b.id).wiki === undefined);
+// URL de l'article Wikipédia : descriptionSource « https://… » ou « editorial|https://… »
+const wikiUrl = (b) => b.descriptionSource?.match(/https?:\/\/\S+/)?.[0] ?? null;
+const wiki = books.filter((b) => wikiUrl(b) && data.get(b.id).wiki === undefined);
 console.log(`Wikipédia : ${wiki.length} article(s) à mesurer (${fmt(startMonth)} → ${fmt(endMonth)})`);
 for (const b of wiki) {
   let views = 0;
   try {
-    const u = new URL(b.descriptionSource);
+    const u = new URL(wikiUrl(b));
     const project = u.hostname.replace(/^www\./, "").replace(".org", ""); // fr.wikipedia
     const article = u.pathname.split("/wiki/")[1];
     const res = await get(
