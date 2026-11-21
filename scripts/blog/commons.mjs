@@ -11,7 +11,7 @@
  * bloque le serveur : on prépare tout depuis un autre poste avec prefetch-images.mjs,
  * puis on copie le dossier sur le serveur).
  */
-import { mkdir, writeFile, readFile, stat } from "node:fs/promises";
+import { mkdir, writeFile, readFile, stat, copyFile } from "node:fs/promises";
 import path from "node:path";
 
 const DIR = path.join(process.cwd(), "public", "uploads", "blog");
@@ -91,11 +91,20 @@ export async function commonsImage(file, base, lang = "fr") {
     if (known && known.title === title && (await fileOk(path.join(DIR, known.name)))) {
       return { url: `/uploads/blog/${known.name}`, credit: buildCredit(known, lang) };
     }
+    // Même fichier Commons déjà récupéré sous un autre nom : copie locale, sans réseau
+    const twin = Object.values(m).find((e) => e.title === title);
+    if (twin && (await fileOk(path.join(DIR, twin.name)))) {
+      const name = `${base}${path.extname(twin.name)}`;
+      await copyFile(path.join(DIR, twin.name), path.join(DIR, name));
+      m[base] = { ...twin, name };
+      await saveManifest();
+      return { url: `/uploads/blog/${name}`, credit: buildCredit(m[base], lang) };
+    }
     const d = await api({
       action: "query",
       titles: title,
       prop: "imageinfo",
-      iiprop: "url|extmetadata|mime",
+      iiprop: "url|extmetadata|mime|size",
       iiurlwidth: "960",
       iiextmetadatafilter: "LicenseShortName|Artist",
     });
@@ -110,7 +119,8 @@ export async function commonsImage(file, base, lang = "fr") {
       .slice(0, 120)
       .trim();
 
-    const src = info.thumburl || info.url;
+    // Original si l'image fait moins de 960 px (Commons refuse les vignettes agrandies : 429)
+    const src = info.width && info.width <= 960 ? info.url : info.thumburl || info.url;
     const ext = (/\.(png|jpe?g|webp|gif)(?:$|\?)/i.exec(src)?.[1] || "jpg").toLowerCase().replace("jpeg", "jpg");
     const name = `${base}.${ext}`;
     const dest = path.join(DIR, name);
@@ -139,7 +149,8 @@ export async function commonsImage(file, base, lang = "fr") {
  * Renvoie aussi le nombre d'images refusées (l'appelant peut alors reporter la publication).
  */
 export async function resolveCommonsImages(content, slug, lang = "fr") {
-  const re = /!\[([^\]]*)\]\(commons:([^)"]+?)(?:\s+"([^"]*)")?\)/g;
+  // Bloc seul sur sa ligne ; le nom de fichier peut contenir des parenthèses (« (A) »)
+  const re = /^!\[([^\]]*)\]\(commons:(.+?)(?:\s+"([^"]*)")?\)$/gm;
   const found = [...content.matchAll(re)];
   let out = content;
   let n = 0;

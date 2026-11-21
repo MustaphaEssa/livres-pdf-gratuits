@@ -63,7 +63,7 @@ export const PLAN = {
     inline: [
       {
         after: 2,
-        file: "File:Victor Hugo by Étienne Carjat 1876.jpg",
+        file: "File:Victor Hugo by Étienne Carjat 1876 - full.jpg",
         alt: "Victor Hugo photographié par Étienne Carjat en 1876",
         caption: "Victor Hugo par Étienne Carjat (1876) : toute son œuvre est dans le domaine public",
       },
@@ -101,12 +101,6 @@ export const PLAN = {
         alt: "Portrait d'Émile Zola par Nadar",
         caption: "Émile Zola photographié par Nadar",
       },
-      {
-        after: "### Germinal (1885)",
-        file: "File:Front cover illustration of Germinal by Emile Zola（Drawing by Jules Férat）.jpg",
-        alt: "Illustration de couverture de Germinal par Jules Férat",
-        caption: "Germinal, illustration de Jules Férat",
-      },
     ],
   },
   "jules-verne-par-quel-roman-commencer": {
@@ -118,12 +112,6 @@ export const PLAN = {
         alt: "Portrait de Jules Verne par Nadar",
         caption: "Jules Verne photographié par Nadar",
       },
-      {
-        after: "### Vingt mille lieues sous les mers",
-        file: "File:'Twenty Thousand Leagues Under the Sea' by Neuville and Riou 093.jpg",
-        alt: "Illustration de Vingt mille lieues sous les mers",
-        caption: "Vingt mille lieues sous les mers, illustration de l'édition Hetzel",
-      },
     ],
   },
   "classiques-lycee-lire-gratuitement-pdf": {
@@ -131,7 +119,7 @@ export const PLAN = {
     inline: [
       {
         after: "### Gustave Flaubert, Madame Bovary",
-        file: "File:Gustave Flaubert portrait photo.jpg",
+        file: "File:Portrait de Gustave Flaubert vers 1865-1869. - btv1b10053467c.jpg",
         alt: "Portrait de Gustave Flaubert par Nadar",
         caption: "Gustave Flaubert photographié par Nadar",
       },
@@ -177,7 +165,7 @@ export const PLAN = {
     inline: [
       {
         after: "## The novel came first",
-        file: "File:Victor Hugo by Étienne Carjat c1880.png",
+        file: "File:Victor Hugo by Étienne Carjat 1876 - full.jpg",
         alt: "Victor Hugo photographed by Étienne Carjat",
         caption: "Victor Hugo, photographed by Étienne Carjat",
       },

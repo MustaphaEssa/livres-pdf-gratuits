@@ -22,7 +22,7 @@ for (const [slug, plan] of Object.entries(PLAN)) {
 }
 for (const a of adaptations) {
   if (a.cover) jobs.push([a.cover, `${a.slug}-cover`]);
-  [...a.content.matchAll(/!\[[^\]]*\]\(commons:([^)"]+?)(?:\s+"[^"]*")?\)/g)].forEach((m, i) =>
+  [...a.content.matchAll(/^!\[[^\]]*\]\(commons:(.+?)(?:\s+"[^"]*")?\)$/gm)].forEach((m, i) =>
     jobs.push([m[1].trim(), `${a.slug}-${i + 1}`])
   );
 }
