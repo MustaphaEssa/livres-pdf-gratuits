@@ -488,7 +488,7 @@
   .fb-share:hover { color: #fff; background: #1877F2; }
   .post-share { margin-top: 14px; }
   /* Encart de notation après téléchargement (non bloquant) */
-  .rate-prompt { position: fixed; z-index: 40; inset-inline-end: 24px; bottom: 24px; width: min(340px, calc(100vw - 32px)); display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 18px 20px; background: var(--ivory); color: var(--ink); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow-md); animation: rate-in .35s var(--ease) both; }
+  .rate-prompt { position: fixed; z-index: 70; /* au-dessus de la bannière app Android (60) */ inset-inline-end: 24px; bottom: 24px; width: min(340px, calc(100vw - 32px)); display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 18px 20px; background: var(--ivory); color: var(--ink); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow-md); animation: rate-in .35s var(--ease) both; }
   .rate-prompt-title { margin: 0; padding-inline-end: 24px; font: 600 17px var(--font-sans); }
   .rate-prompt-hint { margin: 0; font-size: 14px; color: var(--muted); }
   .rate-prompt-close { position: absolute; top: 8px; inset-inline-end: 10px; width: 32px; height: 32px; border: 0; border-radius: 50%; background: transparent; font-size: 22px; line-height: 1; color: var(--muted); cursor: pointer; }
