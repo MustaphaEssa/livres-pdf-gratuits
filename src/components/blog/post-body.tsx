@@ -7,7 +7,7 @@ import Link from "@/i18n/navigation";
  *   ## Intertitre        → <h2 id="…">     ### Sous-titre → <h3>
  *   - élément (lignes)   → <ul><li>
  *   [texte](/livre/x)    → lien interne (externe si http…)
- *   **gras**             → <strong>
+ *   **gras**             → <strong>      *italique* → <em>
  *   ![alt](/img.jpg "légende") → <figure> (seul dans son bloc)
  *
  * Les anciens articles (paragraphes simples séparés par une ligne vide) s'affichent
@@ -24,7 +24,9 @@ const slugId = (s: string) =>
 
 function inline(text: string, keyBase: string): ReactNode[] {
   const out: ReactNode[] = [];
-  const re = /\[([^\]]+)\]\(([^)\s]+)\)|\*\*([^*]+)\*\*/g;
+  // Lien (l'adresse peut contenir des parenthèses équilibrées : « …_(roman) »),
+  // **gras**, puis *italique* (qui peut contenir un lien).
+  const re = /\[([^\]]+)\]\(((?:[^()\s]|\([^()\s]*\))+)\)|\*\*([^*]+)\*\*|\*(?!\s)([^*]+?)\*/g;
   let last = 0;
   let m: RegExpExecArray | null;
   let i = 0;
@@ -44,8 +46,10 @@ function inline(text: string, keyBase: string): ReactNode[] {
           </a>
         )
       );
-    } else {
+    } else if (m[3] !== undefined) {
       out.push(<strong key={key}>{m[3]}</strong>);
+    } else {
+      out.push(<em key={key}>{inline(m[4], key)}</em>);
     }
     last = re.lastIndex;
   }
