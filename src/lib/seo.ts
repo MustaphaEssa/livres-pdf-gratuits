@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { LOCALES, LOCALE_INFO, localizePath, type Locale } from "@/i18n/config";
-import { i18nAlternates } from "@/i18n/seo";
+import { i18nAlternates, INDEXED_LOCALES } from "@/i18n/seo";
 import { SITE_URL, SITE_NAME } from "@/lib/site";
 
 // Métadonnées communes à toutes les pages publiques : title, description,
@@ -50,7 +50,7 @@ interface PageMetaInput {
 export function pageMetadata(o: PageMetaInput): Metadata {
   const url = `${SITE_URL}${localizePath(o.locale, o.path)}`;
   const image = o.image ?? { ...DEFAULT_OG_IMAGE, alt: o.siteName ?? SITE_NAME };
-  const indexLocales = o.indexLocales ?? LOCALES;
+  const indexLocales = o.indexLocales ?? INDEXED_LOCALES;
   const noindex = o.noindex || !indexLocales.includes(o.locale);
   const images = [{ ...image, url: absoluteUrl(image.url) }];
   return {

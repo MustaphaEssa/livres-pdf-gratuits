@@ -37,6 +37,7 @@ import { isBot } from "@/lib/bot";
 import { getServerI18n } from "@/i18n/server";
 import { localizePath } from "@/i18n/config";
 import { bookIndexLocales } from "@/i18n/seo";
+import { isLowValueBook } from "@/lib/book-quality";
 import { categoryLabel, fmt, formatNumber, authorLabel } from "@/i18n/format";
 import { isUsefulDescription, autoDescription, truncateText } from "@/lib/book-description";
 import { pageMetadata, descriptionWithCta, clip, absoluteUrl } from "@/lib/seo";
@@ -75,6 +76,8 @@ export async function generateMetadata({ params }: BookPageProps): Promise<Metad
     description: metaDesc,
     type: "book",
     indexLocales: bookIndexLocales(book.language),
+    // Revue, bulletin, catalogue… ou livre téléchargé nulle part : hors index (reste accessible)
+    noindex: isLowValueBook(book),
     // Carte 1200×630 générée (couverture + titre), cf. /og/livre/[slug]
     image: { url: `/og/livre/${encodeURIComponent(book.slug)}`, width: 1200, height: 630, alt: book.title },
     openGraphExtra: {

@@ -1,10 +1,10 @@
 import DesignShell from "@/components/design/shell";
 import { getServerI18n } from "@/i18n/server";
-import { i18nAlternates } from "@/i18n/seo";
+import { i18nAlternates, localeRobots } from "@/i18n/seo";
 
 export async function generateMetadata() {
   const { locale, t } = await getServerI18n();
-  return { title: t.meta.about, alternates: i18nAlternates(locale, "/a-propos") };
+  return { title: t.meta.about, alternates: i18nAlternates(locale, "/a-propos"), ...localeRobots(locale) };
 }
 
 export default async function AboutPage() {

@@ -1,6 +1,6 @@
 import Link from "@/i18n/navigation";
 import { getServerI18n } from "@/i18n/server";
-import { i18nAlternates } from "@/i18n/seo";
+import { i18nAlternates, localeRobots } from "@/i18n/seo";
 import { categoryLabel, fmt, formatDateLocale, plural, authorLabel } from "@/i18n/format";
 import DesignHeader from "@/components/design/header";
 import DesignFooter from "@/components/design/footer";
@@ -42,7 +42,7 @@ const CAT_ICON: Record<string, string> = {
 
 export async function generateMetadata() {
   const { locale } = await getServerI18n();
-  return { alternates: i18nAlternates(locale, "/") };
+  return { alternates: i18nAlternates(locale, "/"), ...localeRobots(locale) };
 }
 
 export default async function HomePage() {

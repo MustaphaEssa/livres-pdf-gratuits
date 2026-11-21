@@ -1,10 +1,24 @@
 import { LOCALES, DEFAULT_LOCALE, X_DEFAULT_LOCALE, localizePath, type Locale } from "./config";
 
 /**
- * Canonical + hreflang pour une page traduite dans toutes les langues.
+ * Langues indexées : celles dont le catalogue contient des livres. Les autres
+ * (arabe, russe, turc, chinois, japonais) ont une interface traduite mais leurs pages
+ * listent des livres d'autres langues : quasi-doublons → noindex, hors hreflang et
+ * hors sitemap, tant qu'il n'y a pas de livres dans ces langues. Toujours accessibles
+ * aux visiteurs. Ajouter une langue ici dès que son catalogue a des livres.
+ */
+export const INDEXED_LOCALES: readonly Locale[] = ["fr", "en", "es", "de", "it", "pt", "nl"];
+
+/** robots noindex,follow pour une langue sans contenu propre. */
+export function localeRobots(locale: Locale) {
+  return INDEXED_LOCALES.includes(locale) ? {} : { robots: { index: false, follow: true } };
+}
+
+/**
+ * Canonical + hreflang pour une page traduite dans toutes les langues indexées.
  * `path` est le chemin SANS préfixe (« /catalogue »).
  */
-export function i18nAlternates(locale: Locale, path: string, locales: readonly Locale[] = LOCALES) {
+export function i18nAlternates(locale: Locale, path: string, locales: readonly Locale[] = INDEXED_LOCALES) {
   const languages: Record<string, string> = {};
   for (const l of locales) languages[l] = localizePath(l, path);
   // Version proposée aux visiteurs dont la langue n'est pas couverte : l'anglais.
