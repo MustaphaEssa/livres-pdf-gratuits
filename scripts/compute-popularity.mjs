@@ -10,7 +10,8 @@
  *
  * Score (0 à ~1,05) : chaque source est ramenée sur 0–1 en échelle logarithmique
  * (log10(1+v) / log10(1+max de la source)), puis
- *   0,6 × max(Gutenberg, Internet Archive) + 0,4 × Wikipédia + 0,05 × site.
+ *   0,6 × max(Gutenberg, Internet Archive) + 0,4 × Wikipédia + 0,05 × site
+ * (sans article Wikipédia identifié : 0,85 × max(Gutenberg, Internet Archive) + 0,05 × site).
  *
  *   node scripts/compute-popularity.mjs            # collecte + calcul, écrit en base
  *   node scripts/compute-popularity.mjs --refresh  # re-collecte tout (sinon reprend où il en était)
@@ -116,8 +117,11 @@ const norm = (v, m) => Math.log10(1 + (v ?? 0)) / Math.log10(1 + m);
 let written = 0;
 for (const b of books) {
   const d = data.get(b.id);
-  const score =
-    0.6 * Math.max(norm(d.gut, max.gut), norm(d.ia, max.ia)) + 0.4 * norm(d.wiki, max.wiki) + 0.05 * norm(b.downloadCount, max.site);
+  const dl = Math.max(norm(d.gut, max.gut), norm(d.ia, max.ia));
+  // Pas d'article Wikipédia identifié ≠ œuvre inconnue (ex. classiques importés après la
+  // recherche des résumés) : le score repose alors sur les téléchargements, légère décote.
+  const ext = d.wiki ? 0.6 * dl + 0.4 * norm(d.wiki, max.wiki) : 0.85 * dl;
+  const score = ext + 0.05 * norm(b.downloadCount, max.site);
   d.at = new Date().toISOString().slice(0, 10);
   await prisma.book.update({ where: { id: b.id }, data: { popularity: Math.round(score * 10000) / 10000, popularityData: d } });
   written++;
