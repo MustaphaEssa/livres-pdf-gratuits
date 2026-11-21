@@ -143,6 +143,8 @@ export const fr: PublicMessages = {
     progress: "Progression", prevKey: "Précédent (←)", nextKey: "Suivant (→)",
   },
   reviews: {
+    pending: "Merci ! Votre commentaire sera publié après validation.", promptTitle: "Ce livre vous a plu ?", promptHint: "Donnez-lui une note en un clic.",
+    promptThanks: "Merci pour votre note !", promptAddComment: "Ajouter un commentaire", close: "Fermer",
     title: "Avis des lecteurs", yourName: "Votre nom", comment: "Votre commentaire (optionnel)", publish: "Publier mon avis",
     sending: "Envoi…", thanks: "Merci pour votre avis !", chooseRating: "Choisissez une note (1 à 5 étoiles)",
     none: "Aucun avis pour le moment. Soyez le premier !", anonymous: "Anonyme",

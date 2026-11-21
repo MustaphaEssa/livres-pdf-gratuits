@@ -129,6 +129,8 @@ export const nl: DeepPartial<PublicMessages> = {
     cannotDisplay: "Deze PDF kan niet worden weergegeven.", progress: "Voortgang", prevKey: "Vorige (←)", nextKey: "Volgende (→)",
   },
   reviews: {
+    pending: "Bedankt! Je reactie wordt na controle gepubliceerd.", promptTitle: "Vond je dit boek leuk?", promptHint: "Beoordeel het met één klik.",
+    promptThanks: "Bedankt voor je beoordeling!", promptAddComment: "Reactie toevoegen", close: "Sluiten",
     title: "Recensies van lezers", yourName: "Je naam", comment: "Je opmerking (optioneel)", publish: "Recensie plaatsen",
     sending: "Verzenden…", thanks: "Bedankt voor je recensie!", chooseRating: "Kies een beoordeling (1 tot 5 sterren)",
     none: "Nog geen recensies. Wees de eerste!", anonymous: "Anoniem",

@@ -124,6 +124,8 @@ export const zh: DeepPartial<PublicMessages> = {
     progress: "进度", prevKey: "上一页（←）", nextKey: "下一页（→）",
   },
   reviews: {
+    pending: "谢谢！您的评论将在审核后发布。", promptTitle: "喜欢这本书吗？", promptHint: "一键为它评分。",
+    promptThanks: "感谢您的评分！", promptAddComment: "添加评论", close: "关闭",
     title: "读者评论", yourName: "你的名字", comment: "你的评论（可选）", publish: "发表评论", sending: "发送中…",
     thanks: "感谢你的评论！", chooseRating: "请选择评分（1 到 5 星）", none: "暂无评论。来写第一条吧！", anonymous: "匿名",
   },

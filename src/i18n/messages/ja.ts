@@ -129,6 +129,8 @@ export const ja: DeepPartial<PublicMessages> = {
     cannotDisplay: "この PDF を表示できません。", progress: "進捗", prevKey: "前へ（←）", nextKey: "次へ（→）",
   },
   reviews: {
+    pending: "ありがとうございます！コメントは確認後に公開されます。", promptTitle: "この本は気に入りましたか？", promptHint: "ワンクリックで評価しましょう。",
+    promptThanks: "評価ありがとうございます！", promptAddComment: "コメントを追加", close: "閉じる",
     title: "読者レビュー", yourName: "お名前", comment: "コメント（任意）", publish: "レビューを投稿", sending: "送信中…",
     thanks: "レビューありがとうございます！", chooseRating: "評価を選んでください（星 1〜5）",
     none: "まだレビューはありません。最初のレビューを書きませんか？", anonymous: "匿名",

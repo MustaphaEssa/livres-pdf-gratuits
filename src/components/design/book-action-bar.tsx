@@ -51,7 +51,7 @@ export default function BookActionBar({
         </a>
       ) : null}
       {downloadHref && (
-        <a className="btn btn-outline" href={downloadHref} tabIndex={visible ? 0 : -1} aria-label={t.book.downloadPdf}>
+        <a className="btn btn-outline" href={downloadHref} tabIndex={visible ? 0 : -1} aria-label={t.book.downloadPdf} data-rate-trigger>
           <Icon d={I.download} size={18} /> PDF
         </a>
       )}

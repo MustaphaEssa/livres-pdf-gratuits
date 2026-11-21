@@ -133,6 +133,8 @@ export const ar: DeepPartial<PublicMessages> = {
     cannotDisplay: "تعذّر عرض ملف PDF هذا.", progress: "التقدم", prevKey: "السابق (←)", nextKey: "التالي (→)",
   },
   reviews: {
+    pending: "شكرًا! سيُنشر تعليقك بعد المراجعة.", promptTitle: "هل أعجبك هذا الكتاب؟", promptHint: "قيّمه بنقرة واحدة.",
+    promptThanks: "شكرًا على تقييمك!", promptAddComment: "أضف تعليقًا", close: "إغلاق",
     title: "آراء القرّاء", yourName: "اسمك", comment: "تعليقك (اختياري)", publish: "نشر رأيي", sending: "جارٍ الإرسال…",
     thanks: "شكرًا على رأيك!", chooseRating: "اختر تقييمًا (من 1 إلى 5 نجوم)", none: "لا توجد آراء بعد. كن الأول!", anonymous: "مجهول",
   },

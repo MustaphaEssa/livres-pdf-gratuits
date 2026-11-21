@@ -484,6 +484,18 @@
   .share-menu a, .share-menu button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border: 0; border-radius: 10px; background: transparent; font: 500 14px var(--font-sans); color: var(--ink); text-decoration: none; cursor: pointer; }
   .share-menu a:hover, .share-menu button:hover { background: var(--sand-2); }
   .share-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .fb-share { color: #1877F2; }
+  .fb-share:hover { color: #fff; background: #1877F2; }
+  .post-share { margin-top: 14px; }
+  /* Encart de notation après téléchargement (non bloquant) */
+  .rate-prompt { position: fixed; z-index: 40; inset-inline-end: 24px; bottom: 24px; width: min(340px, calc(100vw - 32px)); display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 18px 20px; background: var(--ivory); color: var(--ink); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow-md); animation: rate-in .35s var(--ease) both; }
+  .rate-prompt-title { margin: 0; padding-inline-end: 24px; font: 600 17px var(--font-sans); }
+  .rate-prompt-hint { margin: 0; font-size: 14px; color: var(--muted); }
+  .rate-prompt-close { position: absolute; top: 8px; inset-inline-end: 10px; width: 32px; height: 32px; border: 0; border-radius: 50%; background: transparent; font-size: 22px; line-height: 1; color: var(--muted); cursor: pointer; }
+  .rate-prompt-close:hover { background: var(--sand-2); color: var(--ink); }
+  @keyframes rate-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+  @media (max-width: 767px) { .rate-prompt { inset-inline: 16px; width: auto; bottom: calc(88px + env(safe-area-inset-bottom)); } }
+  @media (prefers-reduced-motion: reduce) { .rate-prompt { animation: none; } }
 
   /* ---------- Fiche livre : « livres comme celui-ci » ---------- */
   .like-band { margin-top: 84px; background: var(--sand); }

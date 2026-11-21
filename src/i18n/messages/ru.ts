@@ -134,6 +134,8 @@ export const ru: DeepPartial<PublicMessages> = {
     cannotDisplay: "Не удалось открыть этот PDF.", progress: "Прогресс", prevKey: "Назад (←)", nextKey: "Далее (→)",
   },
   reviews: {
+    pending: "Спасибо! Ваш комментарий будет опубликован после проверки.", promptTitle: "Вам понравилась эта книга?", promptHint: "Оцените её одним кликом.",
+    promptThanks: "Спасибо за вашу оценку!", promptAddComment: "Добавить комментарий", close: "Закрыть",
     title: "Отзывы читателей", yourName: "Ваше имя", comment: "Ваш комментарий (необязательно)", publish: "Оставить отзыв",
     sending: "Отправка…", thanks: "Спасибо за отзыв!", chooseRating: "Выберите оценку (от 1 до 5 звёзд)",
     none: "Отзывов пока нет. Будьте первым!", anonymous: "Аноним",

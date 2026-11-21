@@ -138,6 +138,8 @@ export const en: PublicMessages = {
     prevKey: "Previous (←)", nextKey: "Next (→)",
   },
   reviews: {
+    pending: "Thank you! Your comment will be published after review.", promptTitle: "Did you enjoy this book?", promptHint: "Rate it in one click.",
+    promptThanks: "Thanks for your rating!", promptAddComment: "Add a comment", close: "Close",
     title: "Reader reviews", yourName: "Your name", comment: "Your comment (optional)", publish: "Post my review",
     sending: "Sending…", thanks: "Thank you for your review!", chooseRating: "Choose a rating (1 to 5 stars)",
     none: "No reviews yet. Be the first!", anonymous: "Anonymous",

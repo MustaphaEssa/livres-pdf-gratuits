@@ -102,6 +102,7 @@ export interface PublicMessages {
   reviews: {
     title: string; yourName: string; comment: string; publish: string; sending: string;
     thanks: string; chooseRating: string; none: string; anonymous: string;
+    pending: string; promptTitle: string; promptHint: string; promptThanks: string; promptAddComment: string; close: string;
   };
   auth: {
     loginTitle: string; loginSubtitle: string; registerTitle: string; registerSubtitle: string;

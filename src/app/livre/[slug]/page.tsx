@@ -15,6 +15,7 @@ import { ZelligePattern } from "@/components/design/patterns";
 import { AudioPlayer } from "@/components/books/audio-player";
 import { ShareButtons } from "@/components/books/share-buttons";
 import { Reviews } from "@/components/books/reviews";
+import { RatePrompt } from "@/components/books/rate-prompt";
 import { formatFileSize, formatAuthorName } from "@/lib/utils";
 import { localizedBio } from "@/lib/author-bios";
 import {
@@ -315,7 +316,7 @@ export default async function BookPage({ params }: BookPageProps) {
               </dl>
               <div className="actions">
                 {hasPdf && (
-                  <a className="btn btn-primary btn-lg" href={downloadHref}>
+                  <a className="btn btn-primary btn-lg" href={downloadHref} data-rate-trigger>
                     <Icon d={I.download} /> {t.book.downloadPdf}
                   </a>
                 )}
@@ -431,6 +432,7 @@ export default async function BookPage({ params }: BookPageProps) {
               <section aria-labelledby="reviews">
                 <h2 id="reviews">{t.book.reviews}</h2>
                 <Reviews bookId={book.id} isLoggedIn={isLoggedIn} />
+                <RatePrompt bookId={book.id} />
               </section>
             </div>
 
@@ -462,7 +464,7 @@ export default async function BookPage({ params }: BookPageProps) {
                         <span>{book.pdfSize ? formatFileSize(book.pdfSize) : ""}</span>
                       </div>
                       <p>{t.book.pdfOffline}</p>
-                      <a className="btn btn-primary btn-xl" href={downloadHref}>
+                      <a className="btn btn-primary btn-xl" href={downloadHref} data-rate-trigger>
                         <Icon d={I.download} /> {t.book.downloadPdf}
                       </a>
                     </div>
@@ -478,7 +480,7 @@ export default async function BookPage({ params }: BookPageProps) {
                         <span>{t.book.epubDevice}</span>
                       </div>
                       <p>{t.book.epubIdeal}</p>
-                      <a className="btn btn-outline btn-xl" href={book.epubUrl} target="_blank" rel="noopener noreferrer">
+                      <a className="btn btn-outline btn-xl" href={book.epubUrl} target="_blank" rel="noopener noreferrer" data-rate-trigger>
                         <Icon d={I.download} /> {t.book.downloadEpub}
                       </a>
                       <a

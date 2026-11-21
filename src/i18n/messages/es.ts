@@ -130,6 +130,8 @@ export const es: DeepPartial<PublicMessages> = {
     cannotDisplay: "No se puede mostrar este PDF.", progress: "Progreso", prevKey: "Anterior (←)", nextKey: "Siguiente (→)",
   },
   reviews: {
+    pending: "¡Gracias! Tu comentario se publicará tras su revisión.", promptTitle: "¿Te ha gustado este libro?", promptHint: "Valóralo con un clic.",
+    promptThanks: "¡Gracias por tu valoración!", promptAddComment: "Añadir un comentario", close: "Cerrar",
     title: "Opiniones de los lectores", yourName: "Tu nombre", comment: "Tu comentario (opcional)", publish: "Publicar mi opinión",
     sending: "Enviando…", thanks: "¡Gracias por tu opinión!", chooseRating: "Elige una valoración (de 1 a 5 estrellas)",
     none: "Todavía no hay opiniones. ¡Sé el primero!", anonymous: "Anónimo",

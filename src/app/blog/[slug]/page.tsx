@@ -1,5 +1,6 @@
 import Link from "@/i18n/navigation";
 import PostBody from "@/components/blog/post-body";
+import { ShareButtons } from "@/components/books/share-buttons";
 import { getServerI18n } from "@/i18n/server";
 import { isLocale, localizePath, DEFAULT_LOCALE, type Locale } from "@/i18n/config";
 import { formatDateLocale } from "@/i18n/format";
@@ -127,16 +128,8 @@ export default async function PostPage({ params }: Props) {
               <p style={{ color: "var(--muted)", marginTop: 10 }}>
                 {post.author ? `${post.author} · ` : ""}
                 {formatDateLocale(locale, post.publishedAt ?? post.createdAt)}
-                {"  "}
-                <a
-                  href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ color: "var(--accent)", fontWeight: 600, marginLeft: 8 }}
-                >
-                  {t.common.share}
-                </a>
               </p>
+              <ShareButtons url={shareUrl} title={post.title} size="sm" className="post-share" />
             </div>
           </div>
 

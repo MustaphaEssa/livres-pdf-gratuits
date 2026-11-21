@@ -129,6 +129,8 @@ export const tr: DeepPartial<PublicMessages> = {
     prevKey: "Önceki (←)", nextKey: "Sonraki (→)",
   },
   reviews: {
+    pending: "Teşekkürler! Yorumunuz incelendikten sonra yayınlanacak.", promptTitle: "Bu kitabı beğendiniz mi?", promptHint: "Tek tıkla puan verin.",
+    promptThanks: "Puanınız için teşekkürler!", promptAddComment: "Yorum ekle", close: "Kapat",
     title: "Okur yorumları", yourName: "Adınız", comment: "Yorumunuz (isteğe bağlı)", publish: "Yorumumu yayınla", sending: "Gönderiliyor…",
     thanks: "Yorumunuz için teşekkürler!", chooseRating: "Bir puan seçin (1 ile 5 yıldız arası)",
     none: "Henüz yorum yok. İlk yorumu siz yapın!", anonymous: "Anonim",

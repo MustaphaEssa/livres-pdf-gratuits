@@ -41,6 +41,8 @@ export function Reviews({
   const [rating, setRating] = useState(0);
   const [hover, setHover] = useState(0);
   const [comment, setComment] = useState("");
+  const [pending, setPending] = useState(false);
+  const [honeypot, setHoneypot] = useState(""); // champ piège anti-robots
   const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -53,6 +55,10 @@ export function Reviews({
 
   useEffect(() => {
     load();
+    // Note donnée depuis l'encart après téléchargement → recharge la liste
+    const refresh = () => load();
+    window.addEventListener("reviews:refresh", refresh);
+    return () => window.removeEventListener("reviews:refresh", refresh);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookId]);
 
@@ -73,10 +79,12 @@ export function Reviews({
           rating,
           comment,
           ...(isLoggedIn ? {} : { name }),
+          website: honeypot,
         }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Échec de l'envoi");
+      setPending(!!data.pending);
       setDone(true);
       setRating(0);
       setComment("");
@@ -94,7 +102,7 @@ export function Reviews({
       {/* Formulaire */}
       <div className="review-form">
         {done ? (
-          <p className="form-note ok">{t.reviews.thanks}</p>
+          <p className="form-note ok">{pending ? t.reviews.pending : t.reviews.thanks}</p>
         ) : (
           <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div className="stars-input" role="radiogroup" aria-label={t.reviews.chooseRating}>
@@ -124,9 +132,19 @@ export function Reviews({
                 placeholder={t.reviews.yourName}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                required
               />
             )}
+            {/* Champ piège : invisible pour les humains, rempli par les robots */}
+            <input
+              type="text"
+              name="website"
+              tabIndex={-1}
+              autoComplete="off"
+              value={honeypot}
+              onChange={(e) => setHoneypot(e.target.value)}
+              aria-hidden="true"
+              style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0 }}
+            />
             <textarea
               className="field"
               placeholder={t.reviews.comment}
