@@ -36,8 +36,11 @@ export async function generateMetadata({ params }: Props) {
       ? post.coverImage
       : `${SITE_URL}${post.coverImage}`
     : undefined;
+  // Titre SEO déjà calibré (≤ 60 car.) : pas de suffixe « | Nom du site » qui le ferait
+  // couper par Google. Suffixe gardé seulement s'il tient dans les 60 caractères.
+  const fitsWithSuffix = title.length + SITE_NAME.length + 3 <= 60;
   return {
-    title,
+    title: post.metaTitle || !fitsWithSuffix ? { absolute: title } : title,
     description,
     alternates: { canonical: localizePath(postLocale(post.language), `/blog/${slug}`) },
     openGraph: {

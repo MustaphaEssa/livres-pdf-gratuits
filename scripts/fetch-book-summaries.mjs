@@ -44,6 +44,24 @@ const isUseful = (d) => {
   return s.length >= 60 && !JUNK.some((re) => re.test(s)) && !GENERATED.test(s);
 };
 
+// Même règle que scripts/reject-bad-summaries.mjs
+const keyOf = (s) =>
+  (s ?? "")
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase()
+    .replace(/\(.*?\)|\[.*?\]/g, "")
+    .replace(/\d{3,4}\s*-\s*\d{0,4}/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+function sameAsAuthor(book, articleTitle) {
+  const parts = String(book.author ?? "").replace(/\d{3,4}\s*-\s*\d{0,4}/g, "").split(",").map((p) => p.trim()).filter(Boolean);
+  const a = keyOf(parts.length === 2 ? `${parts[1]} ${parts[0]}` : parts[0] ?? "");
+  if (!a) return false;
+  const w = keyOf(articleTitle);
+  return w === a || keyOf(book.title) === a || (w.split(" ").length >= 2 && a.includes(w));
+}
+
 const norm = (s) =>
   (s ?? "")
     .normalize("NFD")
@@ -177,6 +195,8 @@ async function main() {
       if (match) break;
     }
     if (!match) continue;
+    // L'article décrit l'auteur (livre au même nom que lui) : biographie ≠ résumé du livre
+    if (sameAsAuthor(book, match.title)) continue;
     found++;
     console.log(`✓ [${i + 1}/${todo.length}] ${book.title} — ${displayAuthor(book.author)}  →  ${match.title}  (${match.text.length} car.)`);
     if (APPLY) {
