@@ -14,7 +14,6 @@ import { ZelligePattern } from "@/components/design/patterns";
 import JsonLd, { websiteLd, organizationLd, itemListLd } from "@/components/seo/json-ld";
 import BookCard from "@/components/design/book-card";
 import {
-  getFeaturedBooks,
   getHomePicks,
   getLatestBooks,
   getBooksByLang,
@@ -70,7 +69,7 @@ export default async function HomePage() {
     await Promise.all([
       getLatestBooks(8),
       Promise.all(shelfLangs.map((l) => getBooksByLang(l.code, 8))),
-      pageLang ? getHomePicks(pageLang, 6) : getFeaturedBooks(6),
+      getHomePicks(pageLang, 6),
       getCategoriesWithCounts(),
       getHomeCollections(4).then((cs) => cs.map((c) => localizeCollection(locale, c))),
       getTopAuthors(10),

@@ -72,6 +72,10 @@ model Book {
   // Métriques
   downloadCount Int      @default(0)
   viewCount    Int      @default(0)
+  // Popularité externe (0 à ~1) : Gutenberg / Internet Archive (téléchargements) + Wikipédia
+  // (vues de l'article) + téléchargements sur le site. Calculée par scripts/compute-popularity.mjs.
+  popularity     Float  @default(0)
+  popularityData Json?
   rating       Float    @default(0)
   ratingCount  Int      @default(0)
   
@@ -97,6 +101,7 @@ model Book {
   @@index([authorSlug])
   @@index([isFeatured])
   @@index([downloadCount])
+  @@index([popularity])
   @@index([createdAt])
   @@index([isPublished])
   @@index([language])

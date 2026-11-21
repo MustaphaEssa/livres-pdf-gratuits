@@ -57,73 +57,39 @@ export async function getFeaturedBooks(limit = 6): Promise<BookWithCategories[]>
   });
 }
 
-// Œuvre connue : un résumé Wikipédia a été trouvé pour elle (fetch-book-summaries).
-// Indice de notoriété quand les téléchargements sont encore trop rares pour classer.
-const KNOWN_WORK: Prisma.BookWhereInput = { descriptionSource: { startsWith: "http" } };
+// Classement par importance réelle : score de popularité externe (Gutenberg / Internet
+// Archive / Wikipédia, cf. scripts/compute-popularity.mjs), puis téléchargements du site.
+const BY_POPULARITY: Prisma.BookOrderByWithRelationInput[] = [{ popularity: "desc" }, { downloadCount: "desc" }];
 
-// Livres par langue (étagères de l'accueil)
-export async function getBooksByLang(
-  language: string,
-  limit = 8
-): Promise<BookWithCategories[]> {
-  const base: Prisma.BookWhereInput = { isPublished: true, mediaType: "PDF", language };
-  // Français : vrai historique de téléchargements → classement direct.
-  // Autres langues : quasiment aucun téléchargement → œuvres connues d'abord.
-  const known =
-    language === "fr"
-      ? []
-      : await prisma.book.findMany({
-          where: { ...base, ...KNOWN_WORK },
-          include: bookWithCategories.include,
-          orderBy: [{ downloadCount: "desc" }, { viewCount: "desc" }],
-          distinct: ["author"], // un livre par auteur : rangée variée
-          take: limit,
-        });
-  if (known.length >= limit) return known;
-  const rest = await prisma.book.findMany({
-    where: { ...base, id: { notIn: known.map((b) => b.id) }, author: { notIn: known.map((b) => b.author) } },
+// Livres par langue (étagères de l'accueil) : les plus importants d'abord, un par auteur
+export async function getBooksByLang(language: string, limit = 8): Promise<BookWithCategories[]> {
+  return prisma.book.findMany({
+    where: { isPublished: true, mediaType: "PDF", language },
     include: bookWithCategories.include,
-    orderBy: { downloadCount: "desc" },
-    distinct: ["author"],
-    take: limit - known.length,
+    orderBy: BY_POPULARITY,
+    distinct: ["author"], // un livre par auteur : rangée variée
+    take: limit,
   });
-  return [...known, ...rest];
 }
 
 /**
- * Sélection « à la une » de l'accueil dans la langue de la page :
- * 1) livres mis en avant dans cette langue ; 2) œuvres connues de cette langue
- * (résumé Wikipédia), par téléchargements puis vues ; 3) complément : sélection générale.
+ * Sélection « à la une » de l'accueil : les livres les plus importants (score de
+ * popularité externe) dans la langue de la page, un par auteur ; sans langue (ou si
+ * elle n'a pas assez de livres) : les plus importants tous langues confondues.
  */
-export async function getHomePicks(language: string, limit = 6): Promise<BookWithCategories[]> {
-  const base: Prisma.BookWhereInput = { isPublished: true, mediaType: "PDF", language };
-  const picked: BookWithCategories[] = [];
-  const add = (list: BookWithCategories[]) => {
-    for (const b of list) {
-      if (picked.length >= limit) break;
-      if (!picked.some((p) => p.id === b.id || p.author === b.author)) picked.push(b);
-    }
-  };
-  add(
-    await prisma.book.findMany({
-      where: { ...base, isFeatured: true },
+export async function getHomePicks(language: string | null, limit = 6): Promise<BookWithCategories[]> {
+  const pick = (lang?: string) =>
+    prisma.book.findMany({
+      where: { isPublished: true, mediaType: "PDF", ...(lang ? { language: lang } : {}) },
       include: bookWithCategories.include,
-      orderBy: { downloadCount: "desc" },
+      orderBy: BY_POPULARITY,
+      distinct: ["author"],
       take: limit,
-    })
-  );
-  if (picked.length < limit)
-    add(
-      await prisma.book.findMany({
-        where: { ...base, ...KNOWN_WORK },
-        include: bookWithCategories.include,
-        orderBy: [{ downloadCount: "desc" }, { viewCount: "desc" }],
-        distinct: ["author"],
-        take: limit * 2,
-      })
-    );
-  if (picked.length < limit) add(await getFeaturedBooks(limit * 2));
-  return picked;
+    });
+  const picked = language ? await pick(language) : [];
+  if (picked.length >= limit) return picked;
+  const rest = (await pick()).filter((b) => !picked.some((p) => p.id === b.id || p.author === b.author));
+  return [...picked, ...rest].slice(0, limit);
 }
 
 // Derniers livres ajoutés
