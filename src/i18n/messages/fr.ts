@@ -61,7 +61,7 @@ export const fr: PublicMessages = {
     listsEyebrow: "Listes de lecture", listsTitle: "Des collections pour vous guider", allCollections: "Toutes les collections",
     exploreEyebrow: "Explorer", genresTitle: "Parcourir par genre", allCatalogue: "Tout le catalogue",
     authorsEyebrow: "Auteurs", authorsTitle: "Les auteurs à découvrir", allAuthors: "Tous les auteurs",
-    featuredEyebrow: "À la une", featuredTitle: "Les livres les plus consultés",
+    featuredEyebrow: "À la une", featuredTitle: "Les incontournables",
     featuredText: "Une sélection mise à jour régulièrement. Chaque livre ouvre sa fiche, avec la lecture en ligne, le PDF et l'audio quand il existe.",
     seeCatalogue: "Voir le catalogue", seeBookOf: "Voir la fiche de {title}",
     audioEyebrow: "À écouter", audioTitle: "Livres audio gratuits", allAudio: "Tous les livres audio",

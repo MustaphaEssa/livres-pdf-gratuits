@@ -52,7 +52,7 @@ export const ar: DeepPartial<PublicMessages> = {
     listsEyebrow: "قوائم القراءة", listsTitle: "مجموعات ترشدك", allCollections: "كل المجموعات",
     exploreEyebrow: "استكشف", genresTitle: "تصفّح حسب النوع", allCatalogue: "الفهرس كاملًا",
     authorsEyebrow: "المؤلفون", authorsTitle: "مؤلفون لتكتشفهم", allAuthors: "كل المؤلفين",
-    featuredEyebrow: "مميّز", featuredTitle: "الكتب الأكثر اطلاعًا",
+    featuredEyebrow: "مميّز", featuredTitle: "كتب لا غنى عنها",
     featuredText: "مختارات تُحدَّث بانتظام. كل كتاب يفتح بطاقته، مع القراءة على الإنترنت وملف PDF والنسخة الصوتية إن وُجدت.",
     seeCatalogue: "عرض الفهرس", seeBookOf: "عرض بطاقة {title}",
     audioEyebrow: "للاستماع", audioTitle: "كتب صوتية مجانية", allAudio: "كل الكتب الصوتية",

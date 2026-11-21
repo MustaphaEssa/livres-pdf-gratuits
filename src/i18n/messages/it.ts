@@ -52,7 +52,7 @@ export const it: DeepPartial<PublicMessages> = {
     listsEyebrow: "Liste di lettura", listsTitle: "Raccolte per orientarti", allCollections: "Tutte le raccolte",
     exploreEyebrow: "Esplora", genresTitle: "Sfoglia per genere", allCatalogue: "Tutto il catalogo",
     authorsEyebrow: "Autori", authorsTitle: "Autori da scoprire", allAuthors: "Tutti gli autori",
-    featuredEyebrow: "In evidenza", featuredTitle: "I libri più consultati",
+    featuredEyebrow: "In evidenza", featuredTitle: "Gli imperdibili",
     featuredText: "Una selezione aggiornata regolarmente. Ogni libro apre la sua scheda, con lettura online, PDF e audio quando disponibile.",
     seeCatalogue: "Vedi il catalogo", seeBookOf: "Vedi la scheda di {title}",
     audioEyebrow: "Da ascoltare", audioTitle: "Audiolibri gratis", allAudio: "Tutti gli audiolibri",

@@ -50,7 +50,7 @@ export const zh: DeepPartial<PublicMessages> = {
     listsEyebrow: "阅读清单", listsTitle: "为你引路的合集", allCollections: "全部合集",
     exploreEyebrow: "探索", genresTitle: "按类型浏览", allCatalogue: "全部书目",
     authorsEyebrow: "作者", authorsTitle: "值得发现的作者", allAuthors: "全部作者",
-    featuredEyebrow: "热门", featuredTitle: "最受欢迎的图书",
+    featuredEyebrow: "热门", featuredTitle: "必读经典",
     featuredText: "定期更新的精选。每本书都会打开详情页，提供在线阅读、PDF，以及有声版本（如有）。",
     seeCatalogue: "查看书目", seeBookOf: "查看《{title}》详情",
     audioEyebrow: "收听", audioTitle: "免费有声书", allAudio: "全部有声书",

@@ -52,7 +52,7 @@ export const nl: DeepPartial<PublicMessages> = {
     listsEyebrow: "Leeslijsten", listsTitle: "Collecties om je op weg te helpen", allCollections: "Alle collecties",
     exploreEyebrow: "Ontdekken", genresTitle: "Bladeren per genre", allCatalogue: "Hele catalogus",
     authorsEyebrow: "Auteurs", authorsTitle: "Auteurs om te ontdekken", allAuthors: "Alle auteurs",
-    featuredEyebrow: "Uitgelicht", featuredTitle: "De meest bekeken boeken",
+    featuredEyebrow: "Uitgelicht", featuredTitle: "Onmisbare klassiekers",
     featuredText: "Een regelmatig bijgewerkte selectie. Elk boek opent zijn pagina, met online lezen, de PDF en audio als die er is.",
     seeCatalogue: "Bekijk de catalogus", seeBookOf: "Bekijk {title}",
     audioEyebrow: "Om te luisteren", audioTitle: "Gratis luisterboeken", allAudio: "Alle luisterboeken",

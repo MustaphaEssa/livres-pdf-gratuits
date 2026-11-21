@@ -51,7 +51,7 @@ export const tr: DeepPartial<PublicMessages> = {
     listsEyebrow: "Okuma listeleri", listsTitle: "Size yol gösterecek koleksiyonlar", allCollections: "Tüm koleksiyonlar",
     exploreEyebrow: "Keşfet", genresTitle: "Türe göre göz atın", allCatalogue: "Tüm katalog",
     authorsEyebrow: "Yazarlar", authorsTitle: "Keşfedilecek yazarlar", allAuthors: "Tüm yazarlar",
-    featuredEyebrow: "Öne çıkanlar", featuredTitle: "En çok incelenen kitaplar",
+    featuredEyebrow: "Öne çıkanlar", featuredTitle: "Mutlaka okunması gerekenler",
     featuredText: "Düzenli olarak güncellenen bir seçki. Her kitap kendi sayfasını açar: çevrimiçi okuma, PDF ve varsa sesli sürüm.",
     seeCatalogue: "Kataloğa git", seeBookOf: "{title} sayfasına git",
     audioEyebrow: "Dinlemek için", audioTitle: "Ücretsiz sesli kitaplar", allAudio: "Tüm sesli kitaplar",

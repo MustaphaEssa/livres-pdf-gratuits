@@ -60,7 +60,7 @@ export const en: PublicMessages = {
     listsEyebrow: "Reading lists", listsTitle: "Collections to guide you", allCollections: "All collections",
     exploreEyebrow: "Explore", genresTitle: "Browse by genre", allCatalogue: "Whole catalogue",
     authorsEyebrow: "Authors", authorsTitle: "Authors to discover", allAuthors: "All authors",
-    featuredEyebrow: "Featured", featuredTitle: "Most viewed books",
+    featuredEyebrow: "Featured", featuredTitle: "Must-read classics",
     featuredText: "A regularly updated selection. Each book opens its page, with online reading, the PDF and audio when available.",
     seeCatalogue: "See the catalogue", seeBookOf: "View {title}",
     audioEyebrow: "To listen", audioTitle: "Free audiobooks", allAudio: "All audiobooks",

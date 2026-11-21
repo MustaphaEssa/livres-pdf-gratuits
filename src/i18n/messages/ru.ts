@@ -53,7 +53,7 @@ export const ru: DeepPartial<PublicMessages> = {
     listsEyebrow: "Списки для чтения", listsTitle: "Подборки, которые помогут выбрать", allCollections: "Все подборки",
     exploreEyebrow: "Обзор", genresTitle: "Жанры", allCatalogue: "Весь каталог",
     authorsEyebrow: "Авторы", authorsTitle: "Авторы, которых стоит открыть", allAuthors: "Все авторы",
-    featuredEyebrow: "Популярное", featuredTitle: "Самые популярные книги",
+    featuredEyebrow: "Популярное", featuredTitle: "Обязательно к прочтению",
     featuredText: "Регулярно обновляемая подборка. Каждая книга открывает свою карточку: чтение онлайн, PDF и аудио, если оно есть.",
     seeCatalogue: "Открыть каталог", seeBookOf: "Открыть карточку «{title}»",
     audioEyebrow: "Слушать", audioTitle: "Бесплатные аудиокниги", allAudio: "Все аудиокниги",

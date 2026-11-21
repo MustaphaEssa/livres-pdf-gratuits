@@ -52,7 +52,7 @@ export const ja: DeepPartial<PublicMessages> = {
     listsEyebrow: "読書リスト", listsTitle: "道しるべとなるコレクション", allCollections: "すべてのコレクション",
     exploreEyebrow: "探す", genresTitle: "ジャンルから探す", allCatalogue: "カタログ全体",
     authorsEyebrow: "著者", authorsTitle: "注目の著者", allAuthors: "すべての著者",
-    featuredEyebrow: "注目", featuredTitle: "よく読まれている本",
+    featuredEyebrow: "注目", featuredTitle: "必読の名作",
     featuredText: "定期的に更新されるセレクション。各本の詳細ページでは、オンライン閲覧、PDF、オーディオ（ある場合）を利用できます。",
     seeCatalogue: "カタログを見る", seeBookOf: "『{title}』の詳細を見る",
     audioEyebrow: "聴く", audioTitle: "無料オーディオブック", allAudio: "すべてのオーディオブック",
