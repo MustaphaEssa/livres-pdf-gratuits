@@ -19,6 +19,8 @@ import path from "node:path";
 
 const prisma = new PrismaClient();
 const APPLY = process.argv.includes("--apply");
+// --redo : refait les couvertures dessinées dont le titre avait été tronqué (« L'assommo… »)
+const REDO = process.argv.includes("--redo");
 const LIMIT = Number(process.env.LIMIT) || Infinity;
 const PUB = path.join(process.cwd(), "public");
 const SAMPLE_DIR = "/tmp/covers-sample";
@@ -101,10 +103,12 @@ function wrap(text, max) {
   return lines;
 }
 
-/** Plus grande taille de police où le titre tient en 5 lignes. */
+/** Plus grande taille de police où le titre tient en 5 lignes, sans couper de mot. */
 function layoutTitle(title) {
-  for (const size of [46, 40, 35, 31, 27, 24]) {
+  const longest = Math.max(...title.split(/\s+/).map((w) => w.length));
+  for (const size of [46, 40, 35, 31, 27, 24, 21]) {
     const max = Math.floor(296 / (size * 0.64)); // largeur moyenne d'un caractère DejaVu Serif Bold
+    if (longest > max && size > 21) continue;
     const lines = wrap(title, max);
     if (lines.length <= 5) return { size, lines };
   }
@@ -150,6 +154,17 @@ async function renderCover(book, dest) {
   return (await stat(dest)).size;
 }
 
+/** Ancienne mise en page (1re version) : un mot plus long que la ligne était tronqué. */
+function wasTruncated(title) {
+  const main = title.split(/\s*[:;]\s+|\s+[-–—]\s+/)[0].trim() || title;
+  for (const size of [46, 40, 35, 31, 27, 24]) {
+    const max = Math.floor(296 / (size * 0.64));
+    const lines = wrap(main, max);
+    if (lines.length <= 5) return lines.some((l) => l.includes("…"));
+  }
+  return true;
+}
+
 // ------------------------------------------------------------------ programme
 
 const books = await prisma.book.findMany({
@@ -167,15 +182,21 @@ await mkdir(APPLY ? path.join(PUB, "uploads", "covers") : SAMPLE_DIR, { recursiv
 
 for (const b of books) {
   if (done >= LIMIT) break;
-  if (b.coverImage.endsWith("-c.jpg")) continue; // déjà refaite
-  const file = path.join(PUB, b.coverImage);
-  let isGen = false;
-  try {
-    isGen = await isGenericCover(file);
-  } catch {
-    continue; // fichier absent ou illisible
+  const isDesigned = /-c\d*\.jpg$/.test(b.coverImage);
+  if (REDO) {
+    // Seulement les couvertures de la 1re version dont un mot du titre était tronqué
+    if (!b.coverImage.endsWith("-c.jpg") || !wasTruncated(b.title)) continue;
+  } else {
+    if (isDesigned) continue; // déjà refaite
+    const file = path.join(PUB, b.coverImage);
+    let isGen = false;
+    try {
+      isGen = await isGenericCover(file);
+    } catch {
+      continue; // fichier absent ou illisible
+    }
+    if (!isGen) continue;
   }
-  if (!isGen) continue;
   generic++;
   if (!APPLY) {
     if (samples.length < 8) {
@@ -184,7 +205,8 @@ for (const b of books) {
     }
     continue;
   }
-  const name = `${b.slug}-c.jpg`;
+  // Nouveau nom pour une couverture refaite : les navigateurs gardent l'ancienne en cache une semaine
+  const name = REDO ? `${b.slug}-c2.jpg` : `${b.slug}-c.jpg`;
   bytes += await renderCover(b, path.join(PUB, "uploads", "covers", name));
   await prisma.book.update({ where: { id: b.id }, data: { coverImage: `/uploads/covers/${name}` } });
   done++;

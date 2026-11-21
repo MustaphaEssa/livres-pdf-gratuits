@@ -72,9 +72,9 @@ export default function BookCover({
   const { t } = useI18n();
   const imgRef = useRef<HTMLImageElement>(null);
   const local = !!book.coverImage && book.coverImage.startsWith("/");
-  // Couvertures dessinées par le site (scripts/generate-covers.mjs, « <slug>-c.jpg ») :
+  // Couvertures dessinées par le site (scripts/generate-covers.mjs, « <slug>-c.jpg » / « -c2.jpg ») :
   // fond sombre uni voulu, à ne pas confondre avec une reliure vide.
-  const designed = !!book.coverImage?.endsWith("-c.jpg");
+  const designed = /-c\d*\.jpg$/.test(book.coverImage ?? "");
   const [blank, setBlank] = useState(() => (book.coverImage ? coverVerdict.get(book.coverImage) === true : false));
 
   // Analyse une fois l'image chargée (y compris si elle l'était déjà avant l'hydratation)
