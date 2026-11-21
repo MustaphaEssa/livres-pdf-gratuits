@@ -57,19 +57,73 @@ export async function getFeaturedBooks(limit = 6): Promise<BookWithCategories[]>
   });
 }
 
+// Œuvre connue : un résumé Wikipédia a été trouvé pour elle (fetch-book-summaries).
+// Indice de notoriété quand les téléchargements sont encore trop rares pour classer.
+const KNOWN_WORK: Prisma.BookWhereInput = { descriptionSource: { startsWith: "http" } };
+
 // Livres par langue (étagères de l'accueil)
 export async function getBooksByLang(
   language: string,
   limit = 8
 ): Promise<BookWithCategories[]> {
-  const books = await prisma.book.findMany({
-    where: { isPublished: true, mediaType: "PDF", language },
+  const base: Prisma.BookWhereInput = { isPublished: true, mediaType: "PDF", language };
+  // Français : vrai historique de téléchargements → classement direct.
+  // Autres langues : quasiment aucun téléchargement → œuvres connues d'abord.
+  const known =
+    language === "fr"
+      ? []
+      : await prisma.book.findMany({
+          where: { ...base, ...KNOWN_WORK },
+          include: bookWithCategories.include,
+          orderBy: [{ downloadCount: "desc" }, { viewCount: "desc" }],
+          distinct: ["author"], // un livre par auteur : rangée variée
+          take: limit,
+        });
+  if (known.length >= limit) return known;
+  const rest = await prisma.book.findMany({
+    where: { ...base, id: { notIn: known.map((b) => b.id) }, author: { notIn: known.map((b) => b.author) } },
     include: bookWithCategories.include,
     orderBy: { downloadCount: "desc" },
-    distinct: ["author"], // un livre par auteur : rangée variée
-    take: limit,
+    distinct: ["author"],
+    take: limit - known.length,
   });
-  return books;
+  return [...known, ...rest];
+}
+
+/**
+ * Sélection « à la une » de l'accueil dans la langue de la page :
+ * 1) livres mis en avant dans cette langue ; 2) œuvres connues de cette langue
+ * (résumé Wikipédia), par téléchargements puis vues ; 3) complément : sélection générale.
+ */
+export async function getHomePicks(language: string, limit = 6): Promise<BookWithCategories[]> {
+  const base: Prisma.BookWhereInput = { isPublished: true, mediaType: "PDF", language };
+  const picked: BookWithCategories[] = [];
+  const add = (list: BookWithCategories[]) => {
+    for (const b of list) {
+      if (picked.length >= limit) break;
+      if (!picked.some((p) => p.id === b.id || p.author === b.author)) picked.push(b);
+    }
+  };
+  add(
+    await prisma.book.findMany({
+      where: { ...base, isFeatured: true },
+      include: bookWithCategories.include,
+      orderBy: { downloadCount: "desc" },
+      take: limit,
+    })
+  );
+  if (picked.length < limit)
+    add(
+      await prisma.book.findMany({
+        where: { ...base, ...KNOWN_WORK },
+        include: bookWithCategories.include,
+        orderBy: [{ downloadCount: "desc" }, { viewCount: "desc" }],
+        distinct: ["author"],
+        take: limit * 2,
+      })
+    );
+  if (picked.length < limit) add(await getFeaturedBooks(limit * 2));
+  return picked;
 }
 
 // Derniers livres ajoutés

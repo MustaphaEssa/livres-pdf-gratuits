@@ -15,6 +15,7 @@ import JsonLd, { websiteLd, organizationLd, itemListLd } from "@/components/seo/
 import BookCard from "@/components/design/book-card";
 import {
   getFeaturedBooks,
+  getHomePicks,
   getLatestBooks,
   getBooksByLang,
   getLanguagesWithCounts,
@@ -49,7 +50,14 @@ export default async function HomePage() {
   const { locale, t } = await getServerI18n();
   // Étagère par langue : les 5 premières langues présentes (FR, EN, ES, AR… selon le catalogue)
   const allLangs = await getLanguagesWithCounts();
-  const shelfLangs = sortLanguages(allLangs).slice(0, 5);
+  // Langue de la page (/en, /es…) quand le catalogue a assez de livres dans cette langue :
+  // l'accueil montre alors d'abord des livres lisibles par le visiteur (et chaque version
+  // linguistique de l'accueil a un contenu propre, au lieu de 12 copies de la même liste).
+  const pageLang = (allLangs.find((l) => l.code === locale)?.count ?? 0) >= 20 ? locale : null;
+  const sorted = sortLanguages(allLangs);
+  const shelfLangs = (
+    pageLang ? [...sorted.filter((l) => l.code === pageLang), ...sorted.filter((l) => l.code !== pageLang)] : sorted
+  ).slice(0, 5);
   // Texte de présentation + FAQ (vise « livres pdf gratuits ») ; nombre arrondi à la centaine
   const sc = seoContent(locale);
   const totalBooks = allLangs.reduce((n, l) => n + l.count, 0);
@@ -62,7 +70,7 @@ export default async function HomePage() {
     await Promise.all([
       getLatestBooks(8),
       Promise.all(shelfLangs.map((l) => getBooksByLang(l.code, 8))),
-      getFeaturedBooks(6),
+      pageLang ? getHomePicks(pageLang, 6) : getFeaturedBooks(6),
       getCategoriesWithCounts(),
       getHomeCollections(4).then((cs) => cs.map((c) => localizeCollection(locale, c))),
       getTopAuthors(10),
@@ -124,6 +132,7 @@ export default async function HomePage() {
             masqué tant que le catalogue est petit). */}
 
         <LangShelf
+          initialTab={pageLang ?? "new"}
           newest={newest}
           langs={shelfLangs.map((l, i) => ({ code: l.code, label: languageLabel(l.code), books: langBooks[i] }))}
         />

@@ -12,9 +12,20 @@ export interface LangShelfTab {
   books: CardBook[];
 }
 
-export default function LangShelf({ newest, langs }: { newest: CardBook[]; langs: LangShelfTab[] }) {
+export default function LangShelf({
+  newest,
+  langs,
+  initialTab = "new",
+}: {
+  newest: CardBook[];
+  langs: LangShelfTab[];
+  /** Onglet ouvert au chargement : la langue de la page si elle a des livres. */
+  initialTab?: string;
+}) {
   const { t } = useI18n();
-  const [tab, setTab] = useState<string>("new");
+  const [tab, setTab] = useState<string>(() =>
+    langs.some((l) => l.code === initialTab && l.books.length > 0) ? initialTab : "new"
+  );
   const current = langs.find((l) => l.code === tab);
   const list = current ? current.books : newest;
   const href = current ? `/catalogue?language=${current.code}` : "/catalogue";
