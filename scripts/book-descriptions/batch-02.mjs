@@ -28,12 +28,12 @@ Publié en 1761, le roman épistolaire de Jean-Jacques Rousseau fut l'un des plu
 Roman de l'amour, de la vertu et de la sensibilité, il célèbre aussi la nature et les paysages des Alpes, annonçant le romantisme. Une œuvre majeure des Lumières, à lire gratuitement en ligne ou en PDF.`,
   },
   {
-    slug: "le-mariage-de-figaro-comedie-en-cinq-actes-en-prose-edited-with-an-int",
+    slug: "le-mariage-de-figaro-comedie-en-cinq-actes-en-prose-edited-with-an-introd-and-notes",
     text: `Figaro, valet du comte Almaviva, s'apprête à épouser Suzanne, la camériste de la comtesse. Mais le comte, lassé de sa femme, compte bien obtenir les faveurs de la fiancée avant les noces. Pendant une « folle journée », Figaro, Suzanne et la comtesse unissent leurs ruses pour déjouer ses projets, au milieu des déguisements, des quiproquos et des portes qui claquent.
 
 Suite du Barbier de Séville, la comédie de Beaumarchais fut longtemps interdite par la censure et par Louis XVI lui-même, avant d'être enfin jouée en 1784 à la Comédie-Française, avec un succès retentissant. Derrière le rire, la pièce dénonce les privilèges de la noblesse, notamment dans le célèbre monologue de Figaro au cinquième acte.
 
-Mozart et son librettiste Da Ponte en tirèrent Les Noces de Figaro en 1786. Cette édition scolaire présente le texte français accompagné d'une introduction en anglais. À lire gratuitement en ligne ou en PDF.`,
+Mozart et son librettiste Da Ponte en tirèrent Les Noces de Figaro en 1786. Cette édition présente le texte français accompagné d'une introduction et de notes en anglais. À lire gratuitement en ligne ou en PDF.`,
   },
   {
     slug: "la-dame-aux-camelias",
@@ -100,20 +100,20 @@ C'est dans cette pièce que Monsieur Jourdain découvre, émerveillé, qu'il fai
 Créé en 1670 devant Louis XIV au château de Chambord, Le Bourgeois gentilhomme est une comédie-ballet de Molière, sur une musique de Lully. Satire de la vanité et du snobisme, elle reste l'une des pièces les plus jouées du répertoire. Cette édition porte aussi le titre anglais The Tradesman Turned Gentleman. À lire gratuitement en ligne ou en PDF.`,
   },
   {
-    slug: "les-contemplations-nouv-ed-publiee-d-apres-les-manuscrits-et-les-editi",
+    slug: "les-contemplations-nouv-ed-publiee-d-apres-les-manuscrits-et-les-editions-originales-avec-des-variantes-une-introd-des-notices-et-des-notes-par-joseph-vianey",
     text: `Publié en 1856, alors que Victor Hugo vit en exil à Guernesey, Les Contemplations est souvent considéré comme son plus grand recueil poétique. L'auteur lui-même le présentait comme les « mémoires d'une âme ».
 
 Le livre se divise en deux parties, « Autrefois » et « Aujourd'hui », séparées par un événement tragique : la mort de sa fille Léopoldine, noyée dans la Seine à Villequier en 1843. La première partie évoque la jeunesse, l'amour et les combats littéraires ; la seconde, le deuil, l'exil et la méditation sur la mort et sur Dieu. On y trouve des poèmes parmi les plus connus de la langue française, comme « Demain, dès l'aube… ».
 
-Cette nouvelle édition a été établie d'après les manuscrits et les éditions originales. Un recueil bouleversant, souvent étudié au lycée, à lire gratuitement en ligne ou en PDF.`,
+Cette nouvelle édition, établie par Joseph Vianey d'après les manuscrits et les éditions originales, propose des variantes, une introduction et des notes. Un recueil bouleversant, souvent étudié au lycée, à lire gratuitement en ligne ou en PDF.`,
   },
   {
-    slug: "de-la-terre-a-la-lune-trajet-direct-en-97-heures-20-minutes-41-dessins",
+    slug: "de-la-terre-a-la-lune-trajet-direct-en-97-heures-20-minutes-41-dessins-et-une-carte-par-de-montaut",
     text: `Après la guerre de Sécession, les membres du Gun Club de Baltimore, passionnés d'artillerie, s'ennuient. Leur président, Impey Barbicane, leur propose un projet fou : envoyer un boulet sur la Lune grâce à un canon géant. L'Amérique s'enthousiasme, les calculs commencent, et un audacieux Français, Michel Ardan, propose de prendre place dans le projectile.
 
 Publié en 1865, De la Terre à la Lune est un roman d'anticipation plein d'humour, où Jules Verne se moque gentiment de l'enthousiasme américain tout en s'appuyant sur les connaissances scientifiques de son temps. Certains détails, comme le site de lancement en Floride, ont frappé les lecteurs un siècle plus tard, au moment des missions Apollo.
 
-L'aventure se poursuit dans Autour de la Lune. Cette édition illustrée, au titre complet « trajet direct en 97 heures 20 minutes », se lit gratuitement en ligne ou en PDF.`,
+L'aventure se poursuit dans Autour de la Lune. Cette édition, au titre complet « trajet direct en 97 heures 20 minutes », est illustrée de 41 dessins et d'une carte par Henri de Montaut. À lire gratuitement en ligne ou en PDF.`,
   },
   {
     slug: "le-horla",
