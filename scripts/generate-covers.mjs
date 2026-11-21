@@ -23,6 +23,8 @@ const APPLY = process.argv.includes("--apply");
 const REDO = process.argv.includes("--redo");
 const LIMIT = Number(process.env.LIMIT) || Infinity;
 const PUB = path.join(process.cwd(), "public");
+// Vraies couvertures au titre très pâle, repérées lors du contrôle visuel : jamais remplacées
+const KEEP = new Set(["contes-choisis-00unse", "the-counterplot", "lord-palmerston", ...(process.env.KEEP ?? "").split(",").filter(Boolean)]);
 const SAMPLE_DIR = "/tmp/covers-sample";
 const W = 400;
 const H = 600;
@@ -215,6 +217,7 @@ await mkdir(APPLY ? path.join(PUB, "uploads", "covers") : SAMPLE_DIR, { recursiv
 
 for (const b of books) {
   if (done >= LIMIT) break;
+  if (KEEP.has(b.slug)) continue;
   const isDesigned = /-c\d*\.jpg$/.test(b.coverImage);
   if (REDO) {
     // Seulement les couvertures de la 1re version dont un mot du titre était tronqué
