@@ -152,7 +152,7 @@ export async function sitemapXml(file: string): Promise<string | null> {
   const locale = m[1];
   const index = Number(m[2]);
   const entries = (await localeEntries(locale)).slice(index * CHUNK, (index + 1) * CHUNK);
-  if (!entries.length && index > 0) return null;
+  if (!entries.length && (index > 0 || !INDEXED_LOCALES.includes(locale))) return null; // langue non indexée → 404
 
   const urls = entries.map((e) => {
     const lines = [`<loc>${esc(abs(localizePath(locale, e.path)))}</loc>`];
