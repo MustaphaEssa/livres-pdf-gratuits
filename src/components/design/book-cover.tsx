@@ -72,13 +72,16 @@ export default function BookCover({
   const { t } = useI18n();
   const imgRef = useRef<HTMLImageElement>(null);
   const local = !!book.coverImage && book.coverImage.startsWith("/");
+  // Couvertures dessinées par le site (scripts/generate-covers.mjs, « <slug>-c.jpg ») :
+  // fond sombre uni voulu, à ne pas confondre avec une reliure vide.
+  const designed = !!book.coverImage?.endsWith("-c.jpg");
   const [blank, setBlank] = useState(() => (book.coverImage ? coverVerdict.get(book.coverImage) === true : false));
 
   // Analyse une fois l'image chargée (y compris si elle l'était déjà avant l'hydratation)
   useEffect(() => {
     const img = imgRef.current;
     const src = book.coverImage;
-    if (!img || !src || !local || coverVerdict.has(src)) return;
+    if (!img || !src || !local || designed || coverVerdict.has(src)) return;
     const check = () => {
       if (!img.naturalWidth) return;
       const v = isBlankCover(img);
@@ -88,7 +91,7 @@ export default function BookCover({
     if (img.complete) check();
     else img.addEventListener("load", check, { once: true });
     return () => img.removeEventListener("load", check);
-  }, [book.coverImage, local]);
+  }, [book.coverImage, local, designed]);
 
   const rtl = !!book.language && RTL_LANGS.has(book.language);
   const cls = `cover ${mini ? "cover-mini" : ""} ${rtl ? "is-rtl" : ""} ${className}`.trim();

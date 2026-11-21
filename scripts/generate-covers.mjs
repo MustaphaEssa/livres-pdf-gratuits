@@ -153,7 +153,9 @@ async function renderCover(book, dest) {
 // ------------------------------------------------------------------ programme
 
 const books = await prisma.book.findMany({
-  where: { isPublished: true, sourceId: { startsWith: "gutenberg:" }, coverImage: { startsWith: "/uploads/covers/" } },
+  // Tous les livres : certains fichiers Gutenberg ont remplacé un scan Internet Archive
+  // sans changer sourceId (« alléger les livres lourds »). La détection visuelle suffit.
+  where: { isPublished: true, coverImage: { startsWith: "/uploads/covers/" } },
   select: { id: true, slug: true, title: true, author: true, coverImage: true },
 });
 
@@ -189,7 +191,7 @@ for (const b of books) {
   if (done % 500 === 0) console.log(`  ${done} couvertures refaites…`);
 }
 
-console.log(`${books.length} livres Gutenberg avec couverture ; ${generic} couverture(s) générique(s) détectée(s).`);
+console.log(`${books.length} livres avec couverture locale ; ${generic} couverture(s) générique(s) détectée(s).`);
 if (APPLY) console.log(`✓ ${done} couverture(s) remplacée(s), taille moyenne ${Math.round(bytes / Math.max(done, 1) / 1024)} Ko.`);
 else console.log(`Aperçu : ${samples.length} exemple(s) dans ${SAMPLE_DIR} (moy. ${Math.round(bytes / Math.max(samples.length, 1) / 1024)} Ko) : ${samples.join(", ")}`);
 await prisma.$disconnect();
