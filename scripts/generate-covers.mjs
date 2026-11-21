@@ -43,15 +43,19 @@ async function isGenericCover(file) {
       if (r > 235 && g > 235 && b > 235) white++;
     }
   let sat = 0;
+  let soft = 0; // couleurs pastel (gabarits Gutenberg moins saturés)
   let botN = 0;
   for (let y = 34; y < 84; y++)
     for (let x = 0; x < 60; x++) {
       const [r, g, b] = px(x, y);
       botN++;
-      if (Math.max(r, g, b) - Math.min(r, g, b) > 90) sat++;
+      const chroma = Math.max(r, g, b) - Math.min(r, g, b);
+      if (chroma > 90) sat++;
+      if (chroma > 40) soft++;
     }
   // Titre long : le bandeau contient beaucoup de texte → seuil de blanc à 55 %
-  return white / topN > 0.55 && sat / botN > 0.5;
+  // Les pages de titre scannées (papier presque sans couleur) n'atteignent aucun des deux seuils.
+  return (white / topN > 0.55 && sat / botN > 0.5) || (white / topN > 0.6 && soft / botN > 0.6);
 }
 
 // ------------------------------------------------------------------ dessin
@@ -100,12 +104,12 @@ function wrap(text, max) {
 /** Plus grande taille de police où le titre tient en 5 lignes. */
 function layoutTitle(title) {
   for (const size of [46, 40, 35, 31, 27, 24]) {
-    const max = Math.floor(318 / (size * 0.56));
+    const max = Math.floor(296 / (size * 0.64)); // largeur moyenne d'un caractère DejaVu Serif Bold
     const lines = wrap(title, max);
     if (lines.length <= 5) return { size, lines };
   }
   const size = 24;
-  const lines = wrap(title, Math.floor(318 / (size * 0.56)));
+  const lines = wrap(title, Math.floor(296 / (size * 0.64)));
   return { size, lines: [...lines.slice(0, 4), `${lines[4]}…`] };
 }
 
