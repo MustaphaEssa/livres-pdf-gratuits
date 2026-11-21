@@ -14,13 +14,17 @@
 import { commonsImage } from "./commons.mjs";
 import { PLAN } from "./image-plan.mjs";
 import { articles as adaptations } from "./articles-2026-11-adaptations.mjs";
+import { articles as quasimodo } from "./articles-2026-11-quasimodo.mjs";
+
+// Arguments optionnels : préfixes de slug à traiter (sinon tout)
+const only = process.argv.slice(2);
 
 const jobs = [];
 for (const [slug, plan] of Object.entries(PLAN)) {
   if (plan.cover) jobs.push([plan.cover, `${slug}-cover`]);
   (plan.inline ?? []).forEach((it, i) => jobs.push([it.file, `${slug}-in-${i + 1}`]));
 }
-for (const a of adaptations) {
+for (const a of [...adaptations, ...quasimodo]) {
   if (a.cover) jobs.push([a.cover, `${a.slug}-cover`]);
   [...a.content.matchAll(/^!\[[^\]]*\]\(commons:(.+?)(?:\s+"[^"]*")?\)$/gm)].forEach((m, i) =>
     jobs.push([m[1].trim(), `${a.slug}-${i + 1}`])
@@ -28,7 +32,8 @@ for (const a of adaptations) {
 }
 
 let ok = 0;
-for (const [file, base] of jobs) {
+const todo = only.length ? jobs.filter(([, base]) => only.some((p) => base.startsWith(p))) : jobs;
+for (const [file, base] of todo) {
   const r = await commonsImage(file, base, "fr");
   if (r) ok++;
   console.log(`${r ? "✓" : "✗"} ${base}`);

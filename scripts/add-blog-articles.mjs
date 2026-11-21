@@ -12,6 +12,7 @@ import { PrismaClient } from "@prisma/client";
 import { articles as articles202611 } from "./blog/articles-2026-11.mjs";
 import { articles as articles202611en } from "./blog/articles-2026-11-en.mjs";
 import { articles as articlesAdaptations } from "./blog/articles-2026-11-adaptations.mjs";
+import { articles as articlesQuasimodo } from "./blog/articles-2026-11-quasimodo.mjs";
 import { commonsImage, resolveCommonsImages, coverCreditLine } from "./blog/commons.mjs";
 const prisma = new PrismaClient();
 
@@ -109,7 +110,7 @@ async function resolveGutenbergLinks(content) {
 }
 
 async function main() {
-  for (const a of [...articles, ...articles202611, ...articles202611en, ...articlesAdaptations]) {
+  for (const a of [...articles, ...articles202611, ...articles202611en, ...articlesAdaptations, ...articlesQuasimodo]) {
     const existing = await prisma.post.findUnique({ where: { slug: a.slug } });
     if (existing) {
       console.log("DÉJÀ PRÉSENT, ignoré :", a.slug);
