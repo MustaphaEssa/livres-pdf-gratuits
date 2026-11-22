@@ -4,7 +4,7 @@
  *   - sinon le LIVRE le plus populaire (téléchargements, puis vues) pas encore partagé
  * Poste 1 élément par exécution, au plus FACEBOOK_BOOKS_PER_DAY livres/jour (défaut 12).
  * Cron conseillé (12 posts étalés, toutes les 2 h, jour et nuit) :
- *   0 */2 * * * cd /chemin/du/site && ./node_modules/.bin/tsx scripts/facebook-post.ts
+ *   0 0-22/2 * * * cd /chemin/du/site && ./node_modules/.bin/tsx scripts/facebook-post.ts
  *
  * Requiert dans .env :
  *   FACEBOOK_PAGE_ID=...        (ID de la page)
