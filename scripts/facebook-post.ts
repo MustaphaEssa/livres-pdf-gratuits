@@ -2,16 +2,16 @@
  * Publie automatiquement un contenu sur la page Facebook :
  *   - en priorité un ARTICLE de blog pas encore partagé
  *   - sinon le LIVRE le plus populaire (téléchargements, puis vues) pas encore partagé
- * Poste 1 élément par exécution, au plus FACEBOOK_BOOKS_PER_DAY livres/jour (défaut 8).
- * Cron conseillé (8 posts étalés, toutes les 2 h de 8 h à 22 h) :
- *   0 8-22/2 * * * cd /chemin/du/site && ./node_modules/.bin/tsx scripts/facebook-post.ts
+ * Poste 1 élément par exécution, au plus FACEBOOK_BOOKS_PER_DAY livres/jour (défaut 12).
+ * Cron conseillé (12 posts étalés, toutes les 2 h, jour et nuit) :
+ *   0 */2 * * * cd /chemin/du/site && ./node_modules/.bin/tsx scripts/facebook-post.ts
  *
  * Requiert dans .env :
  *   FACEBOOK_PAGE_ID=...        (ID de la page)
  *   FACEBOOK_PAGE_TOKEN=...     (jeton de page permanent)
  *   NEXT_PUBLIC_SITE_URL=https://livrespdfgratuits.com
  *   (optionnel) FACEBOOK_GRAPH_VERSION=v21.0
- *   (optionnel) FACEBOOK_BOOKS_PER_DAY=8
+ *   (optionnel) FACEBOOK_BOOKS_PER_DAY=12
  *
  * Lancer : ./node_modules/.bin/tsx scripts/facebook-post.ts
  */
@@ -28,7 +28,7 @@ const GRAPH = process.env.FACEBOOK_GRAPH_VERSION || "v21.0";
 // "all" (articles prioritaires puis livres). Défaut : all.
 const SHARE = (process.env.FACEBOOK_SHARE || "all").toLowerCase();
 // Nombre max de livres partagés par jour (les plus populaires d'abord).
-const BOOKS_PER_DAY = Math.max(1, Number(process.env.FACEBOOK_BOOKS_PER_DAY) || 8);
+const BOOKS_PER_DAY = Math.max(1, Number(process.env.FACEBOOK_BOOKS_PER_DAY) || 12);
 // Les posts sont rédigés en anglais (audience internationale) et pointent vers les pages /en/.
 const LOCALE = "en" as const;
 
@@ -110,7 +110,7 @@ async function main() {
   }
 
   // 2. Le livre le PLUS POPULAIRE pas encore partagé — sauf en mode "posts".
-  //    Plafond de BOOKS_PER_DAY livres par jour (cron conseillé : 8 passages/jour).
+  //    Plafond de BOOKS_PER_DAY livres par jour (cron conseillé : 12 passages/jour, toutes les 2 h).
   if (SHARE !== "posts") {
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
