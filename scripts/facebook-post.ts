@@ -96,7 +96,7 @@ async function main() {
   // 1. Article de blog non encore partagé (priorité) — sauf en mode "books"
   if (SHARE !== "books") {
     const post = await prisma.post.findFirst({
-      where: { isPublished: true, fbPostedAt: null },
+      where: { isPublished: true, fbPostedAt: null, language: LOCALE }, // articles anglais seulement
       orderBy: { publishedAt: "desc" },
     });
     if (post) {
