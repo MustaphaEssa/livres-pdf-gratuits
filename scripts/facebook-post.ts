@@ -17,6 +17,7 @@
  */
 import { PrismaClient } from "@prisma/client";
 import { formatAuthorName } from "../src/lib/utils";
+import { localizePath } from "../src/i18n/config";
 
 const prisma = new PrismaClient();
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://livrespdfgratuits.com";
@@ -28,6 +29,8 @@ const GRAPH = process.env.FACEBOOK_GRAPH_VERSION || "v21.0";
 const SHARE = (process.env.FACEBOOK_SHARE || "all").toLowerCase();
 // Nombre max de livres partagés par jour (les plus populaires d'abord).
 const BOOKS_PER_DAY = Math.max(1, Number(process.env.FACEBOOK_BOOKS_PER_DAY) || 8);
+// Les posts sont rédigés en anglais (audience internationale) et pointent vers les pages /en/.
+const LOCALE = "en" as const;
 
 // Transforme un chemin de couverture en URL absolue publique (requis par Facebook).
 function absoluteUrl(path?: string | null): string | null {
@@ -97,8 +100,8 @@ async function main() {
       orderBy: { publishedAt: "desc" },
     });
     if (post) {
-      const link = `${SITE_URL}/blog/${post.slug}`;
-      const msg = `📝 ${post.title}${post.excerpt ? `\n\n${post.excerpt}` : ""}\n\nÀ lire sur notre blog 👇`;
+      const link = `${SITE_URL}${localizePath(LOCALE, `/blog/${post.slug}`)}`;
+      const msg = `📝 ${post.title}${post.excerpt ? `\n\n${post.excerpt}` : ""}\n\nRead it on our blog 👇`;
       const fbId = await share(msg, link, post.coverImage);
       await prisma.post.update({ where: { id: post.id }, data: { fbPostedAt: new Date() } });
       console.log(`✅ Article partagé : « ${post.title} » (post Facebook ${fbId})`);
@@ -123,8 +126,8 @@ async function main() {
       select: { id: true, slug: true, title: true, author: true, coverImage: true },
     });
     if (book) {
-      const link = `${SITE_URL}/livre/${book.slug}`;
-      const msg = `📖 ${book.title}\n\npar ${formatAuthorName(book.author)} — livre gratuit à télécharger en PDF et à lire en ligne 👇`;
+      const link = `${SITE_URL}${localizePath(LOCALE, `/livre/${book.slug}`)}`;
+      const msg = `📖 ${book.title}\n\nby ${formatAuthorName(book.author)} — free book to download as PDF and read online 👇`;
       const fbId = await share(msg, link, book.coverImage);
       await prisma.book.update({ where: { id: book.id }, data: { fbPostedAt: new Date() } });
       console.log(
