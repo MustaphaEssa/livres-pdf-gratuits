@@ -19,6 +19,8 @@ export function localeRobots(locale: Locale) {
  * `path` est le chemin SANS préfixe (« /catalogue »).
  */
 export function i18nAlternates(locale: Locale, path: string, locales: readonly Locale[] = INDEXED_LOCALES) {
+  // Langue non indexée : pas de hreflang (la page n'y figurerait pas)
+  if (!locales.includes(locale)) return { canonical: localizePath(locale, path) };
   const languages: Record<string, string> = {};
   for (const l of locales) languages[l] = localizePath(l, path);
   // Version proposée aux visiteurs dont la langue n'est pas couverte : l'anglais.

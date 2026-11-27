@@ -43,7 +43,12 @@ export default function LangSwitcher({ variant = "icon" }: { variant?: "icon" | 
     if (l !== locale) window.location.assign(hrefFor(l));
   };
 
-  const items = LOCALES.map((l) => (
+  // Blog : seules les langues qui ont des articles (les autres redirigent vers l'anglais)
+  const available: readonly Locale[] = /^\/blog(\/|$)/.test(stripLocale(pathname))
+    ? LOCALES.filter((l) => l === "fr" || l === "en" || l === locale)
+    : LOCALES;
+
+  const items = available.map((l) => (
     <a
       key={l}
       href={localizePath(l, stripLocale(pathname))}

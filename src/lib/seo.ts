@@ -56,7 +56,13 @@ export function pageMetadata(o: PageMetaInput): Metadata {
   return {
     title: o.absoluteTitle ? { absolute: o.title } : o.title,
     description: o.description,
-    alternates: o.alternates ?? i18nAlternates(o.locale, o.path, indexLocales),
+    // Version non indexée : canonical seul. Une liste hreflang dont la page est absente
+    // est incohérente (Google exige l'auto-référence) et l'ignore.
+    alternates:
+      o.alternates ??
+      (indexLocales.includes(o.locale)
+        ? i18nAlternates(o.locale, o.path, indexLocales)
+        : { canonical: localizePath(o.locale, o.path) }),
     openGraph: {
       type: o.type ?? "website",
       url,
@@ -64,7 +70,7 @@ export function pageMetadata(o: PageMetaInput): Metadata {
       description: o.description,
       siteName: o.siteName ?? SITE_NAME,
       locale: LOCALE_INFO[o.locale].og,
-      alternateLocale: indexLocales.filter((l) => l !== o.locale).map((l) => LOCALE_INFO[l].og),
+      alternateLocale: (indexLocales.includes(o.locale) ? indexLocales : []).filter((l) => l !== o.locale).map((l) => LOCALE_INFO[l].og),
       images,
       ...(o.openGraphExtra ?? {}),
     },

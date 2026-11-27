@@ -7,25 +7,31 @@ import DesignFooter from "@/components/design/footer";
 import MobileTabbar from "@/components/design/mobile-tabbar";
 import { getPublishedPosts, blogLanguageFor } from "@/lib/posts";
 import { getCategoriesWithCounts } from "@/lib/books";
+import { permanentRedirect } from "next/navigation";
+import { localizePath, type Locale } from "@/i18n/config";
 
 export async function generateMetadata() {
   const { locale, t } = await getServerI18n();
-  // Liste indexée en FR et EN (les autres langues affichent les articles anglais : quasi-doublons)
+  // Indexée en FR, EN et dans les langues qui ont leurs propres articles
+  // (les autres redirigent vers /en/blog, voir plus bas).
+  const lang = await blogLanguageFor(locale);
+  const indexLocales: Locale[] = lang === locale && locale !== "fr" && locale !== "en" ? ["fr", "en", locale] : ["fr", "en"];
   return pageMetadata({
     locale,
     path: "/blog",
     title: t.meta.blogTitle,
     description: t.meta.blogDesc,
-    indexLocales: ["fr", "en"],
+    indexLocales,
   });
 }
 
 export default async function BlogPage() {
   const { locale, t } = await getServerI18n();
-  const [posts, categories] = await Promise.all([
-    blogLanguageFor(locale).then((lang) => getPublishedPosts(lang)),
-    getCategoriesWithCounts(),
-  ]);
+  const lang = await blogLanguageFor(locale);
+  // Pas d'articles dans cette langue (/es/blog…) : la page ne serait qu'un doublon
+  // de /en/blog avec l'interface traduite → redirection vers la version anglaise.
+  if (lang !== locale) permanentRedirect(localizePath(lang as Locale, "/blog"));
+  const [posts, categories] = await Promise.all([getPublishedPosts(lang), getCategoriesWithCounts()]);
 
   return (
     <div className="ma">
