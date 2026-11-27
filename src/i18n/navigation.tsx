@@ -4,7 +4,7 @@ import NextLink from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { forwardRef, useMemo, type ComponentProps } from "react";
 import { useI18n } from "@/components/i18n-provider";
-import { localizePath, stripLocale } from "./config";
+import { localizePath, stripLocale, type Locale } from "./config";
 
 type LinkProps = ComponentProps<typeof NextLink>;
 
@@ -13,8 +13,12 @@ type LinkProps = ComponentProps<typeof NextLink>;
  * langue courante (/catalogue → /en/catalogue). Utilisable aussi dans les
  * composants serveur (c'est un composant client).
  */
-const Link = forwardRef<HTMLAnchorElement, LinkProps>(function LocaleLink({ href, ...rest }, ref) {
-  const { locale } = useI18n();
+const Link = forwardRef<HTMLAnchorElement, LinkProps & { locale?: Locale }>(function LocaleLink(
+  { href, locale: forced, ...rest },
+  ref
+) {
+  const { locale: current } = useI18n();
+  const locale = forced ?? current;
   const localized = typeof href === "string" ? localizePath(locale, href) : href;
   return <NextLink ref={ref} href={localized} {...rest} />;
 });

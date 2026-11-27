@@ -3,6 +3,7 @@
 import Link from "@/i18n/navigation";
 import { useI18n } from "@/components/i18n-provider";
 import { categoryLabel } from "@/i18n/format";
+import { blogLocaleFor } from "@/i18n/seo";
 import Logo from "./logo";
 
 export default function DesignFooter({
@@ -10,7 +11,7 @@ export default function DesignFooter({
 }: {
   categories?: { name: string; slug: string }[];
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   return (
     <footer className="site-footer">
       <div className="footer-inner">
@@ -24,7 +25,7 @@ export default function DesignFooter({
           <Link href="/livres-audio">{t.nav.audiobooks}</Link>
           <Link href="/collections">{t.nav.collections}</Link>
           <Link href="/auteurs">{t.nav.authors}</Link>
-          <Link href="/blog">{t.nav.blog}</Link>
+          <Link href="/blog" locale={blogLocaleFor(locale)}>{t.nav.blog}</Link>
         </div>
         <div className="footer-col">
           <h2>{t.footer.genres}</h2>

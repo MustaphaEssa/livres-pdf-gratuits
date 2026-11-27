@@ -1,6 +1,6 @@
 import prisma from "@/lib/db";
 import { SITE_URL } from "@/lib/site";
-import { bookIndexLocales, INDEXED_LOCALES } from "@/i18n/seo";
+import { bookIndexLocales, BLOG_LOCALES, INDEXED_LOCALES } from "@/i18n/seo";
 import { isLowValueBook } from "@/lib/book-quality";
 import { DEFAULT_LOCALE, LOCALES, X_DEFAULT_LOCALE, isLocale, localizePath, type Locale } from "@/i18n/config";
 
@@ -37,7 +37,7 @@ export async function sitemapEntries(): Promise<Entry[]> {
     { path: "/livres-audio", freq: "daily", priority: 0.8, i18n: true, lastmod: now },
     { path: "/auteurs", freq: "weekly", priority: 0.8, i18n: true },
     { path: "/collections", freq: "weekly", priority: 0.7, i18n: true },
-    { path: "/blog", freq: "weekly", priority: 0.6, i18n: true, locales: ["fr", "en"] },
+    { path: "/blog", freq: "weekly", priority: 0.6, i18n: true, locales: BLOG_LOCALES },
     { path: "/a-propos", freq: "yearly", priority: 0.4, i18n: true },
     { path: "/contact", freq: "yearly", priority: 0.3, i18n: true },
     ...["/confidentialite", "/mentions-legales", "/conditions", "/dmca"].map(

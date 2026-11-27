@@ -9,6 +9,19 @@ import { LOCALES, DEFAULT_LOCALE, X_DEFAULT_LOCALE, localizePath, type Locale } 
  */
 export const INDEXED_LOCALES: readonly Locale[] = ["fr", "en", "es", "de", "it", "pt", "nl"];
 
+/**
+ * Langues qui ont des articles de blog. Les autres redirigent /xx/blog vers /en/blog
+ * (sinon : articles anglais sous une interface traduite = quasi-doublon). Les liens
+ * « Blog » de ces langues pointent directement vers /en/blog. Ajouter une langue ici
+ * dès qu'elle a ses propres articles.
+ */
+export const BLOG_LOCALES: readonly Locale[] = ["fr", "en"];
+
+/** Langue du blog affiché pour une langue d'interface : la sienne si elle a des articles, sinon l'anglais. */
+export function blogLocaleFor(locale: Locale): Locale {
+  return BLOG_LOCALES.includes(locale) ? locale : X_DEFAULT_LOCALE;
+}
+
 /** robots noindex,follow pour une langue sans contenu propre. */
 export function localeRobots(locale: Locale) {
   return INDEXED_LOCALES.includes(locale) ? {} : { robots: { index: false, follow: true } };

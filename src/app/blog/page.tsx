@@ -9,19 +9,17 @@ import { getPublishedPosts, blogLanguageFor } from "@/lib/posts";
 import { getCategoriesWithCounts } from "@/lib/books";
 import { permanentRedirect } from "next/navigation";
 import { localizePath, type Locale } from "@/i18n/config";
+import { BLOG_LOCALES } from "@/i18n/seo";
 
 export async function generateMetadata() {
   const { locale, t } = await getServerI18n();
-  // Indexée en FR, EN et dans les langues qui ont leurs propres articles
-  // (les autres redirigent vers /en/blog, voir plus bas).
-  const lang = await blogLanguageFor(locale);
-  const indexLocales: Locale[] = lang === locale && locale !== "fr" && locale !== "en" ? ["fr", "en", locale] : ["fr", "en"];
+  // Indexée dans les langues qui ont leurs propres articles (les autres redirigent, voir plus bas)
   return pageMetadata({
     locale,
     path: "/blog",
     title: t.meta.blogTitle,
     description: t.meta.blogDesc,
-    indexLocales,
+    indexLocales: BLOG_LOCALES,
   });
 }
 

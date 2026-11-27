@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useI18n } from "@/components/i18n-provider";
 import { LOCALES, LOCALE_COOKIE, LOCALE_INFO, localizePath, stripLocale, type Locale } from "@/i18n/config";
+import { BLOG_LOCALES } from "@/i18n/seo";
 import Icon, { I } from "./icon";
 
 /**
@@ -45,7 +46,7 @@ export default function LangSwitcher({ variant = "icon" }: { variant?: "icon" | 
 
   // Blog : seules les langues qui ont des articles (les autres redirigent vers l'anglais)
   const available: readonly Locale[] = /^\/blog(\/|$)/.test(stripLocale(pathname))
-    ? LOCALES.filter((l) => l === "fr" || l === "en" || l === locale)
+    ? LOCALES.filter((l) => BLOG_LOCALES.includes(l))
     : LOCALES;
 
   const items = available.map((l) => (

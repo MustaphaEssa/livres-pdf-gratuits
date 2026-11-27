@@ -263,19 +263,23 @@ export async function getBooksByAuthorSlug(
   page = 1,
   pageSize = PAGE_SIZE
 ): Promise<SearchBooksResult & { authorName: string | null }> {
-  const where: Prisma.BookWhereInput = { isPublished: true, authorSlug, mediaType: "PDF" };
+  // Livres PDF de l'auteur ; à défaut, ses livres audio (sinon les auteurs « audio
+  // seulement », liés depuis leurs fiches et listés dans le sitemap, tombaient en 404).
+  let where: Prisma.BookWhereInput = { isPublished: true, authorSlug, mediaType: "PDF" };
+  let total = await prisma.book.count({ where });
+  if (total === 0) {
+    where = { isPublished: true, authorSlug, mediaType: "AUDIO" };
+    total = await prisma.book.count({ where });
+  }
   const currentPage = Math.max(1, page);
 
-  const [total, books] = await Promise.all([
-    prisma.book.count({ where }),
-    prisma.book.findMany({
-      where,
-      include: bookWithCategories.include,
-      orderBy: { downloadCount: "desc" },
-      skip: (currentPage - 1) * pageSize,
-      take: pageSize,
-    }),
-  ]);
+  const books = await prisma.book.findMany({
+    where,
+    include: bookWithCategories.include,
+    orderBy: { downloadCount: "desc" },
+    skip: (currentPage - 1) * pageSize,
+    take: pageSize,
+  });
 
   return {
     books,

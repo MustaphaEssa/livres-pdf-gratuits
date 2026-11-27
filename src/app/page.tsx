@@ -1,6 +1,6 @@
 import Link from "@/i18n/navigation";
 import { getServerI18n } from "@/i18n/server";
-import { i18nAlternates, localeRobots } from "@/i18n/seo";
+import { blogLocaleFor, i18nAlternates, localeRobots } from "@/i18n/seo";
 import { categoryLabel, fmt, formatDateLocale, plural, authorLabel } from "@/i18n/format";
 import DesignHeader from "@/components/design/header";
 import DesignFooter from "@/components/design/footer";
@@ -311,7 +311,7 @@ export default async function HomePage() {
               <div className="eyebrow">{t.home.helpEyebrow}</div>
               <h2 id="help-title">{t.home.helpTitle}</h2>
               <p>{t.home.helpText}</p>
-              <Link href="/blog" className="link-arrow">
+              <Link href="/blog" locale={blogLocaleFor(locale)} className="link-arrow">
                 {t.home.readingGuides} <Icon d={I.arrow} />
               </Link>
             </div>
@@ -351,7 +351,7 @@ export default async function HomePage() {
                 <div className="eyebrow">{t.home.postsEyebrow}</div>
                 <h2 id="posts-title">{t.home.postsTitle}</h2>
               </div>
-              <Link href="/blog" className="link-arrow">
+              <Link href="/blog" locale={blogLocaleFor(locale)} className="link-arrow">
                 {t.home.allBlog} <Icon d={I.arrow} />
               </Link>
             </div>
@@ -360,6 +360,7 @@ export default async function HomePage() {
                 <Link
                   key={post.id}
                   href={`/blog/${post.slug}`}
+                  locale={blogLocaleFor(locale)}
                   className={`post-card ${i === 0 ? "is-lead" : ""}`}
                 >
                   {post.coverImage ? (

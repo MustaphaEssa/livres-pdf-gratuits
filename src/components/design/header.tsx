@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link, { useLocalePathname } from "@/i18n/navigation";
 import { useI18n } from "@/components/i18n-provider";
+import { blogLocaleFor } from "@/i18n/seo";
 import Logo from "./logo";
 import Icon, { I } from "./icon";
 import LangSwitcher from "./lang-switcher";
@@ -11,7 +12,7 @@ import { useAuth } from "@/components/auth/auth-modal";
 
 export default function DesignHeader() {
   const path = useLocalePathname();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [open, setOpen] = useState(false);
   const { user, openAuth } = useAuth();
   const isCurrent = (href: string) =>
@@ -37,7 +38,7 @@ export default function DesignHeader() {
           <nav className="nav" aria-label={t.nav.main}>
             {/* « Accueil » omis sur ordinateur : le logo y mène déjà (gagne la place d'« Auteurs ») */}
             {NAV.filter((n) => n.href !== "/").map((n) => (
-              <Link key={n.href} href={n.href} aria-current={isCurrent(n.href) ? "page" : undefined}>
+              <Link key={n.href} href={n.href} locale={n.href === "/blog" ? blogLocaleFor(locale) : undefined} aria-current={isCurrent(n.href) ? "page" : undefined}>
                 {n.label}
               </Link>
             ))}
@@ -75,7 +76,7 @@ export default function DesignHeader() {
           <div className="mobile-menu" id="mobile-menu">
             <nav aria-label={t.nav.mobileMenu}>
               {NAV.map((n) => (
-                <Link key={n.href} href={n.href} onClick={() => setOpen(false)}>
+                <Link key={n.href} href={n.href} locale={n.href === "/blog" ? blogLocaleFor(locale) : undefined} onClick={() => setOpen(false)}>
                   {n.label}
                 </Link>
               ))}

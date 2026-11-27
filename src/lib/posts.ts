@@ -1,5 +1,7 @@
 import { Prisma } from "@prisma/client";
 import prisma from "@/lib/db";
+import { isLocale } from "@/i18n/config";
+import { blogLocaleFor } from "@/i18n/seo";
 
 const postWithCategories = Prisma.validator<Prisma.PostDefaultArgs>()({
   include: {
@@ -10,11 +12,9 @@ const postWithCategories = Prisma.validator<Prisma.PostDefaultArgs>()({
 export type PostWithCategories = Prisma.PostGetPayload<typeof postWithCategories>;
 
 // Articles publiés (liste publique)
-/** Langue des articles affichés pour une langue d'interface : la sienne s'il y en a, sinon l'anglais. */
+/** Langue des articles affichés pour une langue d'interface (voir BLOG_LOCALES). */
 export async function blogLanguageFor(locale: string): Promise<string> {
-  if (locale === "fr" || locale === "en") return locale;
-  const n = await prisma.post.count({ where: { isPublished: true, language: locale } });
-  return n > 0 ? locale : "en";
+  return isLocale(locale) ? blogLocaleFor(locale) : "en";
 }
 
 export async function getPublishedPosts(language?: string): Promise<PostWithCategories[]> {
